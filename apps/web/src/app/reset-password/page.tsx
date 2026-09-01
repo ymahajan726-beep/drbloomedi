@@ -7,28 +7,37 @@ import {
 } from "react";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-
-import { useAuth } from "../../context/AuthContext";
+import { useSearchParams } from "next/navigation";
 
 const API_URL = "http://localhost:4000";
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function ResetPasswordPage() {
+  const searchParams =
+    useSearchParams();
 
-  const { refreshAuth } = useAuth();
+  const tokenFromUrl =
+    searchParams.get("token") || "";
 
-  const [email, setEmail] =
+  const [token, setToken] =
+    useState(tokenFromUrl);
+
+  const [newPassword, setNewPassword] =
     useState("");
 
-  const [password, setPassword] =
+  const [confirmPassword, setConfirmPassword] =
     useState("");
 
   const [showPassword, setShowPassword] =
     useState(false);
 
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
+
   const [loading, setLoading] =
     useState(false);
+
+  const [message, setMessage] =
+    useState("");
 
   const [error, setError] =
     useState("");
@@ -38,11 +47,39 @@ export default function LoginPage() {
   ) {
     event.preventDefault();
 
+    setMessage("");
     setError("");
 
-    if (!email || !password) {
+    if (!token) {
       setError(
-        "Email and password are required.",
+        "Reset token is required.",
+      );
+
+      return;
+    }
+
+    if (!newPassword) {
+      setError(
+        "Please enter a new password.",
+      );
+
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError(
+        "Password must be at least 6 characters.",
+      );
+
+      return;
+    }
+
+    if (
+      newPassword !==
+      confirmPassword
+    ) {
+      setError(
+        "Passwords do not match.",
       );
 
       return;
@@ -53,7 +90,7 @@ export default function LoginPage() {
 
       const response =
         await fetch(
-          `${API_URL}/auth/login`,
+          `${API_URL}/auth/reset-password`,
           {
             method: "POST",
 
@@ -65,8 +102,8 @@ export default function LoginPage() {
             credentials: "include",
 
             body: JSON.stringify({
-              email,
-              password,
+              token,
+              newPassword,
             }),
           },
         );
@@ -77,37 +114,23 @@ export default function LoginPage() {
       if (!response.ok) {
         throw new Error(
           data.message ||
-            "Login failed",
+            "Password reset failed.",
         );
       }
 
-      const currentUser =
-        await refreshAuth();
-
-      if (!currentUser) {
-        throw new Error(
-          "Login succeeded, but authentication session could not be verified.",
-        );
-      }
-
-      if (
-        currentUser.role === "ADMIN"
-      ) {
-        router.replace(
-          "/admin/dashboard",
-        );
-
-        return;
-      }
-
-      router.replace(
-        "/user/dashboard",
+      setMessage(
+        data.message ||
+          "Password reset successful.",
       );
+
+      setToken("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (error) {
       setError(
         error instanceof Error
           ? error.message
-          : "Unable to login.",
+          : "Something went wrong.",
       );
     } finally {
       setLoading(false);
@@ -116,17 +139,32 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
 
+        {/* HEADER */}
+
         <div className="mb-8 text-center">
+
           <h1 className="text-3xl font-bold text-gray-900">
-            DrblooMedi
+            Reset Password
           </h1>
 
           <p className="mt-2 text-gray-600">
-            Sign in to your account
+            Create a new password for your account
           </p>
+
         </div>
+
+        {/* SUCCESS */}
+
+        {message && (
+          <div className="mb-5 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+            {message}
+          </div>
+        )}
+
+        {/* ERROR */}
 
         {error && (
           <div className="mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -139,31 +177,34 @@ export default function LoginPage() {
           className="space-y-5"
         >
 
-          {/* EMAIL */}
+          {/* TOKEN */}
 
           <div>
+
             <label className="mb-2 block text-sm font-medium text-gray-900">
-              Email
+              Reset Token
             </label>
 
             <input
-              type="email"
-              value={email}
+              type="text"
+              value={token}
               onChange={(event) =>
-                setEmail(
+                setToken(
                   event.target.value,
                 )
               }
-              placeholder="admin@drbloomedi.com"
+              placeholder="Enter reset token"
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
+
           </div>
 
-          {/* PASSWORD */}
+          {/* NEW PASSWORD */}
 
           <div>
+
             <label className="mb-2 block text-sm font-medium text-gray-900">
-              Password
+              New Password
             </label>
 
             <div className="relative">
@@ -174,13 +215,13 @@ export default function LoginPage() {
                     ? "text"
                     : "password"
                 }
-                value={password}
+                value={newPassword}
                 onChange={(event) =>
-                  setPassword(
+                  setNewPassword(
                     event.target.value,
                   )
                 }
-                placeholder="Enter your password"
+                placeholder="Enter new password"
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-20 text-gray-900 placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
 
@@ -199,22 +240,56 @@ export default function LoginPage() {
               </button>
 
             </div>
-          </div>
-
-          {/* FORGOT PASSWORD */}
-
-          <div className="flex justify-end">
-
-            <Link
-              href="/forgot-password"
-              className="text-sm font-medium text-blue-600 hover:text-blue-800"
-            >
-              Forgot Password?
-            </Link>
 
           </div>
 
-          {/* LOGIN BUTTON */}
+          {/* CONFIRM PASSWORD */}
+
+          <div>
+
+            <label className="mb-2 block text-sm font-medium text-gray-900">
+              Confirm Password
+            </label>
+
+            <div className="relative">
+
+              <input
+                type={
+                  showConfirmPassword
+                    ? "text"
+                    : "password"
+                }
+                value={
+                  confirmPassword
+                }
+                onChange={(event) =>
+                  setConfirmPassword(
+                    event.target.value,
+                  )
+                }
+                placeholder="Confirm new password"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-20 text-gray-900 placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirmPassword(
+                    !showConfirmPassword,
+                  )
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                {showConfirmPassword
+                  ? "Hide"
+                  : "Show"}
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* RESET BUTTON */}
 
           <button
             type="submit"
@@ -222,12 +297,27 @@ export default function LoginPage() {
             className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading
-              ? "Signing in..."
-              : "Sign In"}
+              ? "Resetting..."
+              : "Reset Password"}
           </button>
 
         </form>
+
+        {/* LOGIN LINK */}
+
+        <div className="mt-6 text-center">
+
+          <Link
+            href="/login"
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            ← Back to Login
+          </Link>
+
+        </div>
+
       </div>
+
     </main>
   );
 }

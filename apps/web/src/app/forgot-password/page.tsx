@@ -7,28 +7,18 @@ import {
 } from "react";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-
-import { useAuth } from "../../context/AuthContext";
 
 const API_URL = "http://localhost:4000";
 
-export default function LoginPage() {
-  const router = useRouter();
-
-  const { refreshAuth } = useAuth();
-
+export default function ForgotPasswordPage() {
   const [email, setEmail] =
     useState("");
 
-  const [password, setPassword] =
-    useState("");
-
-  const [showPassword, setShowPassword] =
-    useState(false);
-
   const [loading, setLoading] =
     useState(false);
+
+  const [message, setMessage] =
+    useState("");
 
   const [error, setError] =
     useState("");
@@ -38,11 +28,12 @@ export default function LoginPage() {
   ) {
     event.preventDefault();
 
+    setMessage("");
     setError("");
 
-    if (!email || !password) {
+    if (!email) {
       setError(
-        "Email and password are required.",
+        "Please enter your email address.",
       );
 
       return;
@@ -53,7 +44,7 @@ export default function LoginPage() {
 
       const response =
         await fetch(
-          `${API_URL}/auth/login`,
+          `${API_URL}/auth/forgot-password`,
           {
             method: "POST",
 
@@ -66,7 +57,6 @@ export default function LoginPage() {
 
             body: JSON.stringify({
               email,
-              password,
             }),
           },
         );
@@ -77,37 +67,19 @@ export default function LoginPage() {
       if (!response.ok) {
         throw new Error(
           data.message ||
-            "Login failed",
+            "Unable to process request.",
         );
       }
 
-      const currentUser =
-        await refreshAuth();
-
-      if (!currentUser) {
-        throw new Error(
-          "Login succeeded, but authentication session could not be verified.",
-        );
-      }
-
-      if (
-        currentUser.role === "ADMIN"
-      ) {
-        router.replace(
-          "/admin/dashboard",
-        );
-
-        return;
-      }
-
-      router.replace(
-        "/user/dashboard",
+      setMessage(
+        data.message ||
+          "Password reset request sent successfully.",
       );
     } catch (error) {
       setError(
         error instanceof Error
           ? error.message
-          : "Unable to login.",
+          : "Something went wrong.",
       );
     } finally {
       setLoading(false);
@@ -116,17 +88,32 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
 
+        {/* HEADER */}
+
         <div className="mb-8 text-center">
+
           <h1 className="text-3xl font-bold text-gray-900">
-            DrblooMedi
+            Forgot Password
           </h1>
 
           <p className="mt-2 text-gray-600">
-            Sign in to your account
+            Enter your email to reset your password
           </p>
+
         </div>
+
+        {/* SUCCESS MESSAGE */}
+
+        {message && (
+          <div className="mb-5 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+            {message}
+          </div>
+        )}
+
+        {/* ERROR MESSAGE */}
 
         {error && (
           <div className="mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -134,14 +121,15 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* FORM */}
+
         <form
           onSubmit={handleSubmit}
           className="space-y-5"
         >
 
-          {/* EMAIL */}
-
           <div>
+
             <label className="mb-2 block text-sm font-medium text-gray-900">
               Email
             </label>
@@ -157,64 +145,8 @@ export default function LoginPage() {
               placeholder="admin@drbloomedi.com"
               className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
-          </div>
-
-          {/* PASSWORD */}
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-900">
-              Password
-            </label>
-
-            <div className="relative">
-
-              <input
-                type={
-                  showPassword
-                    ? "text"
-                    : "password"
-                }
-                value={password}
-                onChange={(event) =>
-                  setPassword(
-                    event.target.value,
-                  )
-                }
-                placeholder="Enter your password"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 pr-20 text-gray-900 placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowPassword(
-                    !showPassword,
-                  )
-                }
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-blue-600 hover:text-blue-800"
-              >
-                {showPassword
-                  ? "Hide"
-                  : "Show"}
-              </button>
-
-            </div>
-          </div>
-
-          {/* FORGOT PASSWORD */}
-
-          <div className="flex justify-end">
-
-            <Link
-              href="/forgot-password"
-              className="text-sm font-medium text-blue-600 hover:text-blue-800"
-            >
-              Forgot Password?
-            </Link>
 
           </div>
-
-          {/* LOGIN BUTTON */}
 
           <button
             type="submit"
@@ -222,12 +154,27 @@ export default function LoginPage() {
             className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading
-              ? "Signing in..."
-              : "Sign In"}
+              ? "Sending..."
+              : "Send Reset Request"}
           </button>
 
         </form>
+
+        {/* BACK TO LOGIN */}
+
+        <div className="mt-6 text-center">
+
+          <Link
+            href="/login"
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            ← Back to Login
+          </Link>
+
+        </div>
+
       </div>
+
     </main>
   );
 }
