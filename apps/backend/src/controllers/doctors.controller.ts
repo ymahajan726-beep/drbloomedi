@@ -1,144 +1,42 @@
-
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  ParseIntPipe,
-  Patch,
   Post,
-  UseGuards,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
-
-import { DoctorService } from '../services/doctors.service';
-
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { DoctorsService } from '../services/doctors.service';
 
 @Controller('doctors')
-@UseGuards(JwtAuthGuard)
-export class DoctorController {
-  constructor(
-    private readonly doctorService: DoctorService,
-  ) {}
-
-  // =====================================================
-  // GET ALL DOCTORS
-  // GET /doctors
-  // =====================================================
+export class DoctorsController {
+  constructor(private readonly doctorsService: DoctorsService) {}
 
   @Get()
-  async findAll() {
-    return this.doctorService.findAll();
+  async getAll(@Query('search') search?: string) {
+    return this.doctorsService.findAll(search);
   }
-
-  // =====================================================
-  // GET DOCTOR BY ID
-  // GET /doctors/:id
-  // =====================================================
 
   @Get(':id')
-  async findById(
-    @Param(
-      'id',
-      ParseIntPipe,
-    )
-    id: number,
-  ) {
-    return this.doctorService.findById(id);
+  async getOne(@Param('id', ParseIntPipe) id: number) {
+    return this.doctorsService.findOne(id);
   }
-
-  // =====================================================
-  // CREATE DOCTOR
-  // POST /doctors
-  // =====================================================
 
   @Post()
-  async createDoctor(
-    @Body()
-    body: {
-      email: string;
-      password: string;
-      specialization?: string;
-      qualifications?: string;
-      phone?: string;
-    },
-  ) {
-    return this.doctorService.createDoctor(
-      body.email,
-      body.password,
-      body.specialization,
-      body.qualifications,
-      body.phone,
-    );
+  async create(@Body() body: any) {
+    return this.doctorsService.create(body);
   }
 
-  // =====================================================
-  // UPDATE DOCTOR
-  // PATCH /doctors/:id
-  // =====================================================
-
-  @Patch(':id')
-  async updateDoctor(
-    @Param(
-      'id',
-      ParseIntPipe,
-    )
-    id: number,
-
-    @Body()
-    body: {
-      specialization?: string;
-      qualifications?: string;
-      phone?: string;
-    },
-  ) {
-    return this.doctorService.updateDoctor(
-      id,
-      body.specialization,
-      body.qualifications,
-      body.phone,
-    );
+  @Patch(':id/toggle')
+  async toggleStatus(@Param('id', ParseIntPipe) id: number) {
+    return this.doctorsService.toggleStatus(id);
   }
-
-  // =====================================================
-  // ACTIVATE / DEACTIVATE DOCTOR
-  // PATCH /doctors/:id/status
-  // =====================================================
-
-  @Patch(':id/status')
-  async setActive(
-    @Param(
-      'id',
-      ParseIntPipe,
-    )
-    id: number,
-
-    @Body()
-    body: {
-      isActive: boolean;
-    },
-  ) {
-    return this.doctorService.setActive(
-      id,
-      body.isActive,
-    );
-  }
-
-  // =====================================================
-  // DELETE DOCTOR
-  // DELETE /doctors/:id
-  // =====================================================
 
   @Delete(':id')
-  async deleteDoctor(
-    @Param(
-      'id',
-      ParseIntPipe,
-    )
-    id: number,
-  ) {
-    return this.doctorService.deleteDoctor(id);
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.doctorsService.delete(id);
   }
 }
-

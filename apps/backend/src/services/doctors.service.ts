@@ -1,219 +1,113 @@
-
 import {
-  ConflictException,
   Injectable,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
-
 import { InjectRepository } from '@nestjs/typeorm';
-
+import { Repository, ILike } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-
-import { Repository } from 'typeorm';
-
-import {
-  Doctor,
-} from '../entities/doctor.entity';
-
-import {
-  User,
-  UserRole,
-} from '../entities/user.entity';
+import { Doctor } from '../entities/doctor.entity';
+import { User, UserRole } from '../entities/user.entity';
+import { Department } from '../entities/department.entity';
 
 @Injectable()
-export class DoctorService {
+export class DoctorsService {
   constructor(
     @InjectRepository(Doctor)
-    private readonly doctorRepository: Repository<Doctor>,
-
+    private readonly doctorRepo: Repository<Doctor>,
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userRepo: Repository<User>,
+    @InjectRepository(Department)
+    private readonly deptRepo: Repository<Department>,
   ) {}
 
-  // =====================================================
-  // GET ALL DOCTORS
-  // =====================================================
+  async findAll(search?: string): Promise<Doctor[]> {
+    const query = this.doctorRepo
+      .createQueryBuilder('doctor')
+      .leftJoinAndSelect('doctor.user', 'user')
+      .leftJoinAndSelect('doctor.department', 'department')
+      .orderBy('doctor.createdAt', 'DESC');
 
-  async findAll(): Promise<Doctor[]> {
-    return this.doctorRepository.find({
-      relations: {
-        user: true,
-      },
+    if (search) {
+      query.where(
+        'doctor.specialization ILIKE :search OR doctor.phone ILIKE :search OR user.email ILIKE :search',
+        { search: `%${search}%` },
+      );
+    }
 
-      order: {
-        id: 'ASC',
-      },
+    return query.getMany();
+  }
+
+  async findOne(id: number): Promise<Doctor> {
+    const doc = await this.doctorRepo.findOne({
+      where: { id },
+      relations: { user: true, department: true },
     });
+    if (!doc) throw new NotFoundException('Doctor not found');
+    return doc;
   }
 
-  // =====================================================
-  // GET DOCTOR BY ID
-  // =====================================================
+  async create(data: {
+    email: string;
+    password?: string;
+    specialization: string;
+    qualifications: string;
+    phone: string;
+    departmentId?: string;
+  }): Promise<Doctor> {
+    const normalizedEmail = data.email.trim().toLowerCase();
 
-  async findById(
-    id: number,
-  ): Promise<Doctor> {
-    const doctor =
-      await this.doctorRepository.findOne({
-        where: {
-          id,
-        },
-
-        relations: {
-          user: true,
-        },
+    let user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
+    if (user) {
+      const existingDoc = await this.doctorRepo.findOne({
+        where: { user: { id: user.id } },
       });
-
-    if (!doctor) {
-      throw new NotFoundException(
-        'Doctor not found',
-      );
-    }
-
-    return doctor;
-  }
-
-  // =====================================================
-  // CREATE DOCTOR
-  // =====================================================
-
-  async createDoctor(
-    email: string,
-    password: string,
-    specialization?: string,
-    qualifications?: string,
-    phone?: string,
-  ): Promise<Doctor> {
-    const existingUser =
-      await this.userRepository.findOne({
-        where: {
-          email,
-        },
-      });
-
-    if (existingUser) {
-      throw new ConflictException(
-        'User with this email already exists',
-      );
-    }
-
-    const hashedPassword =
-      await bcrypt.hash(
-        password,
-        10,
-      );
-
-    const user =
-      this.userRepository.create({
-        email,
+      if (existingDoc) {
+        throw new ConflictException('A doctor with this email already exists');
+      }
+    } else {
+      const hashedPassword = await bcrypt.hash(data.password || 'Doctor@123', 10);
+      user = this.userRepo.create({
+        email: normalizedEmail,
         password: hashedPassword,
         role: UserRole.DOCTOR,
         isActive: true,
       });
-
-    const savedUser =
-      await this.userRepository.save(user);
-
-    const doctor =
-      this.doctorRepository.create({
-        user: savedUser,
-        specialization,
-        qualifications,
-        phone,
-        isActive: true,
-      });
-
-    return this.doctorRepository.save(
-      doctor,
-    );
-  }
-
-  // =====================================================
-  // UPDATE DOCTOR
-  // =====================================================
-
-  async updateDoctor(
-    id: number,
-    specialization?: string,
-    qualifications?: string,
-    phone?: string,
-  ): Promise<Doctor> {
-    const doctor =
-      await this.findById(id);
-
-    if (
-      specialization !== undefined
-    ) {
-      doctor.specialization =
-        specialization;
+      user = await this.userRepo.save(user);
     }
 
-    if (
-      qualifications !== undefined
-    ) {
-      doctor.qualifications =
-        qualifications;
+    let department: Department | null = null;
+    if (data.departmentId) {
+      department = await this.deptRepo.findOne({ where: { id: data.departmentId } });
     }
 
-    if (phone !== undefined) {
-      doctor.phone = phone;
+    const doctor = this.doctorRepo.create({
+      user,
+      specialization: data.specialization,
+      qualifications: data.qualifications,
+      phone: data.phone,
+      department: department || undefined,
+      isActive: true,
+    });
+
+    return this.doctorRepo.save(doctor);
+  }
+
+  async toggleStatus(id: number): Promise<Doctor> {
+    const doc = await this.findOne(id);
+    doc.isActive = !doc.isActive;
+    return this.doctorRepo.save(doc);
+  }
+
+  async delete(id: number): Promise<{ success: boolean; message: string }> {
+    const doc = await this.findOne(id);
+    const userId = doc.user?.id;
+
+    await this.doctorRepo.delete(id);
+    if (userId) {
+      await this.userRepo.delete(userId).catch(() => null);
     }
 
-    return this.doctorRepository.save(
-      doctor,
-    );
-  }
-
-  // =====================================================
-  // ACTIVATE / DEACTIVATE DOCTOR
-  // =====================================================
-
-  async setActive(
-    id: number,
-    isActive: boolean,
-  ): Promise<Doctor> {
-    const doctor =
-      await this.findById(id);
-
-    doctor.isActive =
-      isActive;
-
-    doctor.user.isActive =
-      isActive;
-
-    await this.userRepository.save(
-      doctor.user,
-    );
-
-    return this.doctorRepository.save(
-      doctor,
-    );
-  }
-
-  // =====================================================
-  // DELETE DOCTOR
-  // =====================================================
-
-  async deleteDoctor(
-    id: number,
-  ): Promise<{
-    message: string;
-  }> {
-    const doctor =
-      await this.findById(id);
-
-    await this.doctorRepository.delete(
-      id,
-    );
-
-    await this.userRepository.delete(
-      doctor.user.id,
-    );
-
-    return {
-      message:
-        'Doctor deleted successfully',
-    };
+    return { success: true, message: 'Doctor profile removed successfully' };
   }
 }
-

@@ -1,16 +1,11 @@
-
 import {
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-
 import { InjectRepository } from '@nestjs/typeorm';
-
 import * as bcrypt from 'bcrypt';
-
 import { Repository } from 'typeorm';
-
 import {
   User,
   UserRole,
@@ -38,15 +33,15 @@ export class UsersService {
   }
 
   // =====================================================
-  // FIND USER BY ID
+  // FIND USER BY ID (UUID - string)
   // =====================================================
 
   async findById(
-    id: number,
+    id: string,
   ): Promise<User | null> {
     return this.userRepository.findOne({
       where: {
-        id,
+        id: String(id),
       },
     });
   }
@@ -58,7 +53,7 @@ export class UsersService {
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
       order: {
-        id: 'ASC',
+        createdAt: 'DESC',
       },
     });
   }
@@ -135,7 +130,7 @@ export class UsersService {
   // =====================================================
 
   async setActive(
-    id: number,
+    id: string,
     isActive: boolean,
   ): Promise<User> {
     const user =
@@ -160,7 +155,7 @@ export class UsersService {
   // =====================================================
 
   async deleteUser(
-    id: number,
+    id: string,
   ): Promise<{
     message: string;
   }> {
@@ -174,7 +169,7 @@ export class UsersService {
     }
 
     await this.userRepository.delete(
-      id,
+      String(id),
     );
 
     return {
@@ -245,10 +240,6 @@ export class UsersService {
     user: User,
     newPassword: string,
   ): Promise<User> {
-    /*
-     * New password ko bcrypt se hash
-     * kar rahe hain.
-     */
     const hashedPassword =
       await bcrypt.hash(
         newPassword,
@@ -258,10 +249,6 @@ export class UsersService {
     user.password =
       hashedPassword;
 
-    /*
-     * Password reset hone ke baad
-     * purana token invalidate kar do.
-     */
     user.resetPasswordToken =
       null;
 
@@ -273,7 +260,7 @@ export class UsersService {
     );
   }
 
-    // =====================================================
+  // =====================================================
   // ADMIN DASHBOARD COUNTS
   // =====================================================
 
@@ -310,4 +297,3 @@ export class UsersService {
     };
   }
 }
-  

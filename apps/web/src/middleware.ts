@@ -1,21 +1,36 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/request';
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("accessToken")?.value;
-
   const { pathname } = request.nextUrl;
 
-  const isAdminRoute = pathname.startsWith("/admin");
+  // 1. Static फाइल्स और लॉगिन को छोड़ दें
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.') ||
+    pathname === '/login' ||
+    pathname === '/forgot-password'
+  ) {
+    return NextResponse.next();
+  }
 
-  if (isAdminRoute && !token) {
-    return NextResponse.redirect(
-      new URL("/login", request.url),
-    );
+  // 2. Cookie चेक करें
+  const token = request.cookies.get('token')?.value;
+
+  // 3. अगर टोकन नहीं है, तो किसी भी प्रोटेक्टेड पेज को तुरंत ब्लॉक करें
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: [
+    '/admin/:path*',
+    '/doctor/:path*',
+    '/reception/:path*',
+    '/patient/:path*',
+  ],
 };

@@ -1,8 +1,8 @@
 import {
-  Column,
-  CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
@@ -15,12 +15,13 @@ export enum UserRole {
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({
-    unique: true,
-  })
+  @Column({ type: 'varchar', nullable: true, default: 'Staff User' })
+  name: string;
+
+  @Column({ unique: true })
   email: string;
 
   @Column()
@@ -33,30 +34,14 @@ export class User {
   })
   role: UserRole;
 
-  @Column({
-    default: true,
-  })
+  @Column({ default: true })
   isActive: boolean;
 
-  // =====================================================
-  // PASSWORD RESET TOKEN
-  // =====================================================
-
-  @Column({
-    type: 'varchar',
-    nullable: true,
-  })
+  @Column({ type: 'varchar', nullable: true })
   resetPasswordToken: string | null;
 
-  @Column({
-    type: 'timestamp',
-    nullable: true,
-  })
+  @Column({ type: 'timestamp', nullable: true })
   resetPasswordExpires: Date | null;
-
-  // =====================================================
-  // TIMESTAMPS
-  // =====================================================
 
   @CreateDateColumn()
   createdAt: Date;

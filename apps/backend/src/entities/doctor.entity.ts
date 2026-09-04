@@ -3,13 +3,14 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
-
+  ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 import { User } from './user.entity';
+import { Department } from './department.entity';
 
 @Entity('doctors')
 export class Doctor {
@@ -26,12 +27,18 @@ export class Doctor {
   @Column({ length: 255, nullable: true })
   qualifications: string;
 
-
   @Column({ length: 30, nullable: true })
   phone: string;
 
   @Column({ default: true })
   isActive: boolean;
+
+  @ManyToOne(() => Department, (dept) => dept.doctors, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'departmentId' })
+  department: Department;
 
   @CreateDateColumn()
   createdAt: Date;

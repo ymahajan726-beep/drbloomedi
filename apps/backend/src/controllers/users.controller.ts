@@ -1,126 +1,72 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  ParseIntPipe,
-  Patch,
   Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
 } from '@nestjs/common';
-
 import { UsersService } from '../services/users.service';
 import { UserRole } from '../entities/user.entity';
 
 @Controller('users')
 export class UsersController {
-  constructor(
-    private readonly usersService: UsersService,
-  ) {}
+  constructor(private readonly usersService: UsersService) {}
 
-  // GET /users
+  // =====================================================
+  // GET ALL USERS
+  // =====================================================
   @Get()
-  async findAll() {
-    const users =
-      await this.usersService.findAll();
-
-    return users.map((user) => ({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    }));
+  async getAllUsers() {
+    return this.usersService.findAll();
   }
 
-  // GET /users/:id
+  // =====================================================
+  // GET DASHBOARD STATS
+  // =====================================================
+  @Get('stats')
+  async getStats() {
+    return this.usersService.getDashboardStats();
+  }
+
+  // =====================================================
+  // GET USER BY ID
+  // =====================================================
   @Get(':id')
-  async findOne(
-    @Param('id', ParseIntPipe)
-    id: number,
-  ) {
-    const user =
-      await this.usersService.findById(id);
-
-    if (!user) {
-      return {
-        message: 'User not found',
-      };
-    }
-
-    return {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+  async getUserById(@Param('id') id: string) {
+    return this.usersService.findById(id);
   }
 
-  // POST /users
+  // =====================================================
+  // CREATE USER (ADMIN / RECEPTION / PATIENT / DOCTOR)
+  // =====================================================
   @Post()
-  async create(
-    @Body()
-    body: {
-      email: string;
-      password: string;
-      role?: UserRole;
-    },
+  async createUser(
+    @Body('email') email: string,
+    @Body('password') password: string,
+    @Body('role') role?: UserRole,
   ) {
-    const user =
-      await this.usersService.createUser(
-        body.email,
-        body.password,
-        body.role ?? UserRole.PATIENT,
-      );
-
-    return {
-      message: 'User created successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-      },
-    };
+    return this.usersService.createUser(email, password, role);
   }
 
-  // PATCH /users/:id/active
-  @Patch(':id/active')
-  async updateStatus(
-    @Param('id', ParseIntPipe)
-    id: number,
-
-    @Body()
-    body: {
-      isActive: boolean;
-    },
+  // =====================================================
+  // TOGGLE ACTIVE STATUS
+  // =====================================================
+  @Patch(':id/status')
+  async toggleStatus(
+    @Param('id') id: string,
+    @Body('isActive') isActive: boolean,
   ) {
-    const user =
-      await this.usersService.setActive(
-        id,
-        body.isActive,
-      );
-
-    return {
-      message: 'User status updated successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-      },
-    };
+    return this.usersService.setActive(id, isActive);
   }
 
-  // DELETE /users/:id
+  // =====================================================
+  // DELETE USER
+  // =====================================================
   @Delete(':id')
-  async remove(
-    @Param('id', ParseIntPipe)
-    id: number,
-  ) {
+  async deleteUser(@Param('id') id: string) {
     return this.usersService.deleteUser(id);
   }
 }

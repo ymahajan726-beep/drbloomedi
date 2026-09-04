@@ -1,203 +1,111 @@
-
 import {
   Injectable,
   UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
-
-import * as bcrypt from 'bcrypt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
-
-import { UsersService } from './users.service';
+import * as bcrypt from 'bcrypt';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly usersService: UsersService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
 
-  // =====================================================
-  // LOGIN
-  // POST /auth/login
-  // =====================================================
-
-  async login(
-    email: string,
-    password: string,
-  ) {
-    const user =
-      await this.usersService.findByEmail(email);
-
+  async validateUser(email: string, pass: string): Promise<any> {
+    const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+      return null;
     }
 
-    if (!user.isActive) {
-      throw new UnauthorizedException(
-        'User account is inactive',
-      );
+    const isMatch = await bcrypt.compare(pass, user.password);
+    if (!isMatch) {
+      return null;
     }
 
-    const passwordMatched =
-      await bcrypt.compare(
-        password,
-        user.password,
-      );
+    const { password, ...result } = user;
+    return result;
+  }
 
-    if (!passwordMatched) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+  async login(email: string, pass: string) {
+    const user = await this.validateUser(email, pass);
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
     }
 
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
-
-    const accessToken =
-      await this.jwtService.signAsync(
-        payload,
-      );
-
+    const payload = { email: user.email, sub: user.id, role: user.role };
     return {
-      accessToken,
-
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-      },
+      accessToken: this.jwtService.sign(payload),
+      user,
     };
   }
 
-  // =====================================================
-  // FORGOT PASSWORD
-  // POST /auth/forgot-password
-  // =====================================================
-
-  async forgotPassword(
-    email: string,
-  ): Promise<{
-    message: string;
-    token?: string;
-  }> {
-    const user =
-      await this.usersService.findByEmail(email);
-
-    /*
-     * Security:
-     * User exist karta hai ya nahi,
-     * frontend ko directly nahi batayenge.
-     */
+  async forgotPassword(email: string) {
+    const user = await this.userRepository.findOne({ where: { email: email.trim().toLowerCase() } });
     if (!user) {
-      return {
-        message:
-          'If the email exists, a password reset link has been generated.',
-      };
+      throw new NotFoundException('User with this email does not exist.');
     }
 
-    /*
-     * Crypto module import.
-     */
-    const crypto =
-      await import('crypto');
+    // 6-digit numeric reset token
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Token valid for 15 minutes
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 15);
 
-    /*
-     * Secure random reset token.
-     */
-    const token =
-      crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = expires;
+    await this.userRepository.save(user);
 
-    /*
-     * Token 15 minutes ke liye valid rahega.
-     */
-    const expiresAt =
-      new Date(
-        Date.now() +
-          15 * 60 * 1000,
-      );
+    console.log(`\n=========================================`);
+    console.log(`🔑 PASSWORD RESET TOKEN FOR: ${user.email}`);
+    console.log(`TOKEN: ${resetToken}`);
+    console.log(`EXPIRES AT: ${expires.toLocaleTimeString()}`);
+    console.log(`=========================================\n`);
 
-    /*
-     * Token database mein save.
-     */
-    await this.usersService.saveResetToken(
-      user,
-      token,
-      expiresAt,
-    );
-
-    /*
-     * Development/testing ke liye
-     * terminal mein token show karenge.
-     *
-     * Production mein yahan email
-     * reset link bhejna hoga.
-     */
-    console.log(
-      'PASSWORD RESET TOKEN:',
-      token,
-    );
-
-    /*
-     * Development/testing ke liye
-     * frontend ko token return kar rahe hain.
-     */
     return {
-      message:
-        'Password reset token generated successfully.',
-      token,
+      success: true,
+      message: 'Reset token generated successfully.',
+      token: resetToken, // Directly returned for instant local testing
     };
   }
 
-  // =====================================================
-  // RESET PASSWORD
-  // POST /auth/reset-password
-  // =====================================================
-
-  async resetPassword(
-    token: string,
-    newPassword: string,
-  ): Promise<{
-    message: string;
-  }> {
-    /*
-     * Token find karega aur
-     * expiry bhi check karega.
-     */
-    const user =
-      await this.usersService.findByResetToken(
-        token,
-      );
-
-    if (!user) {
-      throw new UnauthorizedException(
-        'Invalid or expired reset token',
-      );
+  async resetPassword(token: string, newPass: string) {
+    if (!token || !newPass) {
+      throw new BadRequestException('Token and new password are required.');
     }
 
-    /*
-     * New password ko bcrypt se hash
-     * karke database mein save karega.
-     */
-    await this.usersService.updatePassword(
-      user,
-      newPassword,
-    );
+    const user = await this.userRepository.findOne({
+      where: { resetPasswordToken: token.trim() },
+    });
 
-    /*
-     * updatePassword() ke andar
-     * reset token invalidate ho jayega.
-     */
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token.');
+    }
+
+    if (!user.resetPasswordExpires || new Date() > new Date(user.resetPasswordExpires)) {
+      throw new BadRequestException('Reset token has expired. Please request a new one.');
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPass, salt);
+
+    // Clear reset token fields
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+
+    await this.userRepository.save(user);
 
     return {
-      message:
-        'Password reset successful.',
+      success: true,
+      message: 'Password has been reset successfully. You can now login with your new password.',
     };
   }
 }
-
