@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { performLogout } from '@/utils/logout';
 
 export default function ReceptionDashboard() {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -44,10 +45,17 @@ export default function ReceptionDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = '/login';
-  };
+    const handleLogout = () => {
+        // 1. दोनों कुकीज़ को तुरंत एक्सपायर (डिलीट) करें
+        document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+        document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+
+        // 2. लोकल स्टोरेज का डेटा साफ़ करें
+        localStorage.clear();
+
+        // 3. सीधा लॉगिन पेज पर रीडायरेक्ट करें
+        window.location.href = '/login';
+      };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -71,13 +79,13 @@ export default function ReceptionDashboard() {
           <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded-full">
             ● Counter Active
           </span>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-xl font-bold transition shadow-sm"
-          >
-            <span>🚪</span>
-            <span>Logout</span>
-          </button>
+         <button
+          onClick={performLogout}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-xl font-bold transition shadow-sm"
+        >
+          <span>🚪</span>
+          <span>Logout</span>
+        </button>
         </div>
       </header>
 

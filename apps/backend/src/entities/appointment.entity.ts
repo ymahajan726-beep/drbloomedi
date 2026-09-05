@@ -62,4 +62,7 @@ export class Appointment {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({ type: 'text', nullable: true })
+reason: string;
 }

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { performLogout } from '@/utils/logout';
 
 interface Appointment {
   id: string;
@@ -25,6 +27,28 @@ export default function DoctorDashboard() {
   const [loading, setLoading] = useState(true);
   const [doctorEmail, setDoctorEmail] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // 1. SECURITY & SESSION GUARD
+  useEffect(() => {
+    const getCookie = (name: string) => {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? match[2] : null;
+    };
+
+    const token = getCookie('token') || localStorage.getItem('token');
+    const role = (getCookie('userRole') || localStorage.getItem('userRole'))?.toUpperCase();
+
+    if (!token || role !== 'DOCTOR') {
+      window.location.replace('/login');
+      return;
+    }
+
+    const email = localStorage.getItem('userEmail') || 'Doctor';
+    setDoctorEmail(email);
+    setIsAuthorized(true);
+    loadAppointments();
+  }, []);
 
   const loadAppointments = async () => {
     try {
@@ -40,12 +64,6 @@ export default function DoctorDashboard() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const email = localStorage.getItem('userEmail') || 'Doctor';
-    setDoctorEmail(email);
-    loadAppointments();
-  }, []);
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
@@ -63,16 +81,25 @@ export default function DoctorDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = '/login';
-  };
+  // अनधिकृत लोड से बचाव
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
+        🔒 Verifying Doctor Clinical Credentials...
+      </div>
+    );
+  }
 
-  const pendingCount = appointments.filter((a) => a.status === 'Scheduled' || a.status === 'Confirmed').length;
-  const completedCount = appointments.filter((a) => a.status === 'Completed').length;
+  const pendingCount = appointments.filter(
+    (a) => a.status === 'Scheduled' || a.status === 'Confirmed' || a.status === 'PENDING'
+  ).length;
+  const completedCount = appointments.filter(
+    (a) => a.status === 'Completed' || a.status === 'COMPLETED'
+  ).length;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
+      {/* Top Header */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-emerald-600 text-white rounded-xl flex items-center justify-center font-black text-sm">
@@ -93,7 +120,7 @@ export default function DoctorDashboard() {
             ● Consultation Active
           </span>
           <button
-            onClick={handleLogout}
+            onClick={performLogout}
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-xl font-bold transition shadow-sm"
           >
             <span>🚪</span>
@@ -102,7 +129,9 @@ export default function DoctorDashboard() {
         </div>
       </header>
 
+      {/* Main Content Area */}
       <main className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Metric Counters */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
@@ -129,7 +158,9 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
+        {/* OPD Queue and Chart Workspace */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: Queue Table */}
           <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex justify-between items-center">
               <h2 className="text-xs font-black text-slate-800 uppercase tracking-wider">
@@ -147,7 +178,7 @@ export default function DoctorDashboard() {
                     <th className="p-3.5">Slot</th>
                     <th className="p-3.5">Symptoms</th>
                     <th className="p-3.5">Status</th>
-                    <th className="p-3.5 text-right">Action</th>
+                    <th className="p-3.5 text-right">Consultation</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -160,56 +191,67 @@ export default function DoctorDashboard() {
                       <td colSpan={6} className="p-12 text-center text-slate-400">No patients scheduled.</td>
                     </tr>
                   ) : (
-                    appointments.map((apt) => (
-                      <tr
-                        key={apt.id}
-                        onClick={() => setSelectedPatient(apt)}
-                        className={`cursor-pointer transition ${
-                          selectedPatient?.id === apt.id ? 'bg-blue-50/80' : 'hover:bg-slate-50/60'
-                        }`}
-                      >
-                        <td className="p-3.5 font-mono font-bold text-blue-600">{apt.appointmentNumber}</td>
-                        <td className="p-3.5 font-bold text-slate-900">
-                          <div>{apt.patient?.fullName}</div>
-                          <div className="text-[11px] text-slate-400 font-normal">
-                            {apt.patient?.age} yrs • {apt.patient?.gender} • {apt.patient?.bloodGroup}
-                          </div>
-                        </td>
-                        <td className="p-3.5 text-slate-600 font-medium">{apt.timeSlot}</td>
-                        <td className="p-3.5 text-slate-600 max-w-xs truncate">{apt.symptoms || 'General Checkup'}</td>
-                        <td className="p-3.5">
-                          <span
-                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                              apt.status === 'Completed'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : apt.status === 'Cancelled'
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}
-                          >
-                            {apt.status}
-                          </span>
-                        </td>
-                        <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                          {apt.status !== 'Completed' ? (
-                            <button
-                              onClick={() => handleUpdateStatus(apt.id, 'Completed')}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] transition shadow-sm"
+                    appointments.map((apt) => {
+                      const isDone = apt.status === 'Completed' || apt.status === 'COMPLETED';
+                      return (
+                        <tr
+                          key={apt.id}
+                          onClick={() => setSelectedPatient(apt)}
+                          className={`cursor-pointer transition ${
+                            selectedPatient?.id === apt.id ? 'bg-blue-50/80' : 'hover:bg-slate-50/60'
+                          }`}
+                        >
+                          <td className="p-3.5 font-mono font-bold text-blue-600">{apt.appointmentNumber}</td>
+                          <td className="p-3.5 font-bold text-slate-900">
+                            <div>{apt.patient?.fullName}</div>
+                            <div className="text-[11px] text-slate-400 font-normal">
+                              {apt.patient?.age} yrs • {apt.patient?.gender} • {apt.patient?.bloodGroup}
+                            </div>
+                          </td>
+                          <td className="p-3.5 text-slate-600 font-medium">{apt.timeSlot}</td>
+                          <td className="p-3.5 text-slate-600 max-w-xs truncate">{apt.symptoms || 'General Checkup'}</td>
+                          <td className="p-3.5">
+                            <span
+                              className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                                isDone
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : apt.status === 'Cancelled'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}
                             >
-                              Done ✓
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 font-semibold">Cleared</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                              {apt.status}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
+                            {isDone ? (
+                              <Link
+                                href={`/doctor/consult/${apt.id}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-200 rounded-xl font-bold text-[11px] transition shadow-sm"
+                              >
+                                <span>📄</span>
+                                <span>View Rx</span>
+                              </Link>
+                            ) : (
+                              <Link
+                                href={`/doctor/consult/${apt.id}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] transition shadow-sm"
+                              >
+                                <span>🩺</span>
+                                <span>Start Consult</span>
+                              </Link>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
           </div>
 
+          {/* Right: Selected Patient Details Card */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">
               Active Patient EMR File
@@ -249,13 +291,21 @@ export default function DoctorDashboard() {
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex gap-2">
-                  {selectedPatient.status !== 'Completed' && (
+                <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+                  <Link
+                    href={`/doctor/consult/${selectedPatient.id}`}
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <span>🩺</span>
+                    <span>{selectedPatient.status === 'Completed' || selectedPatient.status === 'COMPLETED' ? 'Open Digital Rx File' : 'Start E-Prescription'}</span>
+                  </Link>
+
+                  {selectedPatient.status !== 'Completed' && selectedPatient.status !== 'COMPLETED' && (
                     <button
                       onClick={() => handleUpdateStatus(selectedPatient.id, 'Completed')}
-                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                      className="w-full py-2.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 rounded-xl text-xs font-bold transition"
                     >
-                      Complete Consultation
+                      Quick Mark as Cleared
                     </button>
                   )}
                 </div>

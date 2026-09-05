@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { performLogout } from '@/utils/logout';
 
 export default function AdminLayout({
   children,
@@ -13,21 +14,35 @@ export default function AdminLayout({
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState<string>('');
-  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const savedRole = localStorage.getItem('userRole') || 'ADMIN';
-    const savedEmail = localStorage.getItem('userEmail') || '';
-    setRole(savedRole);
-    setEmail(savedEmail);
+    // 1. Session Cookie रीड करने का हेल्पर फ़ंक्शन
+    const getCookie = (name: string) => {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? match[2] : null;
+    };
 
-    // 1. DOCTOR GUARD: अगर डॉक्टर है और वो /admin वाले किसी भी पेज पर आया, तो तुरंत डॉक्टर कंसोल पर भेजो
-    if (savedRole === 'DOCTOR') {
-      router.replace('/doctor/dashboard');
+    const token = getCookie('token') || localStorage.getItem('token');
+    const savedRole = (getCookie('userRole') || localStorage.getItem('userRole'))?.toUpperCase();
+    const savedEmail = localStorage.getItem('userEmail') || '';
+
+    // 2. UNAUTHENTICATED GUARD: अगर टोकन या रोल नहीं है, तो तुरंत लॉगिन पर भेजें
+    if (!token || !savedRole) {
+      window.location.href = '/login';
       return;
     }
 
-    // 2. RECEPTION GUARD: अगर रिसेप्शनिस्ट एडमिन-ओनली पेज खोलने की कोशिश करे तो रिसेप्शन डेस्क पर भेजो
+    setRole(savedRole);
+    setEmail(savedEmail);
+
+    // 3. DOCTOR GUARD: डॉक्टर को एडमिन का कोई भी पेज न देखने दें
+    if (savedRole === 'DOCTOR') {
+      window.location.href = '/doctor/dashboard';
+      return;
+    }
+
+    // 4. RECEPTION GUARD: रिसेप्शनिस्ट एडमिन-ओनली पेज खोले तो रिसेप्शन कंसोल पर भेजें
     if (savedRole === 'RECEPTION') {
       const adminOnlyRoutes = [
         '/admin/dashboard',
@@ -36,29 +51,37 @@ export default function AdminLayout({
         '/admin/departments',
         '/admin/doctors',
         '/admin/reception',
+        '/admin/billing',
+        '/admin/billing/new',
+        '/admin/pharmacy',
+        '/admin/lab',
+        '/admin/emr ',
+        '/admin/ipd',
+        
       ];
       if (adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
-        router.replace('/reception/dashboard');
+        window.location.href = '/reception/dashboard';
         return;
       }
     }
 
-    setIsChecking(false);
-  }, [pathname, router]);
+    // 5. सिर्फ ऑथराइज्ड होने पर ही स्क्रीन लोड होने दें
+    setIsAuthorized(true);
+  }, [pathname]);
 
+  // Logout फ़ंक्शन
   const handleLogout = () => {
-    localStorage.clear();
-    router.push('/login');
+    performLogout();
   };
 
-  // जब तक रोल चेक हो रहा है या डॉक्टर रीडायरेक्ट हो रहा है, तब तक एडमिन स्क्रीन न दिखाएं
-  if (isChecking && role === 'DOCTOR') {
+  // जब तक सेशन वेरिफाई नहीं होता, लोडर दिखाएं ताकि डेटा लीक न हो
+  if (!isAuthorized) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-900 text-white font-sans">
-        <div className="text-center space-y-2">
-          <div className="text-2xl animate-spin">🩺</div>
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase">
-            Redirecting to Doctor Clinical Console...
+            Verifying Admin Authorization...
           </p>
         </div>
       </div>
@@ -86,7 +109,7 @@ export default function AdminLayout({
 
           {/* Navigation Links */}
           <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-170px)]">
-            {/* रिसेप्शनिस्ट के लिए खास बैक बटन */}
+            {/* रिसेप्शनिस्ट के लिए बैक बटन */}
             {isReception && (
               <Link
                 href="/reception/dashboard"
@@ -96,7 +119,7 @@ export default function AdminLayout({
               </Link>
             )}
 
-            {/* केवल ADMIN को दिखने वाले संवेदनशील लिंक्स */}
+            {/* केवल ADMIN को दिखने वाले लिंक्स */}
             {!isReception && (
               <>
                 <Link
@@ -200,6 +223,51 @@ export default function AdminLayout({
             >
               <span>💳</span> Billing & Counter
             </Link>
+
+            {/* Pharmacy & Stock Link */}
+            <Link
+              href="/admin/pharmacy"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                pathname.startsWith('/admin/pharmacy')
+                  ? 'bg-blue-600 text-white'
+                  : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>💊</span> Pharmacy & Stock
+            </Link>
+            {/* Pathology & Lab Link */}
+            <Link
+              href="/admin/lab"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                pathname.startsWith('/admin/lab')
+                  ? 'bg-blue-600 text-white'
+                  : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🔬</span> Pathology & Lab
+            </Link>
+            {/* Patient 360 EMR Link */}
+            <Link
+              href="/admin/emr"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                pathname.startsWith('/admin/emr')
+                  ? 'bg-blue-600 text-white'
+                  : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>📁</span> Patient 360° EMR
+            </Link>
+            {/* IPD & Bed Management Link */}
+            <Link
+              href="/admin/ipd"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition ${
+                pathname.startsWith('/admin/ipd')
+                  ? 'bg-blue-600 text-white'
+                  : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🛏️</span> IPD & Wards
+            </Link>
           </nav>
         </div>
 
@@ -211,9 +279,10 @@ export default function AdminLayout({
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-bold text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 rounded-xl transition duration-150"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition"
           >
-            <span>🚪</span> Sign Out
+            <span>🚪</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>

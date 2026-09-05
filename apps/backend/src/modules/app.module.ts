@@ -20,6 +20,18 @@ import { BillingModule } from './billing.module';
 import { Billing } from '../entities/billing.entity'; 
 import { ReportsModule } from './reports.module';
 import {RolesModule} from './roles.module';
+import { Prescription } from '../entities/prescription.entity'; 
+import { PrescriptionsModule } from './prescriptions.module';
+import {Medicine} from '../entities/medicine.entity'; 
+import { PharmacyModule } from './pharmacy.module';
+import { LabModule } from './lab.module';
+import { LabTest } from '../entities/lab-test.entity';
+import { LabOrder } from '../entities/lab-order.entity';
+import { EmrModule } from './emr.module';
+import { IpdModule } from './ipd.module';
+import { IpdAdmission } from '../entities/ipd-admission.entity';  
+import { Bed } from '../entities/bed.entity';
+import { AdminUserController } from '../controllers/admin-user.controller';
 
 @Module({
   imports: [
@@ -30,7 +42,7 @@ import {RolesModule} from './roles.module';
       username: 'drbloomedi_user',
       password: 'drbloomedi_password_2026',
       database: 'drbloomedi',
-      entities: [User, Doctor, Department, Patient, Receptionist, Appointment, Billing
+      entities: [User, Doctor, Department, Patient, Receptionist, Appointment, Billing, Prescription, Medicine, LabTest, LabOrder, IpdAdmission, Bed
 
       ],
       synchronize: true,
@@ -47,8 +59,14 @@ import {RolesModule} from './roles.module';
     BillingModule,
     ReportsModule,
     RolesModule,
+    PrescriptionsModule,
+    PharmacyModule, 
+    LabModule,
+    EmrModule,
+    IpdModule,
+    
   ],
-  controllers: [AppController],
+  controllers: [AppController, AdminUserController],
   providers: [AppService],
 })
 export class AppModule {}

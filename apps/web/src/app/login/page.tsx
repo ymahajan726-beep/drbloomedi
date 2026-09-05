@@ -44,8 +44,8 @@ export default function LoginPage() {
       localStorage.setItem('userEmail', data.user?.email || email);
 
       // Middleware Cookies Update (Valid for 24 Hours)
-      document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `userRole=${role}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `token=${token}; path=/; SameSite=Lax`;
+      document.cookie = `userRole=${role}; path=/; SameSite=Lax`;
 
       // Smart Redirection
       if (role === 'RECEPTION') {
