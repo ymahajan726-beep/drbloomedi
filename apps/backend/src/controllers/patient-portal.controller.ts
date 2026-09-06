@@ -33,7 +33,7 @@ export class PatientPortalController {
     private readonly doctorRepo: Repository<Doctor>,
   ) {}
 
-  // 1. मरीज़ का आसान फ़ोन-आधारित लॉगिन/सत्यापन
+  // 1. Phone number login
   @Post('login')
   async patientLogin(@Body('phone') phone: string) {
     if (!phone?.trim()) {
@@ -43,7 +43,7 @@ export class PatientPortalController {
       where: { phone: phone.trim() },
     });
     if (!patient) {
-      throw new NotFoundException('No registered patient found with this phone number');
+      throw new NotFoundException('No registered patient found with this mobile number');
     }
     return {
       message: 'Login successful',
@@ -57,7 +57,7 @@ export class PatientPortalController {
     };
   }
 
-  // 2. मरीज़ के सभी अपॉइंटमेंट्स
+  // 2. Patient appointments
   @Get('appointments/:patientId')
   async getMyAppointments(@Param('patientId') patientId: string) {
     return this.appointmentRepo.find({
@@ -67,7 +67,7 @@ export class PatientPortalController {
     });
   }
 
-  // 3. मरीज़ द्वारा नया अपॉइंटमेंट बुक करना
+  // 3. Book OPD Appointment
   @Post('book-appointment')
   async bookAppointment(
     @Body()
@@ -84,18 +84,22 @@ export class PatientPortalController {
     const doctor = await this.doctorRepo.findOne({ where: { id: body.doctorId } });
     if (!doctor) throw new NotFoundException('Doctor not found');
 
-    const appointment = this.appointmentRepo.create({
+    const appointmentData: any = {
       patient,
       doctor,
       appointmentDate: body.appointmentDate,
-      reason: body.reason || 'General Consultation',
       status: AppointmentStatus.SCHEDULED,
-    });
+    };
 
+    if (body.reason) {
+      appointmentData.reason = body.reason;
+    }
+
+    const appointment = this.appointmentRepo.create(appointmentData as any);
     return this.appointmentRepo.save(appointment);
   }
 
-  // 4. मरीज़ के डिजिटल पर्चे (Prescriptions)
+  // 4. Digital Prescriptions
   @Get('prescriptions/:patientId')
   async getMyPrescriptions(@Param('patientId') patientId: string) {
     return this.rxRepo.find({
@@ -105,7 +109,7 @@ export class PatientPortalController {
     });
   }
 
-  // 5. मरीज़ की लैब रिपोर्ट्स
+  // 5. Diagnostic Lab Reports
   @Get('lab-reports/:patientId')
   async getMyLabReports(@Param('patientId') patientId: string) {
     return this.labRepo.find({
@@ -115,7 +119,7 @@ export class PatientPortalController {
     });
   }
 
-  // 6. मरीज़ के बिल (Billing Invoices)
+  // 6. Billing Invoices
   @Get('bills/:patientId')
   async getMyBills(@Param('patientId') patientId: string) {
     return this.billingRepo.find({
