@@ -63,4 +63,9 @@ export class LabOrder {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+
+  // PDF या Image फ़ाइल का पाथ/URL
+  @Column({ type: 'text', nullable: true })
+  reportFileUrl: string;
 }

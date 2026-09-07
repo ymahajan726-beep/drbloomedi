@@ -3,10 +3,12 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
-  Body,
   Query,
+  Body,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { PatientsService } from '../services/patients.service';
 
@@ -19,8 +21,15 @@ export class PatientsController {
     return this.patientsService.findAll(search);
   }
 
+  // Specific route ':id' se pehle aana chahiye
+  @Get('search')
+  async search(@Query('q') query?: string, @Query('search') search?: string) {
+    return this.patientsService.findAll(query || search);
+  }
+
+  // ParseUUIDPipe invalid string jaise "search" ko database query banne se rokega
   @Get(':id')
-  async getOne(@Param('id') id: string) {
+  async getOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.patientsService.findOne(id);
   }
 
@@ -30,12 +39,23 @@ export class PatientsController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any) {
+  async updatePut(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: any,
+  ) {
+    return this.patientsService.update(id, body);
+  }
+
+  @Patch(':id')
+  async updatePatch(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() body: any,
+  ) {
     return this.patientsService.update(id, body);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.patientsService.delete(id);
   }
 }

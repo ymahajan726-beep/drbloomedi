@@ -65,14 +65,18 @@ export class AppointmentsService {
     doctorId: number;
     departmentId?: string;
     appointmentDate: string;
-    timeSlot: string;
+    timeSlot?: string;
+    timeslot?: string;
+    slot?: string;
     symptoms?: string;
+    reason?: string;
+    notes?: string;
   }): Promise<Appointment> {
     const patient = await this.patientRepo.findOne({ where: { id: data.patientId } });
     if (!patient) throw new NotFoundException('Selected patient not found');
 
     const doctor = await this.doctorRepo.findOne({
-      where: { id: data.doctorId },
+      where: { id: Number(data.doctorId) },
       relations: { department: true },
     });
     if (!doctor) throw new NotFoundException('Selected doctor not found');
@@ -84,16 +88,24 @@ export class AppointmentsService {
       department = doctor.department;
     }
 
-    // Generate unique Appointment Token (e.g. APT-2026-8942)
+    // 1. Safe TimeSlot Fallback (Yeh kabhi null nahi hone dega)
+    const safeTimeSlot =
+      (data.timeSlot && data.timeSlot.trim()) ||
+      (data.timeslot && data.timeslot.trim()) ||
+      (data.slot && data.slot.trim()) ||
+      '10:00 AM';
+
+    // 2. Generate unique Appointment Token
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const appointmentNumber = `APT-${new Date().getFullYear()}-${randomSuffix}`;
 
+    // 3. Entity create karein
     const appointment = this.appointmentRepo.create({
       appointmentNumber,
-      appointmentDate: data.appointmentDate,
-      timeSlot: data.timeSlot,
+      appointmentDate: data.appointmentDate || new Date().toISOString().split('T')[0],
+      timeSlot: safeTimeSlot,
       status: AppointmentStatus.SCHEDULED,
-      symptoms: data.symptoms,
+      symptoms: data.symptoms || data.reason || 'General Consultation',
       patient,
       doctor,
       department: department || undefined,

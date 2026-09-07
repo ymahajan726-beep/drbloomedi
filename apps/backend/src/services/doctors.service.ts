@@ -48,6 +48,7 @@ export class DoctorsService {
   }
 
   async create(data: {
+    fullName: string;
     email: string;
     password?: string;
     specialization: string;
@@ -91,6 +92,61 @@ export class DoctorsService {
     });
 
     return this.doctorRepo.save(doctor);
+  }
+
+  async update(id: number, data: {
+    fullName?: string;
+    email?: string;
+    password?: string;
+    specialization?: string;
+    qualifications?: string;
+    phone?: string;
+    departmentId?: string;
+    isActive?: boolean;
+    consultationFee?: number;
+    experienceYears?: number;
+  }): Promise<Doctor> {
+    const doc = await this.findOne(id);
+
+    // 1. Agar Email ya Password update ho raha ho
+    if (data.email && doc.user) {
+      const normalizedEmail = data.email.trim().toLowerCase();
+      if (normalizedEmail !== doc.user.email) {
+        const emailTaken = await this.userRepo.findOne({ where: { email: normalizedEmail } });
+        if (emailTaken && emailTaken.id !== doc.user.id) {
+          throw new ConflictException('This email is already in use by another account');
+        }
+        doc.user.email = normalizedEmail;
+      }
+    }
+
+    if (data.password && doc.user) {
+      doc.user.password = await bcrypt.hash(data.password, 10);
+    }
+
+    if (doc.user) {
+      await this.userRepo.save(doc.user);
+    }
+
+    // 2. Department update handling
+    // 2. Department update handling (Type-safe)
+    if (data.departmentId !== undefined) {
+      if (data.departmentId) {
+        const dept = await this.deptRepo.findOne({ where: { id: data.departmentId } });
+        if (dept) {
+          doc.department = dept;
+        }
+      }
+    }
+
+    // 3. Doctor specific fields update
+    if (data.specialization !== undefined) doc.specialization = data.specialization;
+    if (data.qualifications !== undefined) doc.qualifications = data.qualifications;
+    if (data.phone !== undefined) doc.phone = data.phone;
+    if (data.isActive !== undefined) doc.isActive = data.isActive;
+    
+
+    return this.doctorRepo.save(doc);
   }
 
   async toggleStatus(id: number): Promise<Doctor> {

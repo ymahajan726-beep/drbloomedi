@@ -45,26 +45,32 @@ export class PatientsService {
 
   async create(data: {
     fullName: string;
-    email: string;
+    email?: string;
     password?: string;
     phone: string;
     age: number;
     gender: string;
-    bloodGroup: string;
+    bloodGroup?: string;
     address?: string;
     emergencyContact?: string;
     medicalHistory?: string;
     patientType?: string;
   }): Promise<Patient> {
-    const normalizedEmail = data.email.trim().toLowerCase();
+    // 1. Safe Email Handling (अगर ईमेल नहीं आया तो फोन से डिफॉल्ट ईमेल बनाएगा, trim() कभी क्रैश नहीं करेगा)
+    const cleanPhone = (data.phone || '').trim();
+    const normalizedEmail = data.email && data.email.trim()
+      ? data.email.trim().toLowerCase()
+      : `${cleanPhone || Date.now()}@drbloomedi.local`;
 
+    // 2. Check if patient already exists by phone or email
     const existing = await this.patientRepo.findOne({
-      where: { email: normalizedEmail },
+      where: [{ email: normalizedEmail }, { phone: cleanPhone }],
     });
     if (existing) {
-      throw new ConflictException('Patient with this email already registered');
+      throw new ConflictException('Patient with this phone or email already registered');
     }
 
+    // 3. User Entity creation with fallback
     let user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
     if (!user) {
       const hashedPassword = await bcrypt.hash(data.password || 'Patient@123', 10);
@@ -77,16 +83,17 @@ export class PatientsService {
       user = await this.userRepo.save(user);
     }
 
+    // 4. Patient Entity creation with Safe fallbacks
     const patient = this.patientRepo.create({
-      fullName: data.fullName,
+      fullName: (data.fullName || '').trim(),
       email: normalizedEmail,
-      phone: data.phone,
-      age: Number(data.age),
-      gender: data.gender,
-      bloodGroup: data.bloodGroup,
-      address: data.address,
-      emergencyContact: data.emergencyContact,
-      medicalHistory: data.medicalHistory,
+      phone: cleanPhone,
+      age: Number(data.age) || 0,
+      gender: data.gender || 'Other',
+      bloodGroup: data.bloodGroup ? data.bloodGroup.trim() : 'N/A',
+      address: data.address ? data.address.trim() : '',
+      emergencyContact: data.emergencyContact ? data.emergencyContact.trim() : '',
+      medicalHistory: data.medicalHistory ? data.medicalHistory.trim() : '',
       patientType: data.patientType || 'Outpatient',
       user,
     });

@@ -29,6 +29,7 @@ interface LabOrder {
   orderNumber: string;
   status: string;
   resultValue?: string;
+  reportFileUrl?: string;
   technicianRemarks?: string;
   isAbnormal: boolean;
   billedAmount: number;
@@ -61,6 +62,7 @@ export default function LabManagementPage() {
 
   // Result Entry Form
   const [resultValue, setResultValue] = useState('');
+  const [reportFileUrl, setReportFileUrl] = useState('');
   const [technicianRemarks, setTechnicianRemarks] = useState('');
   const [isAbnormal, setIsAbnormal] = useState(false);
   const [resultSubmitting, setResultSubmitting] = useState(false);
@@ -194,6 +196,11 @@ export default function LabManagementPage() {
     e.preventDefault();
     if (!resultOrder) return;
 
+    if (!resultValue.trim() && !reportFileUrl.trim()) {
+      alert('Please provide either a test result value or attach a report document.');
+      return;
+    }
+
     try {
       setResultSubmitting(true);
       const res = await fetch(`http://localhost:4000/lab/orders/${resultOrder.id}/result`, {
@@ -201,6 +208,7 @@ export default function LabManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resultValue,
+          reportFileUrl,
           technicianRemarks,
           isAbnormal,
         }),
@@ -213,6 +221,7 @@ export default function LabManagementPage() {
 
       setResultOrder(null);
       setResultValue('');
+      setReportFileUrl('');
       setTechnicianRemarks('');
       setIsAbnormal(false);
       fetchOrders();
@@ -339,20 +348,32 @@ export default function LabManagementPage() {
                       </td>
 
                       <td className="p-3.5">
-                        {order.resultValue ? (
+                        {order.resultValue || order.reportFileUrl ? (
                           <div>
-                            <span
-                              className={`font-mono font-bold px-2 py-0.5 rounded ${
-                                order.isAbnormal
-                                  ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                                  : 'bg-slate-100 text-slate-800'
-                              }`}
-                            >
-                              {order.resultValue} {order.labTest?.unit || ''}
-                            </span>
-                              {order.isAbnormal && (
-                                <span className="block text-[9px] text-rose-500 font-bold mt-0.5">⚠️ Out of Range</span>
-                              )}
+                            {order.resultValue && (
+                              <span
+                                className={`font-mono font-bold px-2 py-0.5 rounded ${
+                                  order.isAbnormal
+                                    ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                    : 'bg-slate-100 text-slate-800'
+                                }`}
+                              >
+                                {order.resultValue} {order.labTest?.unit || ''}
+                              </span>
+                            )}
+                            {order.reportFileUrl && (
+                              <a
+                                href={order.reportFileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block text-[11px] text-blue-600 font-semibold hover:underline mt-1"
+                              >
+                                📄 View Attached File
+                              </a>
+                            )}
+                            {order.isAbnormal && (
+                              <span className="block text-[9px] text-rose-500 font-bold mt-0.5">⚠️ Out of Range</span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-slate-400 italic text-[11px]">Awaiting Findings</span>
@@ -377,7 +398,7 @@ export default function LabManagementPage() {
                           <option value="Ordered">Ordered</option>
                           <option value="Sample Collected">Sample Collected</option>
                           <option value="In Progress">In Progress</option>
-                          <option value="Completed" disabled={!order.resultValue}>
+                          <option value="Completed" disabled={!order.resultValue && !order.reportFileUrl}>
                             Completed
                           </option>
                           <option value="Cancelled">Cancelled</option>
@@ -390,6 +411,7 @@ export default function LabManagementPage() {
                             onClick={() => {
                               setResultOrder(order);
                               setResultValue(order.resultValue || '');
+                              setReportFileUrl(order.reportFileUrl || '');
                               setTechnicianRemarks(order.technicianRemarks || '');
                               setIsAbnormal(order.isAbnormal || false);
                             }}
@@ -522,15 +544,47 @@ export default function LabManagementPage() {
 
             <form onSubmit={handleSaveResult} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Test Result Value *</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Test Result Value</label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. 98.4 or Negative"
+                  placeholder="e.g. 98.4, Negative, or attach file below"
                   value={resultValue}
                   onChange={(e) => setResultValue(e.target.value)}
                   className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-mono font-bold text-slate-900 focus:border-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                  Attach Diagnostic Report (PDF or Image)
+                </label>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setReportFileUrl(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-slate-200 rounded-lg p-1.5 bg-slate-50"
+                />
+                {reportFileUrl && (
+                  <div className="flex items-center justify-between mt-1 text-[11px]">
+                    <span className="text-emerald-600 font-medium">✓ File ready for attachment</span>
+                    <button
+                      type="button"
+                      onClick={() => setReportFileUrl('')}
+                      className="text-rose-500 hover:underline font-bold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl">
@@ -589,12 +643,24 @@ export default function LabManagementPage() {
               >
                 ✕ Close
               </button>
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition"
-              >
-                🖨️ Print Report (A4)
-              </button>
+              <div className="flex items-center gap-2">
+                {reportOrder.reportFileUrl && (
+                  <a
+                    href={reportOrder.reportFileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1"
+                  >
+                    📄 View Original File
+                  </a>
+                )}
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition"
+                >
+                  🖨️ Print Report (A4)
+                </button>
+              </div>
             </div>
 
             {/* Letterhead */}
@@ -651,7 +717,7 @@ export default function LabManagementPage() {
                   </td>
                   <td className="p-3 font-mono font-black text-sm">
                     <span className={reportOrder.isAbnormal ? 'text-rose-600 font-black' : 'text-slate-900'}>
-                      {reportOrder.resultValue} {reportOrder.isAbnormal ? '*' : ''}
+                      {reportOrder.resultValue || (reportOrder.reportFileUrl ? 'Refer Attached Document' : 'Pending')} {reportOrder.isAbnormal ? '*' : ''}
                     </span>
                   </td>
                   <td className="p-3 font-mono text-slate-600">{reportOrder.labTest?.unit || '-'}</td>
@@ -670,6 +736,18 @@ export default function LabManagementPage() {
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs my-4">
                 <p className="font-bold text-slate-600 text-[10px] uppercase">Pathologist Remarks:</p>
                 <p className="text-slate-800 mt-0.5">{reportOrder.technicianRemarks}</p>
+              </div>
+            )}
+
+            {/* Attached file preview if it is an image */}
+            {reportOrder.reportFileUrl && reportOrder.reportFileUrl.startsWith('data:image/') && (
+              <div className="my-4 border border-slate-200 rounded-xl p-2 bg-slate-50">
+                <p className="text-[10px] font-bold uppercase text-slate-500 mb-2">Attached Scan Document:</p>
+                <img
+                  src={reportOrder.reportFileUrl}
+                  alt="Lab Report Scan"
+                  className="max-h-72 w-auto mx-auto rounded object-contain"
+                />
               </div>
             )}
 

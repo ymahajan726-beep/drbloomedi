@@ -60,6 +60,7 @@ export class LabController {
     @Body()
     body: {
       resultValue: string;
+      reportFileUrl?: string;
       technicianRemarks?: string;
       isAbnormal?: boolean;
     },
@@ -69,6 +70,7 @@ export class LabController {
       body.resultValue,
       body.technicianRemarks,
       body.isAbnormal,
+      body.reportFileUrl,
     );
   }
 }

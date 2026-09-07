@@ -134,8 +134,8 @@ export class LabService {
       throw new BadRequestException('Cannot modify a cancelled lab order');
     }
 
-    if (newStatus === LabOrderStatus.COMPLETED && !order.resultValue) {
-      throw new BadRequestException('Cannot mark order as COMPLETED without recording test results');
+    if (newStatus === LabOrderStatus.COMPLETED && !order.resultValue && !order.reportFileUrl) {
+      throw new BadRequestException('Cannot mark order as COMPLETED without recording test results or attaching a report');
     }
 
     order.status = newStatus;
@@ -147,9 +147,10 @@ export class LabService {
     resultValue: string,
     technicianRemarks?: string,
     isAbnormal: boolean = false,
+    reportFileUrl?: string,
   ): Promise<LabOrder> {
-    if (!resultValue || !resultValue.trim()) {
-      throw new BadRequestException('Diagnostic result value cannot be empty');
+    if ((!resultValue || !resultValue.trim()) && !reportFileUrl) {
+      throw new BadRequestException('Either diagnostic result value or report file attachment is required');
     }
 
     const order = await this.findOneOrder(id);
@@ -158,9 +159,12 @@ export class LabService {
       throw new BadRequestException('Cannot add test results to a cancelled order');
     }
 
-    order.resultValue = resultValue.trim();
+    order.resultValue = resultValue ? resultValue.trim() : '';
     order.technicianRemarks = technicianRemarks ? technicianRemarks.trim() : '';
     order.isAbnormal = Boolean(isAbnormal);
+    if (reportFileUrl) {
+      order.reportFileUrl = reportFileUrl.trim();
+    }
     order.status = LabOrderStatus.COMPLETED;
 
     return this.labOrderRepo.save(order);

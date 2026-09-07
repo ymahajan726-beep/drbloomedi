@@ -12,27 +12,11 @@ interface Patient {
   address?: string;
 }
 
-interface EMRData {
-  patient: Patient;
-  summary: {
-    totalVisits: number;
-    totalPrescriptions: number;
-    totalLabOrders: number;
-    totalBills: number;
-    totalSpent: number;
-  };
-  records: {
-    appointments: any[];
-    prescriptions: any[];
-    labOrders: any[];
-    billings: any[];
-  };
-}
-
 export default function PatientEMRPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
-  const [emrData, setEmrData] = useState<EMRData | null>(null);
+  const [patientData, setPatientData] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'prescriptions' | 'labs' | 'appointments' | 'bills'>('prescriptions');
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -57,18 +41,30 @@ export default function PatientEMRPage() {
   }, []);
 
   // 2. Fetch Patients List
-  useEffect(() => {
-    if (!isAuthorized) return;
+  const fetchPatients = async (query = '') => {
+    try {
+      const url = query.trim()
+        ? `http://localhost:4000/patients?search=${encodeURIComponent(query.trim())}`
+        : 'http://localhost:4000/patients';
 
-    fetch('http://localhost:4000/patients')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setPatients(data);
-          setSelectedPatientId(data[0].id);
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : [];
+        setPatients(list);
+        if (list.length > 0 && (!selectedPatientId || !list.some((p) => p.id === selectedPatientId))) {
+          setSelectedPatientId(list[0].id);
         }
-      })
-      .catch((err) => console.error('Failed to load patients', err));
+      }
+    } catch (err) {
+      console.error('Failed to load patients', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchPatients();
+    }
   }, [isAuthorized]);
 
   // 3. Fetch EMR 360 Record
@@ -82,7 +78,7 @@ export default function PatientEMRPage() {
         throw new Error(`Server returned ${res.status}: Failed to load timeline`);
       }
       const data = await res.json();
-      setEmrData(data);
+      setPatientData(data);
     } catch (err: any) {
       console.error('EMR load error:', err);
       setFetchError(err.message || 'Could not fetch patient record');
@@ -97,6 +93,11 @@ export default function PatientEMRPage() {
     }
   }, [selectedPatientId]);
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchPatients(searchQuery);
+  };
+
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
@@ -105,12 +106,25 @@ export default function PatientEMRPage() {
     );
   }
 
+  // Safe data unwrapping
+  const patient = patientData?.patient || patientData;
+  const stats = patientData?.stats || {
+    totalVisits: patientData?.appointments?.length || 0,
+    totalInvoiced: (patientData?.billings || []).reduce((acc: number, b: any) => acc + Number(b.totalAmount || b.amount || 0), 0),
+    totalPaid: (patientData?.billings || []).filter((b: any) => b.paymentStatus === 'PAID').reduce((acc: number, b: any) => acc + Number(b.totalAmount || b.amount || 0), 0),
+    outstandingBalance: 0,
+  };
+
+  const prescriptions = patientData?.prescriptions || patient?.prescriptions || [];
+  const labOrders = patientData?.labOrders || patient?.labOrders || [];
+  const appointments = patientData?.appointments || patient?.appointments || [];
+  const billings = patientData?.billings || patientData?.bills || patient?.billings || [];
+
   return (
     <div className="space-y-6 font-sans">
-      {/* प्रिंट के समय साइडबार, हेडर और बटन्स को पूरी तरह हाइड करने के लिए साफ़ CSS */}
       <style>{`
         @media print {
-          aside, header, nav, button, [role="navigation"] {
+          aside, header, nav, button, [role="navigation"], form, select, input {
             display: none !important;
           }
           body {
@@ -123,20 +137,40 @@ export default function PatientEMRPage() {
         }
       `}</style>
 
-      {/* Header & Controls (Hidden during print) */}
-      <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
+      {/* Header, Search & Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-4 print:hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Patient 360° Electronic Medical Record</h1>
           <p className="text-xs text-slate-400">Aggregated Longitudinal Clinical Timeline • Diagnostic Findings • Ledger</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Patient Quick Search */}
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5">
+            <input
+              type="text"
+              placeholder="Search Name / Mobile..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (e.target.value === '') fetchPatients('');
+              }}
+              className="px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 text-slate-800 outline-none focus:border-blue-500 font-medium"
+            />
+            <button
+              type="submit"
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+            >
+              Search
+            </button>
+          </form>
+
+          {/* Select Dropdown */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 uppercase">Patient:</label>
             <select
               value={selectedPatientId}
               onChange={(e) => setSelectedPatientId(e.target.value)}
-              className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl bg-white text-slate-800 outline-none focus:border-blue-500 shadow-sm"
+              className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl bg-white text-slate-800 outline-none focus:border-blue-500 shadow-sm max-w-[220px]"
             >
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -168,9 +202,9 @@ export default function PatientEMRPage() {
         </div>
       )}
 
-      {!loading && emrData && (
+      {!loading && patient && (
         <div className="space-y-6">
-          {/* Official Hospital Letterhead (Always visible on print) */}
+          {/* Print Letterhead */}
           <div className="hidden print:block border-b-2 border-slate-900 pb-4 mb-4">
             <div className="flex justify-between items-start">
               <div>
@@ -178,11 +212,11 @@ export default function PatientEMRPage() {
                   DrBloo<span className="text-slate-900">Medi</span> Super-Speciality Hospital
                 </h2>
                 <p className="text-xs text-slate-600 font-medium">Department of Clinical Records & Medical Archival Services</p>
-                <p className="text-[10px] text-slate-400">NABH & NABL Accredited • Helpline: +91 98765 43210 • info@drbloomedi.com</p>
+                <p className="text-[10px] text-slate-400">NABH & NABL Accredited • Helpline: +91 98765 43210</p>
               </div>
               <div className="text-right">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-900">Official Case Dossier</span>
-                <p className="text-xs font-mono font-bold text-slate-600 mt-0.5">UID: {emrData.patient?.id?.slice(0, 8)}</p>
+                <p className="text-xs font-mono font-bold text-slate-600 mt-0.5">UID: {patient.id?.slice(0, 8)}</p>
                 <p className="text-[10px] text-slate-400">Printed: {new Date().toLocaleDateString()}</p>
               </div>
             </div>
@@ -192,42 +226,42 @@ export default function PatientEMRPage() {
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-6 print:border-none print:p-0">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md print:hidden">
-                {emrData.patient?.fullName?.charAt(0)?.toUpperCase() || 'P'}
+                {patient.fullName?.charAt(0)?.toUpperCase() || 'P'}
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-900">{emrData.patient?.fullName}</h2>
+                <h2 className="text-lg font-black text-slate-900">{patient.fullName}</h2>
                 <div className="flex items-center gap-3 text-xs text-slate-600 mt-1">
-                  <span>Phone: <strong className="text-slate-800">{emrData.patient?.phone}</strong></span>
+                  <span>Phone: <strong className="text-slate-800">{patient.phone}</strong></span>
                   <span>•</span>
-                  <span>Age: <strong className="text-slate-800">{emrData.patient?.age || 'N/A'} Yrs</strong></span>
+                  <span>Age: <strong className="text-slate-800">{patient.age || 'N/A'} Yrs</strong></span>
                   <span>•</span>
-                  <span>Gender: <strong className="text-slate-800">{emrData.patient?.gender || 'N/A'}</strong></span>
+                  <span>Gender: <strong className="text-slate-800">{patient.gender || 'N/A'}</strong></span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Metrics */}
+            {/* Quick Aggregated Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4">
               <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-center print:border-slate-200">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Visits</p>
-                <p className="text-base font-black text-slate-800">{emrData.summary?.totalVisits ?? 0}</p>
+                <p className="text-base font-black text-slate-800">{stats.totalVisits ?? appointments.length}</p>
               </div>
               <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-center print:border-slate-200">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Prescriptions</p>
-                <p className="text-base font-black text-blue-600">{emrData.summary?.totalPrescriptions ?? 0}</p>
+                <p className="text-base font-black text-blue-600">{prescriptions.length}</p>
               </div>
               <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-center print:border-slate-200">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Lab Tests</p>
-                <p className="text-base font-black text-purple-600">{emrData.summary?.totalLabOrders ?? 0}</p>
+                <p className="text-base font-black text-purple-600">{labOrders.length}</p>
               </div>
               <div className="px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-center print:border-slate-200">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Total Billed</p>
-                <p className="text-base font-black text-emerald-600">₹{Number(emrData.summary?.totalSpent || 0).toFixed(2)}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Total Invoiced</p>
+                <p className="text-base font-black text-emerald-600">₹{Number(stats.totalInvoiced || 0).toFixed(2)}</p>
               </div>
             </div>
           </div>
 
-          {/* Navigation Tabs (Screen view only) */}
+          {/* Navigation Tabs */}
           <div className="flex border-b border-slate-200 gap-6 text-xs font-bold print:hidden">
             <button
               onClick={() => setActiveTab('prescriptions')}
@@ -237,7 +271,7 @@ export default function PatientEMRPage() {
                   : 'border-transparent text-slate-400 hover:text-slate-700'
               }`}
             >
-              💊 Prescriptions & Diagnosis ({emrData.records?.prescriptions?.length || 0})
+              💊 Prescriptions & Diagnosis ({prescriptions.length})
             </button>
 
             <button
@@ -248,7 +282,7 @@ export default function PatientEMRPage() {
                   : 'border-transparent text-slate-400 hover:text-slate-700'
               }`}
             >
-              🔬 Lab Findings & Tests ({emrData.records?.labOrders?.length || 0})
+              🔬 Lab Findings & Tests ({labOrders.length})
             </button>
 
             <button
@@ -259,7 +293,7 @@ export default function PatientEMRPage() {
                   : 'border-transparent text-slate-400 hover:text-slate-700'
               }`}
             >
-              📅 OPD Visits ({emrData.records?.appointments?.length || 0})
+              📅 OPD Visits ({appointments.length})
             </button>
 
             <button
@@ -270,20 +304,18 @@ export default function PatientEMRPage() {
                   : 'border-transparent text-slate-400 hover:text-slate-700'
               }`}
             >
-              💳 Billing Invoices ({emrData.records?.billings?.length || 0})
+              💳 Billing Invoices ({billings.length})
             </button>
           </div>
 
-          {/* =========================================================
-              SCREEN VIEW (Interactive Active Tab)
-              ========================================================= */}
+          {/* Interactive Active Tab */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm min-h-[300px] print:hidden">
             {activeTab === 'prescriptions' && (
               <div className="space-y-4">
-                {(!emrData.records?.prescriptions || emrData.records.prescriptions.length === 0) ? (
+                {prescriptions.length === 0 ? (
                   <p className="text-center text-xs text-slate-400 py-10">No clinical prescriptions found for this patient.</p>
                 ) : (
-                  emrData.records.prescriptions.map((rx) => (
+                  prescriptions.map((rx: any) => (
                     <div key={rx.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs">
                       <div className="flex justify-between items-start">
                         <div>
@@ -294,10 +326,22 @@ export default function PatientEMRPage() {
                           {new Date(rx.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      {rx.clinicalNotes && (
+                      {rx.advice && (
                         <p className="text-slate-600 text-[11px] italic bg-white p-2.5 rounded-lg border border-slate-100">
-                          Notes: {rx.clinicalNotes}
+                          Advice: {rx.advice}
                         </p>
+                      )}
+                      {rx.medicines && Array.isArray(rx.medicines) && rx.medicines.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-slate-200">
+                          <p className="font-bold text-slate-700 text-[11px] mb-1">Medicines Prescribed:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {rx.medicines.map((m: any, idx: number) => (
+                              <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[11px] font-medium border border-blue-100">
+                                {m.medicineName} ({m.dosage || m.frequency})
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))
@@ -307,27 +351,48 @@ export default function PatientEMRPage() {
 
             {activeTab === 'labs' && (
               <div className="space-y-3">
-                {(!emrData.records?.labOrders || emrData.records.labOrders.length === 0) ? (
+                {labOrders.length === 0 ? (
                   <p className="text-center text-xs text-slate-400 py-10">No diagnostic orders found.</p>
                 ) : (
-                  emrData.records.labOrders.map((lab) => (
-                    <div key={lab.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                  labOrders.map((lab: any) => (
+                    <div key={lab.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-4 text-xs">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900">{lab.labTest?.testName || 'Diagnostic Test'}</span>
-                          <span className="text-[10px] px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full font-bold">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            lab.status === 'Completed'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-slate-200 text-slate-700'
+                          }`}>
                             {lab.status}
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-0.5">Order #{lab.orderNumber}</p>
                       </div>
-                      <div className="text-right">
-                        {lab.resultValue ? (
-                          <span className="font-mono font-bold px-2.5 py-1 rounded text-xs bg-slate-200 text-slate-800">
-                            {lab.resultValue} {lab.labTest?.unit || ''}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 italic text-[11px]">Pending</span>
+
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          {lab.resultValue ? (
+                            <span className={`font-mono font-bold px-2.5 py-1 rounded text-xs ${
+                              lab.isAbnormal ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-slate-200 text-slate-800'
+                            }`}>
+                              {lab.resultValue} {lab.labTest?.unit || ''} {lab.isAbnormal ? '⚠️' : ''}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic text-[11px]">Pending Results</span>
+                          )}
+                        </div>
+
+                        {lab.reportFileUrl && (
+                          <a
+                            href={lab.reportFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                          >
+                            <span>📄</span>
+                            <span>View Attached Report</span>
+                          </a>
                         )}
                       </div>
                     </div>
@@ -338,10 +403,10 @@ export default function PatientEMRPage() {
 
             {activeTab === 'appointments' && (
               <div className="space-y-3">
-                {(!emrData.records?.appointments || emrData.records.appointments.length === 0) ? (
+                {appointments.length === 0 ? (
                   <p className="text-center text-xs text-slate-400 py-10">No OPD visit records found.</p>
                 ) : (
-                  emrData.records.appointments.map((apt) => (
+                  appointments.map((apt: any) => (
                     <div key={apt.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
                       <div>
                         <p className="font-bold text-slate-900">Dr. {apt.doctor?.user?.email?.split('@')[0] || 'Consultant'}</p>
@@ -356,10 +421,10 @@ export default function PatientEMRPage() {
 
             {activeTab === 'bills' && (
               <div className="space-y-3">
-                {(!emrData.records?.billings || emrData.records.billings.length === 0) ? (
+                {billings.length === 0 ? (
                   <p className="text-center text-xs text-slate-400 py-10">No billing invoices found.</p>
                 ) : (
-                  emrData.records.billings.map((bill) => (
+                  billings.map((bill: any) => (
                     <div key={bill.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
                       <div>
                         <span className="font-mono font-bold text-blue-600">{bill.invoiceNumber || `INV-${bill.id}`}</span>
@@ -369,6 +434,9 @@ export default function PatientEMRPage() {
                         <span className="text-sm font-black text-slate-900 block">
                           ₹{Number(bill.totalAmount || bill.amount || 0).toFixed(2)}
                         </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${bill.paymentStatus === 'PAID' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                          {bill.paymentStatus || 'UNPAID'}
+                        </span>
                       </div>
                     </div>
                   ))
@@ -377,39 +445,35 @@ export default function PatientEMRPage() {
             )}
           </div>
 
-          {/* =========================================================
-              PRINT-ONLY UNIFIED DOSSIER VIEW (All Sections Collated)
-              ========================================================= */}
+          {/* Printable Unified Dossier */}
           <div className="hidden print:block space-y-6 text-xs">
-            {/* 1. Clinical Consultations & Rx Section */}
             <div className="space-y-2">
               <h3 className="font-bold text-slate-900 border-b border-slate-300 pb-1 uppercase tracking-wider text-[11px]">
                 1. Clinical Consultations & Prescriptions History
               </h3>
-              {emrData.records?.prescriptions?.length === 0 ? (
+              {prescriptions.length === 0 ? (
                 <p className="text-slate-400 italic">No historical prescriptions recorded.</p>
               ) : (
                 <div className="space-y-3">
-                  {emrData.records.prescriptions.map((rx) => (
+                  {prescriptions.map((rx: any) => (
                     <div key={rx.id} className="p-3 border border-slate-200 rounded-lg">
                       <div className="flex justify-between font-bold text-slate-800">
                         <span>Dr. {rx.doctor?.user?.email?.split('@')[0] || 'Doctor'}</span>
                         <span className="font-mono">{new Date(rx.createdAt).toLocaleDateString()}</span>
                       </div>
                       <p className="text-slate-600 mt-1">Diagnosis: <strong>{rx.diagnosis || 'Clinical Review'}</strong></p>
-                      {rx.clinicalNotes && <p className="text-slate-500 italic mt-0.5">Notes: {rx.clinicalNotes}</p>}
+                      {rx.advice && <p className="text-slate-500 italic mt-0.5">Advice: {rx.advice}</p>}
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* 2. Diagnostic & Laboratory Reports Section */}
             <div className="space-y-2">
               <h3 className="font-bold text-slate-900 border-b border-slate-300 pb-1 uppercase tracking-wider text-[11px]">
                 2. Pathology & Diagnostic Laboratory Reports
               </h3>
-              {emrData.records?.labOrders?.length === 0 ? (
+              {labOrders.length === 0 ? (
                 <p className="text-slate-400 italic">No lab findings on record.</p>
               ) : (
                 <table className="w-full text-left border border-slate-200 rounded">
@@ -423,7 +487,7 @@ export default function PatientEMRPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-mono">
-                    {emrData.records.labOrders.map((lab) => (
+                    {labOrders.map((lab: any) => (
                       <tr key={lab.id}>
                         <td className="p-2">{lab.orderNumber}</td>
                         <td className="p-2 font-sans font-bold">{lab.labTest?.testName}</td>
@@ -437,46 +501,14 @@ export default function PatientEMRPage() {
               )}
             </div>
 
-            {/* 3. Financial Ledger Summary Section */}
             <div className="space-y-2">
               <h3 className="font-bold text-slate-900 border-b border-slate-300 pb-1 uppercase tracking-wider text-[11px]">
-                3. Financial Billing Summary
+                3. Financial & Invoicing Summary
               </h3>
-              {emrData.records?.billings?.length === 0 ? (
-                <p className="text-slate-400 italic">No financial invoices generated.</p>
-              ) : (
-                <table className="w-full text-left border border-slate-200 rounded">
-                  <thead className="bg-slate-100 font-bold text-slate-700">
-                    <tr>
-                      <th className="p-2 border-b">Invoice #</th>
-                      <th className="p-2 border-b">Date</th>
-                      <th className="p-2 border-b">Payment Method</th>
-                      <th className="p-2 border-b text-right">Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
-                    {emrData.records.billings.map((bill) => (
-                      <tr key={bill.id}>
-                        <td className="p-2">{bill.invoiceNumber || `INV-${bill.id}`}</td>
-                        <td className="p-2">{new Date(bill.createdAt || Date.now()).toLocaleDateString()}</td>
-                        <td className="p-2 font-sans">{bill.paymentMethod || 'Cash'}</td>
-                        <td className="p-2 text-right font-bold">₹{Number(bill.totalAmount || bill.amount || 0).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Legal / Medical Officer Signatures */}
-            <div className="mt-14 pt-6 border-t-2 border-slate-300 flex justify-between items-end text-[10px] text-slate-600">
-              <div>
-                <p className="font-bold text-slate-800">Medical Records Officer</p>
-                <p>Hospital Archival Dept.</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-slate-800">Chief Medical Officer (CMO)</p>
-                <p>Authorized Verification Seal</p>
+              <div className="p-3 border border-slate-200 rounded-lg flex justify-between">
+                <span>Total Invoiced: <strong>₹{Number(stats.totalInvoiced || 0).toFixed(2)}</strong></span>
+                <span>Settled: <strong className="text-emerald-700">₹{Number(stats.totalPaid || 0).toFixed(2)}</strong></span>
+                <span>Outstanding: <strong className="text-rose-700">₹{Number(stats.outstandingBalance || 0).toFixed(2)}</strong></span>
               </div>
             </div>
           </div>

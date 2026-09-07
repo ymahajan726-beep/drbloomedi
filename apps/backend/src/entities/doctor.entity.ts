@@ -45,4 +45,7 @@ export class Doctor {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({ nullable: true })
+  fullName: string;
 }

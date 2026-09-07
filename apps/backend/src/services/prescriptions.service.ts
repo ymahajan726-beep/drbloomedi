@@ -2,78 +2,132 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Prescription } from '../entities/prescription.entity';
-import { Appointment, AppointmentStatus } from '../entities/appointment.entity'; // 👈 यहाँ AppointmentStatus इम्पोर्ट करें
+import { Patient } from '../entities/patient.entity';
+import { Doctor } from '../entities/doctor.entity';
+import { Appointment, AppointmentStatus } from '../entities/appointment.entity';
 
 @Injectable()
 export class PrescriptionsService {
   constructor(
     @InjectRepository(Prescription)
-    private prescriptionRepo: Repository<Prescription>,
+    private readonly prescriptionRepo: Repository<Prescription>,
+    @InjectRepository(Patient)
+    private readonly patientRepo: Repository<Patient>,
+    @InjectRepository(Doctor)
+    private readonly doctorRepo: Repository<Doctor>,
     @InjectRepository(Appointment)
-    private appointmentRepo: Repository<Appointment>,
+    private readonly appointmentRepo: Repository<Appointment>,
   ) {}
 
-  async create(data: any) {
-  try {
-    // 1. अगर फ़्रंटएंड से डॉक्टर आईडी नहीं आई तो अपॉइंटमेंट से निकालें
-    if (!data.doctorId && data.appointmentId) {
-      const apt = await this.appointmentRepo.findOne({
-        where: { id: data.appointmentId },
+  async create(data: {
+    patientId: string;
+    doctorId: number | string;
+    appointmentId?: string | number;
+    diagnosis: string;
+    symptoms?: string;
+    advice?: string;
+    medicines?: any[];
+  }) {
+    // 1. Patient check
+    const patient = await this.patientRepo.findOne({
+      where: { id: data.patientId },
+    });
+    if (!patient) {
+      throw new NotFoundException('Patient record not found');
+    }
+
+    // 2. Doctor check (fallback to first doctor if ID not matched)
+    let doctor: Doctor | null = null;
+    try {
+      doctor = await this.doctorRepo.findOne({
+        where: { id: Number(data.doctorId) || 1 },
+        relations: { user: true },
       });
-      if (apt && (apt as any).doctorId) {
-        data.doctorId = (apt as any).doctorId;
+    } catch {
+      doctor = null;
+    }
+
+    if (!doctor) {
+      const doctors = await this.doctorRepo.find({ take: 1, relations: { user: true } });
+      doctor = doctors.length > 0 ? doctors[0] : null;
+    }
+
+    // 3. Mark appointment COMPLETED if exists
+    let appointment: Appointment | null = null;
+    const cleanApptId = data.appointmentId ? String(data.appointmentId) : null;
+
+    if (cleanApptId) {
+      try {
+        appointment = await this.appointmentRepo.findOne({
+          where: { id: cleanApptId as any },
+        });
+        if (appointment) {
+          appointment.status = AppointmentStatus.COMPLETED;
+          await this.appointmentRepo.save(appointment);
+        }
+      } catch (err) {
+        console.warn('Could not update appointment status:', err);
       }
     }
 
-    const rx = this.prescriptionRepo.create({
-      appointmentId: data.appointmentId,
-      patientId: data.patientId,
-      doctorId: data.doctorId,
+    // 4. Check for existing prescription by appointmentId (Safely handling relation or column)
+    let existingPrescription: Prescription | null = null;
+    if (cleanApptId) {
+      try {
+        existingPrescription = await this.prescriptionRepo
+          .createQueryBuilder('p')
+          .leftJoinAndSelect('p.appointment', 'appointment')
+          .where('p.appointmentId = :apptId OR appointment.id = :apptId', { apptId: cleanApptId })
+          .getOne();
+      } catch {
+        try {
+          existingPrescription = await this.prescriptionRepo.findOne({
+            where: { appointment: { id: cleanApptId } } as any,
+          });
+        } catch {
+          existingPrescription = null;
+        }
+      }
+    }
+
+    const medsList = Array.isArray(data.medicines) ? data.medicines : [];
+    const adviceText = data.advice || '';
+
+    // If existing found, UPDATE it
+    if (existingPrescription) {
+      existingPrescription.diagnosis = data.diagnosis || 'General Clinical Review';
+      existingPrescription.symptoms = data.symptoms || existingPrescription.symptoms || '';
+      existingPrescription.advice = adviceText;
+      existingPrescription.medicines = medsList;
+      if (doctor) existingPrescription.doctor = doctor;
+      return await this.prescriptionRepo.save(existingPrescription);
+    }
+
+    // Otherwise, INSERT new record
+    const newPrescriptionPayload: any = {
+      patient,
+      diagnosis: data.diagnosis || 'General Clinical Review',
       symptoms: data.symptoms || '',
-      diagnosis: data.diagnosis,
-      vitals: data.vitals || null,
-      medicines: data.medicines || [],
-      labTests: data.labTests || '',
-      advice: data.advice || '',
-      followUpDate: data.followUpDate || '',
-    });
+      advice: adviceText,
+      medicines: medsList,
+    };
 
-    const savedRx = await this.prescriptionRepo.save(rx);
+    if (doctor) {
+      newPrescriptionPayload.doctor = doctor;
+    }
 
-    // 2. अपॉइंटमेंट को 'Completed' मार्क करें
-    await this.appointmentRepo.update(data.appointmentId, {
-      status: AppointmentStatus.COMPLETED,
-    });
+    if (appointment) {
+      newPrescriptionPayload.appointment = appointment;
+    }
 
-    return savedRx;
-  } catch (error) {
-    console.error('🔥 Error saving prescription:', error);
-    throw error;
-  }
-}
-
-  async findByAppointment(appointmentId: string) {
-    const rx = await this.prescriptionRepo.findOne({
-      where: { appointmentId },
-      relations: {
-        patient: true,
-        doctor: {
-          user: true,
-        },
-      },
-    });
-    if (!rx) throw new NotFoundException('Prescription not found');
-    return rx;
+    const created = this.prescriptionRepo.create(newPrescriptionPayload as Prescription);
+    return await this.prescriptionRepo.save(created);
   }
 
   async findByPatient(patientId: string) {
     return this.prescriptionRepo.find({
-      where: { patientId },
-      relations: {
-        doctor: {
-          user: true,
-        },
-      },
+      where: { patient: { id: patientId } } as any,
+      relations: { doctor: { user: true } },
       order: { createdAt: 'DESC' },
     });
   }

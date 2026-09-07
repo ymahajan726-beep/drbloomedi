@@ -237,6 +237,22 @@ export default function LoginPage() {
               >
                 🧑‍💼 Reception
               </button>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4">
+            
+              
+              {/* Patient Portal Card/Button */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-4">
+              {/* Patient Portal Card/Button */}
+              <Link
+                href="/patient-portal"
+                className="p-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-center transition flex flex-col items-center justify-center gap-0.5 group"
+              >
+                <span className="text-base group-hover:scale-105 transition">🧑‍⚕️</span>
+                <span className="text-[11px] font-bold text-blue-800 leading-tight">Patient Portal</span>
+                <span className="text-[9px] text-blue-500 font-medium leading-none">OTP / Quick Access</span>
+              </Link>
+            </div>
+            </div>
             </div>
           </div>
         </div>

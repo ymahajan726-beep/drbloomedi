@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Param,
@@ -28,6 +29,24 @@ export class DoctorsController {
   @Post()
   async create(@Body() body: any) {
     return this.doctorsService.create(body);
+  }
+
+  // PUT method for updating doctor details
+  @Put(':id')
+  async updateDoctorPut(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+  ) {
+    return this.doctorsService.update(id, body);
+  }
+
+  // PATCH method for updating doctor details (fallback)
+  @Patch(':id')
+  async updateDoctorPatch(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+  ) {
+    return this.doctorsService.update(id, body);
   }
 
   @Patch(':id/toggle')

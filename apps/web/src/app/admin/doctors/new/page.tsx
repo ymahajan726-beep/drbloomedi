@@ -11,179 +11,191 @@ interface Department {
 
 export default function NewDoctorPage() {
   const router = useRouter();
+
+  // Form Fields
+  const [fullName, setFullName] = useState(''); // <-- Doctor Name State
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [specialization, setSpecialization] = useState('');
+  const [qualifications, setQualifications] = useState('');
+  const [phone, setPhone] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-    specialization: '',
-    qualifications: '',
-    phone: '',
-    departmentId: '',
-  });
-
+  // Fetch Departments for Dropdown
   useEffect(() => {
-    async function fetchDepartments() {
-      try {
-        const res = await fetch('http://localhost:4000/departments');
-        if (res.ok) {
-          const data = await res.json();
-          setDepartments(Array.isArray(data) ? data : []);
-          if (Array.isArray(data) && data.length > 0) {
-            setForm((prev) => ({ ...prev, departmentId: data[0].id }));
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load departments', err);
-      }
-    }
-    fetchDepartments();
+    fetch('http://localhost:4000/departments')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setDepartments(data);
+      })
+      .catch((err) => console.error('Error fetching departments', err));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSaving(true);
-
     try {
+      setLoading(true);
+      setErrorMsg('');
+
+      // Yaha par payload me fullName bhejna hai:
       const res = await fetch('http://localhost:4000/doctors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          password: password || 'Doctor@123',
+          specialization: specialization.trim(),
+          qualifications: qualifications.trim(),
+          phone: phone.trim(),
+          departmentId: departmentId || undefined,
+        }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to register doctor');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to create doctor profile');
+      }
 
+      alert('Doctor added successfully!');
       router.push('/admin/doctors');
     } catch (err: any) {
-      setErrorMsg(err.message);
+      setErrorMsg(err.message || 'Something went wrong');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 font-sans">
+    <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">Register New Doctor</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Create user credentials and link clinical specialty wing
-          </p>
+          <h1 className="text-xl font-black text-slate-900">Add New Doctor</h1>
+          <p className="text-xs text-slate-500">Create a doctor profile and linked login account</p>
         </div>
         <Link
           href="/admin/doctors"
-          className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
         >
-          ← Back to Doctors
+          Back to List
         </Link>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
-            {errorMsg}
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-bold">
+            ⚠️ {errorMsg}
           </div>
         )}
 
-        {/* autoComplete="off" prevents browser auto-population */}
-        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
-          
-          {/* Dummy inputs to deceive browser password auto-fill */}
-          <input type="text" style={{ display: 'none' }} aria-hidden="true" />
-          <input type="password" style={{ display: 'none' }} aria-hidden="true" />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 1. Doctor Full Name Input */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+              Doctor Full Name *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Dr. Rajesh Sharma"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600"
+            />
+          </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 2. Doctor Email */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Doctor Login Email *
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                Doctor Email (Login ID) *
               </label>
               <input
                 type="email"
                 required
-                autoComplete="off"
                 placeholder="doctor@drbloomedi.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600"
               />
             </div>
 
+            {/* 3. Password */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Initial Password *
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                Account Password
               </label>
               <input
                 type="password"
-                required
-                autoComplete="new-password"
-                placeholder="Set password for doctor"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                placeholder="Default: Doctor@123"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none text-slate-800 focus:border-blue-600"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 4. Specialization */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                 Specialization *
               </label>
               <input
                 type="text"
                 required
-                autoComplete="off"
-                placeholder="e.g. Cardiologist, Neurologist"
-                value={form.specialization}
-                onChange={(e) => setForm({ ...form, specialization: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                placeholder="e.g. Cardiologist, Pediatrician"
+                value={specialization}
+                onChange={(e) => setSpecialization(e.target.value)}
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600"
               />
             </div>
 
+            {/* 5. Phone Number */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                required
+                placeholder="e.g. 9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 6. Qualifications */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                 Qualifications *
               </label>
               <input
                 type="text"
                 required
-                autoComplete="off"
-                placeholder="e.g. MBBS, MD, DM"
-                value={form.qualifications}
-                onChange={(e) => setForm({ ...form, qualifications: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Contact Phone *
-              </label>
-              <input
-                type="tel"
-                required
-                autoComplete="off"
-                placeholder="+91 9876543210"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                placeholder="e.g. MBBS, MD, MS"
+                value={qualifications}
+                onChange={(e) => setQualifications(e.target.value)}
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600"
               />
             </div>
 
+            {/* 7. Department */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Department Wing
+              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                Department
               </label>
               <select
-                value={form.departmentId}
-                onChange={(e) => setForm({ ...form, departmentId: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 focus:border-blue-600"
               >
                 <option value="">-- Select Department --</option>
                 {departments.map((dept) => (
@@ -195,19 +207,19 @@ export default function NewDoctorPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <Link
               href="/admin/doctors"
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
             >
               Cancel
             </Link>
             <button
               type="submit"
-              disabled={saving}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
+              disabled={loading}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition"
             >
-              {saving ? 'Registering...' : 'Save Doctor'}
+              {loading ? 'Creating Profile...' : '✓ Save Doctor'}
             </button>
           </div>
         </form>
