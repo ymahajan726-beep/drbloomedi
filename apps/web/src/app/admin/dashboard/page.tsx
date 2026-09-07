@@ -82,12 +82,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-slate-50 font-sans">
       {/* Top Bar Header */}
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               Admin Dashboard
             </h1>
             <p className="mt-1 text-xs text-slate-500">
@@ -102,7 +102,7 @@ export default function DashboardPage() {
             </span>
             <button
               onClick={handleLogout}
-              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 transition"
+              className="rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 transition shadow-sm"
             >
               Logout
             </button>
@@ -113,94 +113,133 @@ export default function DashboardPage() {
       {/* Main Content */}
       <section className="mx-auto max-w-7xl px-6 py-8 space-y-6">
         {error && (
-          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700">
+          <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-700 font-medium">
             ⚠️ {error}
           </div>
         )}
 
-        {/* 4 Metric Cards */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Primary Metric Cards Grid */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Card 1: Doctors */}
           <Link
             href="/admin/doctors"
-            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-blue-400 transition"
+            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-blue-400 hover:shadow-md transition flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Specialist Doctors
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Specialists
+                </p>
+                <span className="p-2 rounded-xl bg-blue-50 text-blue-600 text-xl group-hover:scale-110 transition">
+                  🩺
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-black text-slate-900">
+                {loading ? "..." : stats.totalDoctors}
               </p>
-              <span className="p-2 rounded-xl bg-blue-50 text-blue-600 text-xl">
-                🩺
-              </span>
             </div>
-            <p className="mt-3 text-3xl font-black text-slate-900">
-              {loading ? "..." : stats.totalDoctors}
-            </p>
-            <p className="mt-2 text-xs text-blue-600 font-semibold group-hover:translate-x-1 transition">
-              Manage Doctors →
+            <p className="mt-4 text-xs text-blue-600 font-semibold group-hover:translate-x-1 transition flex items-center gap-1">
+              <span>Manage Doctors</span>
+              <span>→</span>
             </p>
           </Link>
 
           {/* Card 2: Patients */}
           <Link
             href="/admin/patients"
-            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-emerald-400 transition"
+            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-emerald-400 hover:shadow-md transition flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Registered Patients
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Patients
+                </p>
+                <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-xl group-hover:scale-110 transition">
+                  👥
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-black text-slate-900">
+                {loading ? "..." : stats.totalPatients}
               </p>
-              <span className="p-2 rounded-xl bg-emerald-50 text-emerald-600 text-xl">
-                👥
-              </span>
             </div>
-            <p className="mt-3 text-3xl font-black text-slate-900">
-              {loading ? "..." : stats.totalPatients}
-            </p>
-            <p className="mt-2 text-xs text-emerald-600 font-semibold group-hover:translate-x-1 transition">
-              Patients Directory →
+            <p className="mt-4 text-xs text-emerald-600 font-semibold group-hover:translate-x-1 transition flex items-center gap-1">
+              <span>Patients Directory</span>
+              <span>→</span>
             </p>
           </Link>
 
           {/* Card 3: Reception Staff */}
           <Link
             href="/admin/reception"
-            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-purple-400 transition"
+            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-purple-400 hover:shadow-md transition flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Reception Staff
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Frontdesk Staff
+                </p>
+                <span className="p-2 rounded-xl bg-purple-50 text-purple-600 text-xl group-hover:scale-110 transition">
+                  🧑‍💼
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-black text-slate-900">
+                {loading ? "..." : stats.totalReception}
               </p>
-              <span className="p-2 rounded-xl bg-purple-50 text-purple-600 text-xl">
-                🧑‍💼
-              </span>
             </div>
-            <p className="mt-3 text-3xl font-black text-slate-900">
-              {loading ? "..." : stats.totalReception}
-            </p>
-            <p className="mt-2 text-xs text-purple-600 font-semibold group-hover:translate-x-1 transition">
-              Manage Staff →
+            <p className="mt-4 text-xs text-purple-600 font-semibold group-hover:translate-x-1 transition flex items-center gap-1">
+              <span>Manage Staff</span>
+              <span>→</span>
             </p>
           </Link>
 
           {/* Card 4: Departments */}
           <Link
             href="/admin/departments"
-            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-indigo-400 transition"
+            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-amber-400 hover:shadow-md transition flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Clinical Wings
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Clinical Wings
+                </p>
+                <span className="p-2 rounded-xl bg-amber-50 text-amber-600 text-xl group-hover:scale-110 transition">
+                  🏢
+                </span>
+              </div>
+              <p className="mt-3 text-3xl font-black text-slate-900">
+                {loading ? "..." : stats.totalDepartments}
               </p>
-              <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-xl">
-                🏢
-              </span>
             </div>
-            <p className="mt-3 text-3xl font-black text-slate-900">
-              {loading ? "..." : stats.totalDepartments}
+            <p className="mt-4 text-xs text-amber-600 font-semibold group-hover:translate-x-1 transition flex items-center gap-1">
+              <span>View Departments</span>
+              <span>→</span>
             </p>
-            <p className="mt-2 text-xs text-indigo-600 font-semibold group-hover:translate-x-1 transition">
-              View Departments →
+          </Link>
+
+          {/* Card 5: 📂 Medical Document Vault (NEW) */}
+          <Link
+            href="/admin/documents"
+            className="group rounded-2xl bg-white p-5 shadow-sm border border-slate-200 hover:border-indigo-500 hover:shadow-md transition flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                  EMR Vault
+                </p>
+                <span className="p-2 rounded-xl bg-indigo-50 text-indigo-600 text-xl group-hover:scale-110 transition">
+                  📁
+                </span>
+              </div>
+              <p className="mt-3 text-lg font-black text-slate-900 leading-tight">
+                Document Vault
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500 leading-snug">
+                Diagnostic scans, lab PDFs & EMR records
+              </p>
+            </div>
+            <p className="mt-4 text-xs text-indigo-600 font-semibold group-hover:translate-x-1 transition flex items-center gap-1">
+              <span>Open Repository</span>
+              <span>→</span>
             </p>
           </Link>
         </div>
