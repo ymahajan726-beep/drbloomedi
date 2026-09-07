@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { AppController } from '../controllers/app.controller';
 import { AppService } from '../services/app.service';
 import { AuthModule } from './auth.module';
@@ -19,10 +20,10 @@ import { AppointmentsModule } from './appointments.module';
 import { BillingModule } from './billing.module'; 
 import { Billing } from '../entities/billing.entity'; 
 import { ReportsModule } from './reports.module';
-import {RolesModule} from './roles.module';
+import { RolesModule } from './roles.module';
 import { Prescription } from '../entities/prescription.entity'; 
 import { PrescriptionsModule } from './prescriptions.module';
-import {Medicine} from '../entities/medicine.entity'; 
+import { Medicine } from '../entities/medicine.entity'; 
 import { PharmacyModule } from './pharmacy.module';
 import { LabModule } from './lab.module';
 import { LabTest } from '../entities/lab-test.entity';
@@ -32,6 +33,13 @@ import { IpdModule } from './ipd.module';
 import { IpdAdmission } from '../entities/ipd-admission.entity';  
 import { Bed } from '../entities/bed.entity';
 import { AdminUserController } from '../controllers/admin-user.controller';
+import { AiModule } from './ai.module';
+import { EventsModule } from './events.module';
+import { PaymentModule } from './payment.module';
+
+// Document Entity & Module
+import { MedicalDocument } from '../entities/medical-document.entity';
+import { DocumentsModule } from './documents.module';
 
 @Module({
   imports: [
@@ -42,8 +50,21 @@ import { AdminUserController } from '../controllers/admin-user.controller';
       username: 'drbloomedi_user',
       password: 'drbloomedi_password_2026',
       database: 'drbloomedi',
-      entities: [User, Doctor, Department, Patient, Receptionist, Appointment, Billing, Prescription, Medicine, LabTest, LabOrder, IpdAdmission, Bed
-
+      entities: [
+        User,
+        Doctor,
+        Department,
+        Patient,
+        Receptionist,
+        Appointment,
+        Billing,
+        Prescription,
+        Medicine,
+        LabTest,
+        LabOrder,
+        IpdAdmission,
+        Bed,
+        MedicalDocument,
       ],
       synchronize: true,
       logging: false,
@@ -64,7 +85,10 @@ import { AdminUserController } from '../controllers/admin-user.controller';
     LabModule,
     EmrModule,
     IpdModule,
-    
+    AiModule,
+    EventsModule,
+    PaymentModule,
+    DocumentsModule,
   ],
   controllers: [AppController, AdminUserController],
   providers: [AppService],

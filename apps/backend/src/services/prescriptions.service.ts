@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Prescription } from '../entities/prescription.entity';
@@ -21,30 +21,36 @@ export class PrescriptionsService {
 
   async create(data: {
     patientId: string;
-    doctorId: number | string;
+    doctorId?: any;
     appointmentId?: string | number;
     diagnosis: string;
     symptoms?: string;
     advice?: string;
     medicines?: any[];
   }) {
+    if (!data.patientId) {
+      throw new BadRequestException('Patient ID is required');
+    }
+
     // 1. Patient check
     const patient = await this.patientRepo.findOne({
       where: { id: data.patientId },
     });
     if (!patient) {
-      throw new NotFoundException('Patient record not found');
+      throw new NotFoundException(`Patient record not found for ID: ${data.patientId}`);
     }
 
-    // 2. Doctor check (fallback to first doctor if ID not matched)
+    // 2. Doctor check (robust lookup)
     let doctor: Doctor | null = null;
-    try {
-      doctor = await this.doctorRepo.findOne({
-        where: { id: Number(data.doctorId) || 1 },
-        relations: { user: true },
-      });
-    } catch {
-      doctor = null;
+    if (data.doctorId) {
+      try {
+        doctor = await this.doctorRepo.findOne({
+          where: [{ id: data.doctorId as any }, { id: Number(data.doctorId) as any }] as any,
+          relations: { user: true },
+        });
+      } catch {
+        doctor = null;
+      }
     }
 
     if (!doctor) {
@@ -52,76 +58,72 @@ export class PrescriptionsService {
       doctor = doctors.length > 0 ? doctors[0] : null;
     }
 
-    // 3. Mark appointment COMPLETED if exists
+    // 3. Appointment Resolve (Crucial for Postgres NOT NULL constraint)
     let appointment: Appointment | null = null;
-    const cleanApptId = data.appointmentId ? String(data.appointmentId) : null;
 
-    if (cleanApptId) {
-      try {
-        appointment = await this.appointmentRepo.findOne({
-          where: { id: cleanApptId as any },
-        });
-        if (appointment) {
-          appointment.status = AppointmentStatus.COMPLETED;
-          await this.appointmentRepo.save(appointment);
-        }
-      } catch (err) {
-        console.warn('Could not update appointment status:', err);
-      }
+    if (data.appointmentId) {
+      appointment = await this.appointmentRepo.findOne({
+        where: [{ id: data.appointmentId as any }, { id: String(data.appointmentId) as any }] as any,
+      });
     }
 
-    // 4. Check for existing prescription by appointmentId (Safely handling relation or column)
-    let existingPrescription: Prescription | null = null;
-    if (cleanApptId) {
+    // Fallback: Agar frontend se appointmentId nahi aayi, toh is patient ka latest scheduled appointment uthao
+    if (!appointment) {
+      appointment = await this.appointmentRepo.findOne({
+        where: { patient: { id: data.patientId } },
+        order: { appointmentDate: 'DESC' },
+      });
+    }
+
+    // Agar abhi bhi appointment nahi mila, toh crash roko aur ek instant OPD appointment generate kar do
+    if (!appointment && doctor) {
+      const fallbackApt = this.appointmentRepo.create({
+        appointmentNumber: `OPD-${Date.now().toString().slice(-6)}`,
+        patient,
+        doctor,
+        appointmentDate: new Date().toISOString().split('T')[0],
+        timeSlot: '10:00 AM',
+        status: AppointmentStatus.COMPLETED,
+      });
+      appointment = await this.appointmentRepo.save(fallbackApt);
+    }
+
+    // Mark appointment as COMPLETED
+    if (appointment) {
       try {
-        existingPrescription = await this.prescriptionRepo
-          .createQueryBuilder('p')
-          .leftJoinAndSelect('p.appointment', 'appointment')
-          .where('p.appointmentId = :apptId OR appointment.id = :apptId', { apptId: cleanApptId })
-          .getOne();
-      } catch {
-        try {
-          existingPrescription = await this.prescriptionRepo.findOne({
-            where: { appointment: { id: cleanApptId } } as any,
-          });
-        } catch {
-          existingPrescription = null;
-        }
+        appointment.status = AppointmentStatus.COMPLETED;
+        await this.appointmentRepo.save(appointment);
+      } catch (e) {
+        console.warn('Could not mark appointment COMPLETED', e);
       }
     }
 
     const medsList = Array.isArray(data.medicines) ? data.medicines : [];
     const adviceText = data.advice || '';
+    const diagText = data.diagnosis || 'General Clinical Review';
+    const sympText = data.symptoms || '';
 
-    // If existing found, UPDATE it
-    if (existingPrescription) {
-      existingPrescription.diagnosis = data.diagnosis || 'General Clinical Review';
-      existingPrescription.symptoms = data.symptoms || existingPrescription.symptoms || '';
-      existingPrescription.advice = adviceText;
-      existingPrescription.medicines = medsList;
-      if (doctor) existingPrescription.doctor = doctor;
-      return await this.prescriptionRepo.save(existingPrescription);
+    try {
+      // 4. Create new prescription with appointment assigned directly
+      const newPrescriptionPayload: any = {
+        patient,
+        patientId: patient.id,
+        doctor,
+        doctorId: doctor?.id,
+        appointment,
+        appointmentId: appointment?.id, // Satisfies table NOT NULL constraint
+        diagnosis: diagText,
+        symptoms: sympText,
+        advice: adviceText,
+        medicines: medsList,
+      };
+
+      const created = this.prescriptionRepo.create(newPrescriptionPayload as Prescription);
+      return await this.prescriptionRepo.save(created);
+    } catch (dbError: any) {
+      console.error('CRITICAL: Prescription Save Error in Postgres:', dbError);
+      throw new InternalServerErrorException(dbError?.message || 'Database error while saving prescription');
     }
-
-    // Otherwise, INSERT new record
-    const newPrescriptionPayload: any = {
-      patient,
-      diagnosis: data.diagnosis || 'General Clinical Review',
-      symptoms: data.symptoms || '',
-      advice: adviceText,
-      medicines: medsList,
-    };
-
-    if (doctor) {
-      newPrescriptionPayload.doctor = doctor;
-    }
-
-    if (appointment) {
-      newPrescriptionPayload.appointment = appointment;
-    }
-
-    const created = this.prescriptionRepo.create(newPrescriptionPayload as Prescription);
-    return await this.prescriptionRepo.save(created);
   }
 
   async findByPatient(patientId: string) {

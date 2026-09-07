@@ -2,12 +2,10 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Patch,
-  Delete,
-  Param,
   Body,
   Query,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { PharmacyService } from '../services/pharmacy.service';
 
@@ -15,36 +13,36 @@ import { PharmacyService } from '../services/pharmacy.service';
 export class PharmacyController {
   constructor(private readonly pharmacyService: PharmacyService) {}
 
-  @Get()
-  findAll(
-    @Query('search') search?: string,
-    @Query('category') category?: string,
+  // 1. Get Live Inventory with Stock & Expiry Flags
+  @Get('inventory')
+  async getInventory(@Query('search') search?: string) {
+    return this.pharmacyService.getInventory(search);
+  }
+
+  // 2. Add New Medicine / Stock Batch
+  @Post('inventory')
+  @HttpCode(HttpStatus.CREATED)
+  async addMedicine(@Body() body: any) {
+    return this.pharmacyService.addMedicine(body);
+  }
+
+  // 3. Hospital Pharmacy Audits: Low Stock & Expiry Alerts
+  @Get('alerts')
+  async getAlerts() {
+    return this.pharmacyService.getPharmacyAlerts();
+  }
+
+  // 4. Sales Dispense & Auto GST Billing Engine
+  @Post('dispense-bill')
+  @HttpCode(HttpStatus.OK)
+  async processSaleAndBill(
+    @Body()
+    body: {
+      patientId: string;
+      items: Array<{ medicineId: string; quantity: number }>;
+      paymentMethod?: string;
+    },
   ) {
-    return this.pharmacyService.findAll(search, category);
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.pharmacyService.findOne(id);
-  }
-
-  @Post()
-  create(@Body() body: any) {
-    return this.pharmacyService.create(body);
-  }
-
-  @Put(':id')
-  update(@Param('id') id: string, @Body() body: any) {
-    return this.pharmacyService.update(id, body);
-  }
-
-  @Patch(':id/dispense')
-  dispense(@Param('id') id: string, @Body('quantity') quantity: number) {
-    return this.pharmacyService.dispense(id, quantity);
-  }
-
-  @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.pharmacyService.delete(id);
+    return this.pharmacyService.processSaleAndBill(body);
   }
 }

@@ -1,535 +1,629 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 
 interface Medicine {
   id: string;
   name: string;
   genericName?: string;
-  category: string;
-  batchNumber?: string;
+  batchNumber: string;
   stockQuantity: number;
-  minStockAlert: number;
   unitPrice: number;
-  expiryDate?: string;
-  manufacturer?: string;
+  expiryDate: string;
+  isExpired?: boolean;
+  isLowStock?: boolean;
 }
 
-export default function PharmacyInventoryPage() {
+interface CartItem {
+  medicine: Medicine;
+  quantity: number;
+}
+
+export default function PharmacyPage() {
+  const [activeTab, setActiveTab] = useState<'counter' | 'inventory' | 'add'>('counter');
   const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [isAuthorized, setIsAuthorized] = useState(false);
 
-  // Modal States
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [dispenseMed, setDispenseMed] = useState<Medicine | null>(null);
-  const [dispenseQty, setDispenseQty] = useState(1);
-  const [dispenseLoading, setDispenseLoading] = useState(false);
+  // Pharmacy Counter States
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedMedId, setSelectedMedId] = useState('');
+  const [selectedQty, setSelectedQty] = useState('1');
+  const [dispensing, setDispensing] = useState(false);
 
-  // New Medicine Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    genericName: '',
-    category: 'Tablet',
-    batchNumber: '',
-    stockQuantity: 50,
-    minStockAlert: 10,
-    unitPrice: 10,
-    expiryDate: '',
-    manufacturer: '',
-  });
-  const [formSubmitting, setFormSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
+  // Invoice Modal State
+  const [invoiceModal, setInvoiceModal] = useState<any | null>(null);
 
-  // 1. Auth Guard
+  // Add Medicine Form State
+  const [name, setName] = useState('');
+  const [genericName, setGenericName] = useState('');
+  const [batchNumber, setBatchNumber] = useState('');
+  const [stockQuantity, setStockQuantity] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+
   useEffect(() => {
-    const getCookie = (name: string) => {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      return match ? match[2] : null;
-    };
-
-    const token = getCookie('token') || localStorage.getItem('token');
-    const role = (getCookie('userRole') || localStorage.getItem('userRole'))?.toUpperCase();
-
-    if (!token || (role !== 'ADMIN' && role !== 'PHARMACY' && role !== 'RECEPTION')) {
-      window.location.replace('/login');
-      return;
-    }
-
-    setIsAuthorized(true);
+    loadPharmacyData();
   }, []);
 
-  // 2. Fetch Medicines
-  const fetchInventory = async () => {
+  const loadPharmacyData = async () => {
     try {
       setLoading(true);
-      const query = new URLSearchParams();
-      if (search.trim()) query.append('search', search.trim());
-      if (categoryFilter) query.append('category', categoryFilter);
+      const [medsRes, patRes] = await Promise.all([
+        fetch('http://localhost:4000/pharmacy/inventory').catch(() => null),
+        fetch('http://localhost:4000/patients').catch(() => null),
+      ]);
 
-      const res = await fetch(`http://localhost:4000/pharmacy?${query.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMedicines(Array.isArray(data) ? data : []);
+      if (medsRes?.ok) {
+        const medsData = await medsRes.json();
+        setMedicines(medsData);
+      }
+      if (patRes?.ok) {
+        setPatients(await patRes.json());
       }
     } catch (err) {
-      console.error('Failed to load inventory', err);
+      console.error('Failed to load pharmacy data', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (isAuthorized) {
-      fetchInventory();
+  // Add Item to Multi-Medicine Cart
+  const handleAddToCart = () => {
+    if (!selectedMedId) {
+      alert('Please select a medicine');
+      return;
     }
-  }, [isAuthorized, search, categoryFilter]);
+    const med = medicines.find((m) => m.id === selectedMedId);
+    if (!med) return;
 
-  // 3. Handle Add New Medicine
-  const handleAddMedicine = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
+    const qty = parseInt(selectedQty, 10) || 1;
+    if (qty <= 0) {
+      alert('Quantity must be greater than 0');
+      return;
+    }
+
+    if (qty > med.stockQuantity) {
+      alert(`Only ${med.stockQuantity} units available in stock`);
+      return;
+    }
+
+    const existingIndex = cart.findIndex((item) => item.medicine.id === med.id);
+    if (existingIndex > -1) {
+      const updatedCart = [...cart];
+      const newQty = updatedCart[existingIndex].quantity + qty;
+      if (newQty > med.stockQuantity) {
+        alert(`Cannot add more. Maximum available stock is ${med.stockQuantity}`);
+        return;
+      }
+      updatedCart[existingIndex].quantity = newQty;
+      setCart(updatedCart);
+    } else {
+      setCart([...cart, { medicine: med, quantity: qty }]);
+    }
+
+    setSelectedMedId('');
+    setSelectedQty('1');
+  };
+
+  // Remove Item from Cart
+  const handleRemoveFromCart = (id: string) => {
+    setCart(cart.filter((item) => item.medicine.id !== id));
+  };
+
+  // Process Dispense & Generate Bill
+  const handleProcessSale = async () => {
+    if (!selectedPatientId) {
+      alert('Please select a patient for pharmacy billing');
+      return;
+    }
+    if (cart.length === 0) {
+      alert('Please add at least one medicine to the cart');
+      return;
+    }
+
     try {
-      setFormSubmitting(true);
-      const res = await fetch('http://localhost:4000/pharmacy', {
+      setDispensing(true);
+      const payload = {
+        patientId: selectedPatientId,
+        items: cart.map((c) => ({
+          medicineId: c.medicine.id,
+          quantity: c.quantity,
+        })),
+        paymentMethod: 'CASH',
+      };
+
+      const res = await fetch('http://localhost:4000/pharmacy/dispense-bill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
-
-      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(data?.message || 'Failed to add medicine');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Dispensing failed on server');
       }
 
-      setIsAddModalOpen(false);
-      setFormData({
-        name: '',
-        genericName: '',
-        category: 'Tablet',
-        batchNumber: '',
-        stockQuantity: 50,
-        minStockAlert: 10,
-        unitPrice: 10,
-        expiryDate: '',
-        manufacturer: '',
-      });
-      fetchInventory();
+      const invoiceData = await res.json();
+      setInvoiceModal(invoiceData);
+      setCart([]);
+      setSelectedPatientId('');
+      await loadPharmacyData();
     } catch (err: any) {
-      setFormError(err.message || 'Error occurred');
+      alert(`Sales Dispense Error: ${err.message}`);
     } finally {
-      setFormSubmitting(false);
+      setDispensing(false);
     }
   };
 
-  // 4. Handle Quick Dispense (Stock Deduction)
-  const handleDispenseSubmit = async (e: React.FormEvent) => {
+  // Add New Medicine to Stock
+  const handleAddMedicine = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dispenseMed) return;
-
     try {
-      setDispenseLoading(true);
-      const res = await fetch(`http://localhost:4000/pharmacy/${dispenseMed.id}/dispense`, {
-        method: 'PATCH',
+      const res = await fetch('http://localhost:4000/pharmacy/inventory', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: Number(dispenseQty) }),
+        body: JSON.stringify({
+          name,
+          genericName,
+          batchNumber,
+          stockQuantity: Number(stockQuantity),
+          unitPrice: Number(unitPrice),
+          expiryDate,
+        }),
       });
 
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.message || 'Dispense failed');
-      }
+      if (!res.ok) throw new Error('Failed to save medicine');
+      alert('Medicine Stock Added Successfully!');
 
-      setDispenseMed(null);
-      setDispenseQty(1);
-      fetchInventory();
+      setName('');
+      setGenericName('');
+      setBatchNumber('');
+      setStockQuantity('');
+      setUnitPrice('');
+      setExpiryDate('');
+
+      // Reload so dropdown updates immediately
+      await loadPharmacyData();
+      setActiveTab('counter');
     } catch (err: any) {
-      alert(err.message || 'Dispense error');
-    } finally {
-      setDispenseLoading(false);
+      alert(`Error: ${err.message}`);
     }
   };
 
-  // Check Expiry Status Helper
-  const isExpiringSoon = (dateStr?: string) => {
-    if (!dateStr) return false;
-    const expiry = new Date(dateStr).getTime();
-    const today = new Date().getTime();
-    const daysLeft = (expiry - today) / (1000 * 3600 * 24);
-    return daysLeft <= 45; // Warning if within 45 days
-  };
+  // Live Multi-Item Calculations
+  const cartSubTotal = cart.reduce(
+    (sum, item) => sum + item.medicine.unitPrice * item.quantity,
+    0,
+  );
+  const cartGst = cartSubTotal * 0.05;
+  const cartTotal = cartSubTotal + cartGst;
 
-  if (!isAuthorized) {
+  const filteredMeds = medicines.filter((m) => {
+    const q = search.toLowerCase();
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
-        🔒 Checking Pharmacy Counter Permissions...
-      </div>
+      m.name?.toLowerCase().includes(q) ||
+      m.genericName?.toLowerCase().includes(q) ||
+      m.batchNumber?.toLowerCase().includes(q)
     );
-  }
+  });
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">Pharmacy & Medicine Inventory</h1>
-            <p className="text-xs text-slate-400">Stock In-Hand • Batch & Expiry Tracking • Dispensing Desk</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
-            >
-              <span>+</span>
-              <span>Add New Medicine</span>
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <span className="text-[10px] font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full uppercase">
+            Module 7 • Pharmacy & Inventory[cite: 1]
+          </span>
+          <h1 className="text-2xl font-black text-slate-900 mt-1">Hospital Pharmacy & Store</h1>
+          <p className="text-xs text-slate-500">
+            Multi-Medicine Dispense Counter, Live Stock Management & GST Invoicing[cite: 1]
+          </p>
         </div>
-
-        {/* Filters */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center justify-between">
-          <div className="flex-1 min-w-[260px]">
-            <input
-              type="text"
-              placeholder="Search by drug name, generic formula, batch #..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 font-bold text-slate-700 outline-none"
-            >
-              <option value="">All Categories</option>
-              <option value="Tablet">Tablet</option>
-              <option value="Capsule">Capsule</option>
-              <option value="Syrup">Syrup</option>
-              <option value="Injection">Injection</option>
-              <option value="Ointment">Ointment</option>
-              <option value="Drops">Drops</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Inventory Table */}
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-100">
-                <tr>
-                  <th className="p-3.5">Medicine Name</th>
-                  <th className="p-3.5">Category</th>
-                  <th className="p-3.5">Batch / Mfr</th>
-                  <th className="p-3.5">Unit Price</th>
-                  <th className="p-3.5">Stock Level</th>
-                  <th className="p-3.5">Expiry Date</th>
-                  <th className="p-3.5 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-400">Loading pharmacy stock...</td>
-                  </tr>
-                ) : medicines.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-10 text-center text-slate-400 font-medium">
-                      No medicines registered in inventory yet. Click "+ Add New Medicine" above.
-                    </td>
-                  </tr>
-                ) : (
-                  medicines.map((med) => {
-                    const isLowStock = med.stockQuantity <= med.minStockAlert;
-                    const expiring = isExpiringSoon(med.expiryDate);
-
-                    return (
-                      <tr key={med.id} className="hover:bg-slate-50/70 transition">
-                        <td className="p-3.5">
-                          <div className="font-bold text-slate-900 text-sm">{med.name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">{med.genericName || 'No Generic Name'}</div>
-                        </td>
-
-                        <td className="p-3.5">
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 font-bold rounded-md text-[10px]">
-                            {med.category}
-                          </span>
-                        </td>
-
-                        <td className="p-3.5 text-slate-600">
-                          <div className="font-mono text-xs font-semibold">{med.batchNumber || 'N/A'}</div>
-                          <div className="text-[10px] text-slate-400">{med.manufacturer || '-'}</div>
-                        </td>
-
-                        <td className="p-3.5 font-mono font-bold text-slate-900">
-                          ₹{Number(med.unitPrice).toFixed(2)}
-                        </td>
-
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-black ${
-                                isLowStock
-                                  ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse'
-                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              }`}
-                            >
-                              {med.stockQuantity} in stock
-                            </span>
-                          </div>
-                          {isLowStock && (
-                            <span className="text-[9px] text-rose-500 font-bold block mt-0.5">
-                              ⚠️ Below min limit ({med.minStockAlert})
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="p-3.5">
-                          {med.expiryDate ? (
-                            <div>
-                              <span className={`font-mono text-[11px] font-bold ${expiring ? 'text-amber-600' : 'text-slate-700'}`}>
-                                {med.expiryDate}
-                              </span>
-                              {expiring && (
-                                <span className="block text-[9px] text-amber-500 font-bold">⚠️ Expiring Soon</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-
-                        <td className="p-3.5 text-right">
-                          <button
-                            disabled={med.stockQuantity <= 0}
-                            onClick={() => {
-                              setDispenseMed(med);
-                              setDispenseQty(1);
-                            }}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-bold transition shadow-sm"
-                          >
-                            💊 Dispense
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('counter')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              activeTab === 'counter' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-700'
+            }`}
+          >
+            🛒 Dispense Counter ({cart.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              activeTab === 'inventory' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-700'
+            }`}
+          >
+            📦 Stock Inventory
+          </button>
+          <button
+            onClick={() => setActiveTab('add')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              activeTab === 'add' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-700'
+            }`}
+          >
+            + Add Medicine Batch
+          </button>
         </div>
       </div>
 
-      {/* ========================================================
-          ADD NEW MEDICINE MODAL
-          ======================================================== */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-black text-slate-900">Add New Medicine to Stock</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xs font-bold">
-                ✕
-              </button>
-            </div>
+      {/* 1. DISPENSE COUNTER TAB */}
+      {activeTab === 'counter' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+            <h2 className="text-sm font-black text-slate-900 uppercase">Dispense Multi-Medicine Cart</h2>
 
-            {formError && (
-              <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs font-bold text-rose-600">
-                ⚠️ {formError}
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Select Patient *
+                </label>
+                <select
+                  value={selectedPatientId}
+                  onChange={(e) => setSelectedPatientId(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                >
+                  <option value="">-- Choose Patient for Invoice --</option>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.fullName} ({p.phone})
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
 
-            <form onSubmit={handleAddMedicine} className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Medicine Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Paracetamol 500mg"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Generic Formula</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Acetaminophen"
-                    value={formData.genericName}
-                    onChange={(e) => setFormData({ ...formData, genericName: e.target.value })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Category</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    Choose Medicine ({medicines.length} in stock)
+                  </label>
                   <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none font-bold"
+                    value={selectedMedId}
+                    onChange={(e) => setSelectedMedId(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
                   >
-                    <option value="Tablet">Tablet</option>
-                    <option value="Capsule">Capsule</option>
-                    <option value="Syrup">Syrup</option>
-                    <option value="Injection">Injection</option>
-                    <option value="Ointment">Ointment</option>
-                    <option value="Drops">Drops</option>
-                    <option value="Other">Other</option>
+                    <option value="">-- Select Medicine --</option>
+                    {medicines
+                      .filter((m) => Number(m.stockQuantity) > 0)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} | Batch: {m.batchNumber} | Stock: {m.stockQuantity} | ₹{m.unitPrice}
+                        </option>
+                      ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Batch Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. B-9982"
-                    value={formData.batchNumber}
-                    onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Unit Price (₹) *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value={formData.unitPrice}
-                    onChange={(e) => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none font-mono font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Initial Stock Qty *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={formData.stockQuantity}
-                    onChange={(e) => setFormData({ ...formData, stockQuantity: Number(e.target.value) })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Min Stock Alert</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    Qty
+                  </label>
                   <input
                     type="number"
                     min="1"
-                    value={formData.minStockAlert}
-                    onChange={(e) => setFormData({ ...formData, minStockAlert: Number(e.target.value) })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Manufacturer</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Cipla / Sun Pharma"
-                    value={formData.manufacturer}
-                    onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                    className="w-full mt-1 p-2 text-xs border border-slate-200 rounded-xl outline-none"
+                    value={selectedQty}
+                    onChange={(e) => setSelectedQty(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={formSubmitting}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold"
-                >
-                  {formSubmitting ? 'Saving...' : 'Save to Inventory'}
-                </button>
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="w-full py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs transition"
+              >
+                + Add To Patient Bill Cart
+              </button>
+            </div>
+
+            {/* Multiple Medicines in Cart */}
+            <div className="pt-4 border-t border-slate-100">
+              <h3 className="text-xs font-black text-slate-900 uppercase mb-2">
+                Cart Items ({cart.length})
+              </h3>
+              {cart.length === 0 ? (
+                <p className="text-xs text-slate-400 py-6 text-center">
+                  Cart is empty. Select medicines above to add multiple items.
+                </p>
+              ) : (
+                <div className="divide-y divide-slate-100 text-xs">
+                  {cart.map((item) => (
+                    <div key={item.medicine.id} className="py-2.5 flex justify-between items-center">
+                      <div>
+                        <p className="font-bold text-slate-900">{item.medicine.name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          ₹{item.medicine.unitPrice} × {item.quantity} units (Batch: {item.medicine.batchNumber})
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-slate-900">
+                          ₹{(item.medicine.unitPrice * item.quantity).toFixed(2)}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveFromCart(item.medicine.id)}
+                          className="w-6 h-6 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Consolidated Multi-Medicine Bill */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between">
+            <div>
+              <h2 className="text-sm font-black text-slate-900 uppercase mb-4">
+                Pharmacy Tax Invoice
+              </h2>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Items in Cart:</span>
+                  <span className="font-bold">{cart.length} Medicines</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Sub Total:</span>
+                  <span className="font-bold">₹{cartSubTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>GST (5%):</span>
+                  <span className="font-bold">₹{cartGst.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-base font-black text-slate-900 pt-3 border-t border-dashed border-slate-200">
+                  <span>Grand Total:</span>
+                  <span className="text-emerald-700">₹{cartTotal.toFixed(2)}</span>
+                </div>
               </div>
-            </form>
+            </div>
+
+            <button
+              type="button"
+              disabled={dispensing || cart.length === 0 || !selectedPatientId}
+              onClick={handleProcessSale}
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white rounded-xl font-bold text-xs shadow-md transition"
+            >
+              {dispensing ? 'Generating GST Invoice...' : '✓ Dispense & Settle Bill'}
+            </button>
           </div>
         </div>
       )}
 
-      {/* ========================================================
-          DISPENSE MEDICINE POPUP MODAL
-          ======================================================== */}
-      {dispenseMed && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-sm font-black text-slate-900">Dispense Medicine</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Quick Stock Deduction at Counter</p>
+      {/* 2. INVENTORY TAB */}
+      {activeTab === 'inventory' && (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <input
+            type="text"
+            placeholder="Search by Medicine Name, Generic Name or Batch..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-md w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none"
+          />
 
-            <div className="my-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-              <div className="font-bold text-slate-900">{dispenseMed.name}</div>
-              <div className="text-slate-500 text-[11px] mt-0.5">
-                Current Stock: <span className="font-mono font-bold text-emerald-600">{dispenseMed.stockQuantity}</span> | Unit Price: ₹{dispenseMed.unitPrice}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px]">
+                  <th className="py-3 px-4">Medicine Name</th>
+                  <th className="py-3 px-4">Batch No</th>
+                  <th className="py-3 px-4">Stock Units</th>
+                  <th className="py-3 px-4">Unit Price</th>
+                  <th className="py-3 px-4">Expiry Date</th>
+                  <th className="py-3 px-4 text-right">Audit Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredMeds.map((m) => (
+                  <tr key={m.id} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3 px-4 font-bold text-slate-900">{m.name}</td>
+                    <td className="py-3 px-4 font-mono">{m.batchNumber}</td>
+                    <td className="py-3 px-4 font-black">{m.stockQuantity}</td>
+                    <td className="py-3 px-4 font-bold text-emerald-700">₹{m.unitPrice}</td>
+                    <td className="py-3 px-4">{new Date(m.expiryDate).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-right">
+                      {m.isLowStock ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
+                          LOW STOCK
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
+                          IN STOCK
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 3. ADD BATCH TAB */}
+      {activeTab === 'add' && (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-4">
+          <h2 className="text-sm font-black text-slate-900 uppercase">Add Medicine Batch</h2>
+          <form onSubmit={handleAddMedicine} className="space-y-3 text-xs">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                Medicine Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Paracetamol 650mg"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                Generic Composition / Formula
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Acetaminophen"
+                value={genericName}
+                onChange={(e) => setGenericName(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Batch Number *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="BATCH-009"
+                  value={batchNumber}
+                  onChange={(e) => setBatchNumber(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Units Received *
+                </label>
+                <input
+                  type="number"
+                  required
+                  placeholder="100"
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Unit Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  placeholder="15.50"
+                  value={unitPrice}
+                  onChange={(e) => setUnitPrice(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                  Expiry Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition"
+            >
+              + Register Stock Batch
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* PRINTABLE OFFICIAL PHARMACY GST INVOICE MODAL */}
+      {invoiceModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+            <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
+              <div>
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full uppercase">
+                  Official Retail Pharmacy Tax Invoice
+                </span>
+                <h2 className="text-xl font-black text-slate-900 mt-1">DRBLOOMEDI PHARMACY</h2>
+              </div>
+              <button
+                onClick={() => setInvoiceModal(null)}
+                className="w-7 h-7 bg-slate-100 rounded-full font-bold text-slate-500 hover:bg-slate-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <div>
+                <span className="text-[10px] uppercase text-slate-400 font-bold block">
+                  Patient Details
+                </span>
+                <p className="font-bold text-slate-900">{invoiceModal.patient?.fullName}</p>
+                <p className="text-slate-500">Phone: {invoiceModal.patient?.phone}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] uppercase text-slate-400 font-bold block">
+                  Invoice Details
+                </span>
+                <p className="font-mono font-bold text-slate-900">{invoiceModal.invoiceNumber}</p>
+                <p className="text-slate-500">
+                  {new Date(invoiceModal.issuedAt).toLocaleDateString()}
+                </p>
               </div>
             </div>
 
-            <form onSubmit={handleDispenseSubmit} className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Quantity to Dispense</label>
-                <input
-                  type="number"
-                  min="1"
-                  max={dispenseMed.stockQuantity}
-                  value={dispenseQty}
-                  onChange={(e) => setDispenseQty(Number(e.target.value))}
-                  className="w-full mt-1.5 p-2.5 text-sm border border-slate-200 rounded-xl outline-none font-mono font-bold text-slate-900 focus:border-emerald-500"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Total Billable: ₹{(Number(dispenseQty) * Number(dispenseMed.unitPrice)).toFixed(2)}
-                </p>
-              </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                Dispensed Medicines ({invoiceModal.lineItems.length})
+              </span>
+              {invoiceModal.lineItems.map((item: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl text-xs border border-slate-100"
+                >
+                  <span className="font-semibold text-slate-800">{item.itemDescription}</span>
+                  <span className="font-bold text-slate-900">₹{Number(item.amount).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setDispenseMed(null)}
-                  className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={dispenseLoading || dispenseQty <= 0 || dispenseQty > dispenseMed.stockQuantity}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-md"
-                >
-                  {dispenseLoading ? 'Deducting...' : 'Confirm Dispense'}
-                </button>
+            <div className="pt-3 border-t border-slate-100 space-y-1.5 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Sub Total:</span>
+                <span className="font-bold">₹{invoiceModal.subTotal.toFixed(2)}</span>
               </div>
-            </form>
+              <div className="flex justify-between text-slate-600">
+                <span>Hospital Pharmacy GST (5%):</span>
+                <span className="font-bold">₹{invoiceModal.gstAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-base font-black text-slate-900 pt-2 border-t border-dashed border-slate-200">
+                <span>Total Amount Paid:</span>
+                <span className="text-emerald-700">₹{invoiceModal.totalAmount.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-md"
+              >
+                <span>🖨️</span> Print Tax Receipt
+              </button>
+              <button
+                type="button"
+                onClick={() => setInvoiceModal(null)}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

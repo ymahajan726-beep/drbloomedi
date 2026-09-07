@@ -3,74 +3,65 @@ import {
   Get,
   Post,
   Patch,
-  Param,
   Body,
-  Query,
+  Param,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { LabService } from '../services/lab.service';
-import { LabOrderStatus } from '../entities/lab-order.entity';
 
 @Controller('lab')
 export class LabController {
   constructor(private readonly labService: LabService) {}
 
-  // Test Master Catalog
+  // 1. Get all tests from catalog
   @Get('tests')
-  getAllTests(@Query('category') category?: string) {
-    return this.labService.getAllTests(category);
+  async getAllTests() {
+    return this.labService.getAllTests();
   }
 
+  // 2. Add new test to catalog
   @Post('tests')
-  createTest(@Body() body: any) {
+  @HttpCode(HttpStatus.CREATED)
+  async createTest(@Body() body: any) {
     return this.labService.createTest(body);
   }
 
-  // Patient Lab Orders
+  // 3. Get all lab orders (Queue for Lab Technician)
   @Get('orders')
-  getAllOrders(
-    @Query('search') search?: string,
-    @Query('status') status?: string,
-  ) {
-    return this.labService.getAllOrders(search, status);
+  async getAllOrders() {
+    return this.labService.getAllOrders();
   }
 
-  @Get('orders/:id')
-  getOneOrder(@Param('id') id: string) {
-    return this.labService.findOneOrder(id);
-  }
-
+  // 4. Book a new lab test
   @Post('orders')
-  createOrder(
-    @Body() body: { patientId: string; doctorId?: number; labTestId: string },
-  ) {
-    return this.labService.createOrder(body);
+  @HttpCode(HttpStatus.CREATED)
+  async bookTest(@Body() body: { patientId: string; labTestId: string; notes?: string }) {
+    return this.labService.bookTest(body);
   }
 
-  @Patch('orders/:id/status')
-  updateStatus(
+  // 5. Update Sample Collection Status
+  @Patch('orders/:id/sample-status')
+  async updateSampleStatus(
     @Param('id') id: string,
-    @Body('status') status: LabOrderStatus,
+    @Body('status') status: string,
   ) {
-    return this.labService.updateOrderStatus(id, status);
+    return this.labService.updateSampleStatus(id, status);
   }
 
-  @Patch('orders/:id/result')
-  recordResult(
+  // 6. Report Generation & Submit Observed Values
+  @Post('orders/:id/report')
+  @HttpCode(HttpStatus.OK)
+  async submitReport(
     @Param('id') id: string,
-    @Body()
-    body: {
-      resultValue: string;
-      reportFileUrl?: string;
-      technicianRemarks?: string;
-      isAbnormal?: boolean;
-    },
+    @Body() body: { observedValue: string; remarks?: string; reportFileUrl?: string },
   ) {
-    return this.labService.recordResult(
-      id,
-      body.resultValue,
-      body.technicianRemarks,
-      body.isAbnormal,
-      body.reportFileUrl,
-    );
+    return this.labService.submitReport(id, body);
+  }
+
+  // 7. Get single order detail (For Report View & Online Access)
+  @Get('orders/:id')
+  async getOrderById(@Param('id') id: string) {
+    return this.labService.getOrderById(id);
   }
 }

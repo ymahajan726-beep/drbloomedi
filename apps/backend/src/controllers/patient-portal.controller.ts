@@ -4,8 +4,8 @@ import {
   Post,
   Body,
   Param,
-  BadRequestException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +15,7 @@ import { Prescription } from '../entities/prescription.entity';
 import { LabOrder } from '../entities/lab-order.entity';
 import { Billing } from '../entities/billing.entity';
 import { Doctor } from '../entities/doctor.entity';
+import { EventsGateway } from '../gateways/events.gateway';
 
 @Controller('patient-portal')
 export class PatientPortalController {
@@ -24,107 +25,174 @@ export class PatientPortalController {
     @InjectRepository(Appointment)
     private readonly appointmentRepo: Repository<Appointment>,
     @InjectRepository(Prescription)
-    private readonly rxRepo: Repository<Prescription>,
+    private readonly prescriptionRepo: Repository<Prescription>,
     @InjectRepository(LabOrder)
-    private readonly labRepo: Repository<LabOrder>,
+    private readonly labOrderRepo: Repository<LabOrder>,
     @InjectRepository(Billing)
     private readonly billingRepo: Repository<Billing>,
     @InjectRepository(Doctor)
     private readonly doctorRepo: Repository<Doctor>,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
-  // 1. Phone number login
-  @Post('login')
-  async patientLogin(@Body('phone') phone: string) {
-    if (!phone?.trim()) {
+  // 1. Phone Verification Gate
+  @Post('auth/verify')
+  async verifyPhone(@Body('phone') phone: string) {
+    if (!phone || !phone.trim()) {
       throw new BadRequestException('Phone number is required');
     }
+
+    const cleanPhone = phone.trim();
     const patient = await this.patientRepo.findOne({
-      where: { phone: phone.trim() },
+      where: { phone: cleanPhone },
     });
-    if (!patient) {
-      throw new NotFoundException('No registered patient found with this mobile number');
+
+    if (patient) {
+      return {
+        exists: true,
+        message: 'Existing patient verified',
+        patient,
+      };
     }
+
     return {
-      message: 'Login successful',
-      patient: {
-        id: patient.id,
-        fullName: patient.fullName,
-        phone: patient.phone,
-        age: patient.age,
-        gender: patient.gender,
-      },
+      exists: false,
+      message: 'New patient, registration required',
+      phone: cleanPhone,
     };
   }
 
-  // 2. Patient appointments
-  @Get('appointments/:patientId')
-  async getMyAppointments(@Param('patientId') patientId: string) {
-    return this.appointmentRepo.find({
-      where: { patient: { id: patientId } },
-      relations: { doctor: { user: true } },
-      order: { appointmentDate: 'DESC' },
-    });
-  }
-
-  // 3. Book OPD Appointment
-  @Post('book-appointment')
-  async bookAppointment(
+  // 2. New Patient Quick Registration + Instant Appointment Booking
+  @Post('auth/register-and-book')
+  async registerAndBook(
     @Body()
     body: {
-      patientId: string;
-      doctorId: number;
+      fullName: string;
+      phone: string;
+      email?: string;
+      age?: number;
+      gender?: string;
+      bloodGroup?: string;
+      address?: string;
+      doctorId: any;
       appointmentDate: string;
-      reason?: string;
+      timeSlot?: string;
     },
   ) {
-    const patient = await this.patientRepo.findOne({ where: { id: body.patientId } });
-    if (!patient) throw new NotFoundException('Patient not found');
-
-    const doctor = await this.doctorRepo.findOne({ where: { id: body.doctorId } });
-    if (!doctor) throw new NotFoundException('Doctor not found');
-
-    const appointmentData: any = {
-      patient,
-      doctor,
-      appointmentDate: body.appointmentDate,
-      status: AppointmentStatus.SCHEDULED,
-    };
-
-    if (body.reason) {
-      appointmentData.reason = body.reason;
+    if (!body.fullName || !body.phone || !body.doctorId || !body.appointmentDate) {
+      throw new BadRequestException('Missing required registration or appointment details');
     }
 
-    const appointment = this.appointmentRepo.create(appointmentData as any);
-    return this.appointmentRepo.save(appointment);
+    const cleanPhone = body.phone.trim();
+
+    // A. Check if patient already exists or create new
+    let patient = await this.patientRepo.findOne({ where: { phone: cleanPhone } });
+
+    if (!patient) {
+      const email = body.email && body.email.trim() !== ''
+        ? body.email.trim()
+        : `${cleanPhone}@patient.drbloomedi.com`;
+
+      const newPatient = this.patientRepo.create({
+        fullName: body.fullName.trim(),
+        email: email,
+        phone: cleanPhone,
+        age: Number(body.age) || 25,
+        gender: body.gender || 'Male',
+        bloodGroup: body.bloodGroup || 'O+',
+        address: body.address || '',
+      });
+
+      patient = await this.patientRepo.save(newPatient);
+    }
+
+    // B. Find Doctor
+    const doctor = await this.doctorRepo.findOne({
+      where: { id: body.doctorId as any },
+    });
+    if (!doctor) throw new NotFoundException('Doctor not found');
+
+    // C. Generate Appointment Number & Book Appointment
+    const appointmentDateStr = String(body.appointmentDate).split('T')[0];
+    const appointmentNumber = `APT-${Date.now().toString().slice(-6)}`;
+
+    const newAppointment = this.appointmentRepo.create({
+      appointmentNumber,
+      patient,
+      doctor,
+      appointmentDate: appointmentDateStr,
+      timeSlot: body.timeSlot || '10:00 AM',
+      status: AppointmentStatus?.SCHEDULED || ('Scheduled' as any),
+    });
+
+    const savedAppointment = await this.appointmentRepo.save(newAppointment);
+
+    // D. Real-Time Broadcast to Reception & Doctor Queue via Socket.IO
+    try {
+      this.eventsGateway.emitNewAppointment({
+        ...savedAppointment,
+        patient,
+        doctor,
+      });
+    } catch (socketErr) {
+      console.warn('Socket broadcast skipped:', socketErr);
+    }
+
+    return {
+      success: true,
+      message: 'Patient registered and appointment confirmed for Reception',
+      patient,
+      appointment: savedAppointment,
+    };
   }
 
-  // 4. Digital Prescriptions
-  @Get('prescriptions/:patientId')
-  async getMyPrescriptions(@Param('patientId') patientId: string) {
-    return this.rxRepo.find({
-      where: { patient: { id: patientId } },
-      relations: { doctor: { user: true } },
-      order: { createdAt: 'DESC' },
+  // 3. Comprehensive 360° Dossier
+  @Get('history/:patientId')
+  async getFullPatientHistory(@Param('patientId') patientId: string) {
+    const patient = await this.patientRepo.findOne({
+      where: { id: patientId },
     });
-  }
+    if (!patient) {
+      throw new NotFoundException('Patient record not found');
+    }
 
-  // 5. Diagnostic Lab Reports
-  @Get('lab-reports/:patientId')
-  async getMyLabReports(@Param('patientId') patientId: string) {
-    return this.labRepo.find({
-      where: { patient: { id: patientId } },
-      relations: { labTest: true },
-      order: { createdAt: 'DESC' },
-    });
-  }
+    const [appointments, prescriptions, labOrders, bills] = await Promise.all([
+      this.appointmentRepo.find({
+        where: { patient: { id: patientId } },
+        relations: { doctor: true },
+        order: { appointmentDate: 'DESC' },
+      }).catch(() => []),
 
-  // 6. Billing Invoices
-  @Get('bills/:patientId')
-  async getMyBills(@Param('patientId') patientId: string) {
-    return this.billingRepo.find({
-      where: { patient: { id: patientId } },
-      order: { createdAt: 'DESC' },
-    });
+      this.prescriptionRepo.find({
+        where: { patient: { id: patientId } },
+        relations: { doctor: true },
+        order: { createdAt: 'DESC' },
+      }).catch(() => []),
+
+      this.labOrderRepo.find({
+        where: { patient: { id: patientId } },
+        relations: { labTest: true },
+        order: { createdAt: 'DESC' },
+      }).catch(() => []),
+
+      this.billingRepo.find({
+        where: { patient: { id: patientId } },
+        order: { createdAt: 'DESC' },
+      }).catch(() => []),
+    ]);
+
+    return {
+      profile: patient,
+      summary: {
+        totalVisits: appointments.length,
+        totalPrescriptions: prescriptions.length,
+        totalLabTests: labOrders.length,
+        totalBills: bills.length,
+      },
+      appointments,
+      prescriptions,
+      labOrders,
+      bills,
+    };
   }
 }
