@@ -45,11 +45,19 @@ import { DocumentsModule } from './documents.module';
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: '127.0.0.1',
-      port: 5432,
-      username: 'drbloomedi_user',
-      password: 'drbloomedi_password_2026',
-      database: 'drbloomedi',
+      ...(process.env.DATABASE_URL
+        ? {
+            url: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false },
+          }
+        : {
+            host: process.env.DB_HOST || '127.0.0.1',
+            port: parseInt(process.env.DB_PORT || '5432', 10),
+            username: process.env.DB_USERNAME || 'drbloomedi_user',
+            password: process.env.DB_PASSWORD || 'drbloomedi_password_2026',
+            database: process.env.DB_DATABASE || 'drbloomedi',
+            ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+          }),
       entities: [
         User,
         Doctor,
