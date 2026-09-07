@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useRouter } from 'next/navigation';
+import { performLogout } from '@/utils/logout';
 
 export default function ReceptionDashboardPage() {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -65,6 +68,19 @@ export default function ReceptionDashboardPage() {
       socket.disconnect();
     };
   }, []);
+
+  // Logout Trigger Function
+  const handleLogout = () => {
+    if (typeof performLogout === 'function') {
+      performLogout();
+    } else {
+      localStorage.clear();
+      document.cookie = 'token=; path=/; max-age=0;';
+      document.cookie = 'userRole=; path=/; max-age=0;';
+      document.cookie = 'access_token=; path=/; max-age=0;';
+      window.location.href = '/login';
+    }
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -203,7 +219,7 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* Top Header Card */}
+      {/* Top Header Card With Logout Button */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -233,7 +249,7 @@ export default function ReceptionDashboardPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchAppointments}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
           >
             🔄 Refresh
           </button>
@@ -244,6 +260,14 @@ export default function ReceptionDashboardPage() {
           >
             + New Appointment
           </a>
+          {/* Dedicated Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition shadow-sm"
+          >
+            <span>🚪</span>
+            <span>Logout</span>
+          </button>
         </div>
       </div>
 
