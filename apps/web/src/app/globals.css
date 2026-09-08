@@ -60,3 +60,55 @@ body::-webkit-scrollbar,
     scrollbar-width: none;
   }
 }
+
+/* ========================================================
+   🚀 GLOBAL RESPONSIVE SHORTCUT RULES (Added for Mobile Fix)
+   ======================================================== */
+
+/* 1. Automatically make all tables horizontally scrollable on mobile */
+table {
+  width: 100%;
+}
+
+.overflow-x-auto, div:has(> table) {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 2. Prevent flexbox elements from overflowing on small screens */
+.flex:not(.no-wrap) {
+  flex-wrap: wrap;
+}
+
+/* 3. Make large grids responsive by default */
+.grid-cols-3, .grid-cols-4, .grid-cols-5 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ========================================================
+   🛡️ ULTRA MOBILE OVERFLOW PROTECTION
+   ======================================================== */
+
+@media (max-width: 768px) {
+  div[class*="w-["], aside[class*="w-["] {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}

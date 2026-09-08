@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import { PaymentService } from '../services/payment.service';
 
 @Controller('payments')
@@ -20,8 +20,17 @@ export class PaymentController {
       razorpay_payment_id: string;
       razorpay_signature?: string;
       billId?: string;
+      appointmentId?: string;
+      amount?: number;
     },
   ) {
     return this.paymentService.verifyPayment(body);
+  }
+
+  @Post('webhook')
+  @HttpCode(HttpStatus.OK)
+  async razorpayWebhook(@Body() event: any, @Req() req: any) {
+    const signature = req.headers['x-razorpay-signature'];
+    return this.paymentService.handleWebhook(event, signature);
   }
 }

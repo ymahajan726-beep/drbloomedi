@@ -25,6 +25,8 @@ interface LabOrder {
     gender?: string;
   };
   labTest?: LabTest;
+  testName?: string;
+  price?: number;
 }
 
 export default function LaboratoryManagementPage() {
@@ -59,24 +61,38 @@ export default function LaboratoryManagementPage() {
 
   useEffect(() => {
     fetchLabData();
+    const poll = setInterval(() => fetchLabData(true), 5000); // Live polling for instant sync with doctor cabin
+    return () => clearInterval(poll);
   }, []);
 
-  const fetchLabData = async () => {
+  const fetchLabData = async (isBg = false) => {
     try {
-      setLoading(true);
+      if (!isBg) setLoading(true);
+      
       const [ordersRes, testsRes, patientsRes] = await Promise.all([
         fetch('https://drbloomedi-backend.onrender.com/lab/orders').catch(() => null),
         fetch('https://drbloomedi-backend.onrender.com/lab/tests').catch(() => null),
         fetch('https://drbloomedi-backend.onrender.com/patients').catch(() => null),
       ]);
 
-      if (ordersRes?.ok) setOrders(await ordersRes.json());
-      if (testsRes?.ok) setTests(await testsRes.json());
-      if (patientsRes?.ok) setPatients(await patientsRes.json());
+      if (ordersRes && ordersRes.ok) {
+        const orderData = await ordersRes.json();
+        setOrders(Array.isArray(orderData) ? orderData : []);
+      }
+
+      if (testsRes && testsRes.ok) {
+        const testData = await testsRes.json();
+        setTests(Array.isArray(testData) ? testData : []);
+      }
+
+      if (patientsRes && patientsRes.ok) {
+        const patientData = await patientsRes.json();
+        setPatients(Array.isArray(patientData) ? patientData : []);
+      }
     } catch (err) {
       console.error('Failed to load laboratory module data', err);
     } finally {
-      setLoading(false);
+      if (!isBg) setLoading(false);
     }
   };
 
@@ -89,7 +105,7 @@ export default function LaboratoryManagementPage() {
         body: JSON.stringify({ status: nextStatus }),
       });
       if (!res.ok) throw new Error('Status update failed');
-      fetchLabData();
+      fetchLabData(true);
     } catch (err: any) {
       alert(`Error updating sample status: ${err.message}`);
     }
@@ -115,7 +131,7 @@ export default function LaboratoryManagementPage() {
       setReportingOrder(null);
       setObservedValue('');
       setRemarks('');
-      fetchLabData();
+      fetchLabData(true);
     } catch (err: any) {
       alert(`Report Submission Error: ${err.message}`);
     } finally {
@@ -144,7 +160,7 @@ export default function LaboratoryManagementPage() {
       setSelectedPatientId('');
       setSelectedTestId('');
       setActiveTab('worklist');
-      fetchLabData();
+      fetchLabData(true);
     } catch (err: any) {
       alert(`Booking Error: ${err.message}`);
     }
@@ -171,7 +187,7 @@ export default function LaboratoryManagementPage() {
       setNewTestPrice('');
       setNewTestRange('');
       setNewTestUnit('');
-      fetchLabData();
+      fetchLabData(true);
     } catch (err: any) {
       alert(`Catalog Error: ${err.message}`);
     }
@@ -179,10 +195,14 @@ export default function LaboratoryManagementPage() {
 
   const filteredOrders = orders.filter((ord) => {
     const q = search.toLowerCase();
+    const patientName = ord.patient?.fullName || '';
+    const patientPhone = ord.patient?.phone || '';
+    const testName = ord.labTest?.testName || ord.testName || '';
+
     const matchesSearch =
-      ord.patient?.fullName?.toLowerCase().includes(q) ||
-      ord.patient?.phone?.includes(q) ||
-      ord.labTest?.testName?.toLowerCase().includes(q);
+      patientName.toLowerCase().includes(q) ||
+      patientPhone.includes(q) ||
+      testName.toLowerCase().includes(q);
 
     const matchesStatus = statusFilter === 'ALL' || ord.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -242,7 +262,7 @@ export default function LaboratoryManagementPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-md w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none"
             />
-            <div className="flex items-center gap-2 text-xs font-bold">
+            <div className="flex items-center gap-2 text-xs font-bold flex-wrap">
               <span className="text-slate-400">Filter:</span>
               {['ALL', 'PENDING', 'COLLECTED', 'IN_PROCESS', 'COMPLETED'].map((st) => (
                 <button
@@ -289,14 +309,14 @@ export default function LaboratoryManagementPage() {
                   filteredOrders.map((ord) => (
                     <tr key={ord.id} className="hover:bg-slate-50/70 transition">
                       <td className="py-3 px-4">
-                        <p className="font-bold text-slate-900">{ord.patient?.fullName || 'Walk-in'}</p>
-                        <p className="text-[10px] text-slate-400">{ord.patient?.phone}</p>
+                        <p className="font-bold text-slate-900">{ord.patient?.fullName || 'Walk-in Patient'}</p>
+                        <p className="text-[10px] text-slate-400">{ord.patient?.phone || 'No Phone'}</p>
                       </td>
                       <td className="py-3 px-4 font-bold text-slate-800">
-                        {ord.labTest?.testName || 'Pathology Test'}
+                        {ord.labTest?.testName || ord.testName || 'Pathology Test'}
                       </td>
                       <td className="py-3 px-4 font-black text-slate-700">
-                        ₹{ord.labTest?.price || 0}
+                        ₹{ord.labTest?.price || ord.price || 350}
                       </td>
                       <td className="py-3 px-4">
                         <span
@@ -310,7 +330,7 @@ export default function LaboratoryManagementPage() {
                               : 'bg-slate-100 text-slate-600 border-slate-200'
                           }`}
                         >
-                          {ord.status}
+                          {ord.status || 'PENDING'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-slate-700">
@@ -323,7 +343,7 @@ export default function LaboratoryManagementPage() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-right space-x-2">
-                        {ord.status === 'PENDING' && (
+                        {(!ord.status || ord.status === 'PENDING') && (
                           <button
                             onClick={() => handleStatusUpdate(ord.id, 'COLLECTED')}
                             className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold shadow-sm"
@@ -506,7 +526,7 @@ export default function LaboratoryManagementPage() {
               <div>
                 <h3 className="font-black text-slate-900">Enter Pathology Result</h3>
                 <p className="text-[11px] text-slate-500">
-                  {reportingOrder.labTest?.testName} • {reportingOrder.patient?.fullName}
+                  {reportingOrder.labTest?.testName || reportingOrder.testName} • {reportingOrder.patient?.fullName}
                 </p>
               </div>
               <button
@@ -590,8 +610,8 @@ export default function LaboratoryManagementPage() {
             <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div>
                 <span className="text-[10px] uppercase text-slate-400 font-bold block">Patient Details</span>
-                <p className="font-bold text-slate-900">{viewingReport.patient?.fullName}</p>
-                <p className="text-slate-500">Phone: {viewingReport.patient?.phone}</p>
+                <p className="font-bold text-slate-900">{viewingReport.patient?.fullName || 'N/A'}</p>
+                <p className="text-slate-500">Phone: {viewingReport.patient?.phone || 'N/A'}</p>
               </div>
               <div className="text-right">
                 <span className="text-[10px] uppercase text-slate-400 font-bold block">Order Details</span>
@@ -611,7 +631,7 @@ export default function LaboratoryManagementPage() {
               <tbody className="divide-y divide-slate-100">
                 <tr>
                   <td className="py-3 px-4 font-bold text-slate-800">
-                    {viewingReport.labTest?.testName}
+                    {viewingReport.labTest?.testName || viewingReport.testName}
                   </td>
                   <td className="py-3 px-4 font-mono font-black text-purple-700 text-sm">
                     {viewingReport.resultValue} {viewingReport.labTest?.unit}

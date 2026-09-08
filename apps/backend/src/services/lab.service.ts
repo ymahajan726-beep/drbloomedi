@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { LabOrder } from '../entities/lab-order.entity';
 import { LabTest } from '../entities/lab-test.entity';
 import { Patient } from '../entities/patient.entity';
+import { Billing } from '../entities/billing.entity';
 
 @Injectable()
 export class LabService {
@@ -14,6 +15,7 @@ export class LabService {
     private readonly labTestRepo: Repository<LabTest>,
     @InjectRepository(Patient)
     private readonly patientRepo: Repository<Patient>,
+    private readonly dataSource: DataSource,
   ) {}
 
   // 1. Get all Available Tests Catalog
@@ -41,14 +43,14 @@ export class LabService {
     return this.labTestRepo.save(newTest);
   }
 
-  // 3. Get All Orders (Lab Worklist Queue)
+  // 3. Get All Orders (Lab Worklist Queue - Sorted Old to New / FIFO)
   async getAllOrders() {
     return this.labOrderRepo.find({
       relations: {
         patient: true,
         labTest: true,
       },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'ASC' }, // Oldest first (FIFO sequence)
     });
   }
 
@@ -85,13 +87,13 @@ export class LabService {
     return this.labOrderRepo.save(order);
   }
 
-  // 6. Submit Findings, Observed Values & Generate Report
+  // 6. Submit Findings, Observed Values & Generate Report (PDF Upload support)
   async submitReport(
     orderId: string,
     reportData: {
       observedValue: string;
       remarks?: string;
-      reportFileUrl?: string; // Ready for future S3 integration
+      reportFileUrl?: string; // PDF report link
     },
   ) {
     const order = await this.labOrderRepo.findOne({
@@ -118,5 +120,52 @@ export class LabService {
     });
     if (!order) throw new NotFoundException('Lab Order not found');
     return order;
+  }
+
+  // 8. Doctor Prescription se Lab Orders create karna aur Billing mein fee add karna
+  async createOrdersFromConsultation(data: {
+    appointmentId: string;
+    patientId: string;
+    labTestIds: string[];
+  }) {
+    const patient = await this.patientRepo.findOne({ where: { id: data.patientId } });
+    if (!patient) throw new NotFoundException('Patient not found');
+
+    const createdOrders: any[] = [];
+    let additionalAmount = 0;
+
+    for (const testId of data.labTestIds) {
+      const labTest = await this.labTestRepo.findOne({ where: { id: testId } });
+      if (labTest) {
+        additionalAmount += Number(labTest.price || 0);
+
+        const newOrder = this.labOrderRepo.create({
+          patient,
+          labTest,
+          status: 'PENDING',
+        } as any);
+
+        const savedOrder = await this.labOrderRepo.save(newOrder);
+        createdOrders.push(savedOrder);
+      }
+    }
+
+    // Auto-update Billing Desk total amount if bill exists for this appointment
+    try {
+      const billRepo = this.dataSource.getRepository(Billing);
+      const bill = await billRepo.findOne({ where: { appointment: { id: data.appointmentId } } as any });
+      if (bill) {
+        bill.totalAmount = Number(bill.totalAmount || 0) + additionalAmount;
+        await billRepo.save(bill);
+      }
+    } catch (e) {
+      console.warn('Could not auto-update billing amount for lab tests:', e);
+    }
+
+    return {
+      success: true,
+      message: `${createdOrders.length} lab orders created and fees added to billing successfully.`,
+      orders: createdOrders,
+    };
   }
 }

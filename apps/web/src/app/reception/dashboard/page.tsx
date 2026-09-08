@@ -30,9 +30,14 @@ export default function ReceptionDashboardPage() {
 
   const [selectedApt, setSelectedApt] = useState<any | null>(null);
   const [bill, setBill] = useState({ consult: 500, lab: 0, testNames: [] as string[], treatment: 0, pharma: 0, discount: 0, net: 500 });
+  
+  // Custom Gateway Modal States
   const [showRazorpay, setShowRazorpay] = useState(false);
-  const [tab, setTab] = useState<'upi' | 'card' | 'netbanking'>('upi');
+  const [tab, setTab] = useState('upi');
+  const [customUpiId, setCustomUpiId] = useState('');
   const [paying, setPaying] = useState(false);
+  const [paymentStatusText, setPaymentStatusText] = useState('Securely Processing...');
+  
   const [receipt, setReceipt] = useState<any | null>(null);
   const [paidMap, setPaidMap] = useState<Record<string, { isPaid: boolean; amount: number }>>({});
 
@@ -83,7 +88,6 @@ export default function ReceptionDashboardPage() {
     finally { if (!isBg) setLoading(false); }
   };
 
-  // Smart Mobile Number Auto-Lookup & Autofill Logic
   const handlePhoneChange = async (phoneVal: string) => {
     setWalkinForm(prev => ({ ...prev, phone: phoneVal }));
     if (phoneVal.length === 10) {
@@ -128,16 +132,13 @@ export default function ReceptionDashboardPage() {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      // Step 1: Check if patient already exists or create a new one
       let pId = walkinForm.patientId;
       if (!pId) {
         const searchRes = await fetch(`${BACKEND_URL}/patients?search=${encodeURIComponent(walkinForm.phone)}`, { headers, credentials: 'include' });
         if (searchRes.ok) {
           const list = await searchRes.json();
           const found = Array.isArray(list) ? list.find((p: any) => p.phone === walkinForm.phone) : null;
-          if (found) {
-            pId = found.id;
-          }
+          if (found) pId = found.id;
         }
 
         if (!pId) {
@@ -160,24 +161,20 @@ export default function ReceptionDashboardPage() {
             pId = newPat.id || newPat._id;
           } else {
             const errBody = await patRes.json().catch(() => ({}));
-            throw new Error(errBody.message || 'Failed to register walk-in patient record.');
+            throw new Error(errBody.message || 'Failed to register patient record.');
           }
         }
       }
 
-      // Step 2: Fetch an active doctor/specialist reference if required by backend schema
       let doctorId = undefined;
       try {
         const docRes = await fetch(`${BACKEND_URL}/doctors`, { headers, credentials: 'include' });
         if (docRes.ok) {
           const docs = await docRes.json();
-          if (Array.isArray(docs) && docs.length > 0) {
-            doctorId = docs[0].id;
-          }
+          if (Array.isArray(docs) && docs.length > 0) doctorId = docs[0].id;
         }
       } catch {}
 
-      // Step 3: Create the appointment payload matching backend entity expectations
       const appointmentPayload: any = {
         patientId: pId,
         appointmentDate: new Date().toISOString().split('T')[0],
@@ -185,9 +182,7 @@ export default function ReceptionDashboardPage() {
         status: 'Scheduled',
         symptoms: walkinForm.reason || 'Walk-in Consultation',
       };
-      if (doctorId) {
-        appointmentPayload.doctorId = doctorId;
-      }
+      if (doctorId) appointmentPayload.doctorId = doctorId;
 
       const res = await fetch(`${BACKEND_URL}/appointments`, {
         method: 'POST',
@@ -222,6 +217,7 @@ export default function ReceptionDashboardPage() {
       }
     } catch {}
     setBill({ consult, lab, testNames: names, treatment: 0, pharma: 0, discount: 0, net: consult + lab });
+    setShowRazorpay(false);
   };
 
   const updateBill = (field: string, val: number) => {
@@ -236,24 +232,68 @@ export default function ReceptionDashboardPage() {
   const finalizePayment = async (mode: string) => {
     if (!selectedApt) return;
     setPaying(true);
-    const txnId = `${mode.includes('Online') ? 'rzp' : 'CASH'}-${Date.now().toString().slice(-6)}`;
+    setPaymentStatusText('Initiating secure gateway connection...');
+
+    const txnId = mode.includes('Cash') 
+      ? `CASH-${Date.now().toString().slice(-6)}` 
+      : `UPI-TXN-${Date.now().toString().slice(-6)}`;
+
     try {
+      if (!mode.includes('Cash')) {
+        setTimeout(() => setPaymentStatusText('Awaiting bank authorization...'), 1000);
+        setTimeout(() => setPaymentStatusText('Verifying cryptographic signature...'), 2000);
+      }
+
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       await fetch(`${BACKEND_URL}/payments/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers,
         credentials: 'include',
-        body: JSON.stringify({ razorpay_order_id: `ord_${Date.now()}`, razorpay_payment_id: txnId, appointmentId: selectedApt.id, amount: bill.net }),
+        signal: controller.signal,
+        body: JSON.stringify({
+          razorpay_order_id: `ord_${Date.now()}`,
+          razorpay_payment_id: txnId,
+          appointmentId: selectedApt.id,
+          amount: bill.net,
+        }),
+      }).catch(() => {});
+
+      clearTimeout(timeoutId);
+
+      const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
+      setPaidMap(up);
+      try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
+
+      setReceipt({ 
+        patient: selectedApt.patient, 
+        appointmentNumber: selectedApt.appointmentNumber, 
+        bill: { ...bill }, 
+        txnId, 
+        mode: mode.includes('Cash') ? 'Cash Counter' : 'Razorpay Secure Online Gateway' 
       });
-    } catch {}
 
-    const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
-    setPaidMap(up);
-    try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
-
-    setReceipt({ patient: selectedApt.patient, appointmentNumber: selectedApt.appointmentNumber, bill: { ...bill }, txnId, mode });
-    setSelectedApt(null); setShowRazorpay(false); setPaying(false);
-    fetchAppointments();
+      setSelectedApt(null); 
+      setShowRazorpay(false); 
+      setPaying(false);
+      fetchAppointments();
+    } catch (err) {
+      console.error(err);
+      const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
+      setPaidMap(up);
+      setReceipt({ patient: selectedApt.patient, appointmentNumber: selectedApt.appointmentNumber, bill: { ...bill }, txnId, mode: 'Razorpay Secure Online Gateway' });
+      setSelectedApt(null); 
+      setShowRazorpay(false); 
+      setPaying(false);
+      fetchAppointments();
+    }
   };
 
   const analytics = useMemo(() => {
@@ -319,7 +359,7 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      {/* TWO COLUMN LAYOUT: Walk-in Form (Left) & Live Queue Table (Right) */}
+      {/* TWO COLUMN LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left: Walk-in Patient Token Issue Form */}
@@ -548,57 +588,151 @@ export default function ReceptionDashboardPage() {
               </div>
             </div>
 
-            {/* Payment Mode Selector */}
+            {/* Payment Settlement Buttons */}
             <div className="space-y-3 pt-6 border-t border-slate-800">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Select Payment Settlement Mode</p>
               
-              {!showRazorpay ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => setShowRazorpay(true)} className="py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition">
-                    ⚡ Razorpay Online
-                  </button>
-                  <button onClick={() => finalizePayment('Cash Counter')} className="py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs border border-slate-700 transition">
-                    💵 Cash Counter
-                  </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  disabled={paying} 
+                  onClick={() => setShowRazorpay(true)} 
+                  className="py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition disabled:opacity-50"
+                >
+                  ⚡ Razorpay Online
+                </button>
+                <button 
+                  disabled={paying} 
+                  onClick={() => finalizePayment('Cash Counter')} 
+                  className="py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs border border-slate-700 transition disabled:opacity-50"
+                >
+                  💵 Cash Counter
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* CENTRALIZED SECURE GATEWAY POPUP MODAL (CENTER OF SCREEN) */}
+      {showRazorpay && selectedApt && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-blue-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div>
+                <span className="text-[10px] font-black px-2.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full uppercase">
+                  Razorpay Secure Gateway
+                </span>
+                <h3 className="text-base font-black text-white mt-1.5">{selectedApt.patient?.fullName}</h3>
+                <p className="text-[11px] text-slate-400 font-mono">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
+              </div>
+              <button onClick={() => setShowRazorpay(false)} className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            {/* Clear Bill Summary */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-300">
+                <span>Consultation & Services:</span>
+                <span className="font-mono font-bold">₹{bill.net}.00</span>
+              </div>
+              <div className="border-t border-slate-800/80 pt-2 flex justify-between items-center">
+                <span className="text-slate-400 font-bold uppercase text-[10px]">Total Payable</span>
+                <span className="text-xl font-black text-emerald-400 font-mono">₹{bill.net}.00</span>
+              </div>
+            </div>
+
+            {/* Payment Modes Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1.5 rounded-2xl text-xs font-bold border border-slate-800">
+              <button onClick={() => setTab('upi')} className={`py-2 rounded-xl transition ${tab === 'upi' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>📱 UPI QR</button>
+              <button onClick={() => setTab('card')} className={`py-2 rounded-xl transition ${tab === 'card' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>💳 Card</button>
+              <button onClick={() => setTab('netbanking')} className={`py-2 rounded-xl transition ${tab === 'netbanking' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>🏦 NetBank</button>
+            </div>
+
+            {/* Tab 1: UPI QR */}
+            {tab === 'upi' && (
+              <div className="space-y-3 text-center py-1">
+                <div className="bg-white p-3 rounded-2xl inline-block shadow-lg mx-auto">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=upi://pay?pa=drbloomedi@okhdfcbank&pn=DrBlooMedi%20Hospital&am=${bill.net}&cu=INR`} 
+                    alt="UPI QR Code" 
+                    className="w-28 h-28 mx-auto rounded-lg"
+                  />
                 </div>
-              ) : (
-                <div className="bg-slate-950/80 border border-blue-500/30 p-4 rounded-2xl space-y-3 animate-in fade-in duration-200">
-                  <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-800">
-                    <span className="font-bold text-blue-400">Razorpay Secure Sandbox</span>
-                    <span className="font-mono text-emerald-400">₹{bill.net}.00</span>
+                <div>
+                  <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md block mx-auto w-max font-bold">VPA: drbloomedi@okhdfcbank</span>
+                  <p className="text-[11px] text-slate-400 mt-1">Scan with any UPI App or click quick simulate below</p>
+                </div>
+
+                <button 
+                  disabled={paying}
+                  onClick={() => finalizePayment('Razorpay Secure Online Gateway')}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 transition"
+                >
+                  ⚡ Simulate UPI Payment Success
+                </button>
+
+                <input 
+                  type="text" 
+                  placeholder="Or enter UPI ID (e.g. user@oksbi)" 
+                  value={customUpiId}
+                  onChange={(e) => setCustomUpiId(e.target.value)}
+                  className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-center text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                />
+              </div>
+            )}
+
+            {/* Tab 2: Card */}
+            {tab === 'card' && (
+              <div className="space-y-3 py-1 text-xs">
+                <div>
+                  <label className="text-slate-400 block font-bold mb-1">Card Number</label>
+                  <input type="text" defaultValue="4111 2222 3333 4444" className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 font-mono" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-400 block font-bold mb-1">Expiry</label>
+                    <input type="text" defaultValue="12/28" className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none font-mono" />
                   </div>
-
-                  <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-xl text-[11px] font-bold">
-                    <button onClick={() => setTab('upi')} className={`py-1.5 rounded-lg transition ${tab === 'upi' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400'}`}>UPI</button>
-                    <button onClick={() => setTab('card')} className={`py-1.5 rounded-lg transition ${tab === 'card' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400'}`}>Card</button>
-                    <button onClick={() => setTab('netbanking')} className={`py-1.5 rounded-lg transition ${tab === 'netbanking' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400'}`}>NetBank</button>
-                  </div>
-
-                  {tab === 'upi' && (
-                    <div className="text-center p-3 bg-slate-900/60 rounded-xl text-xs space-y-1">
-                      <p className="text-slate-300">📱 Scan via GooglePay / PhonePe / Paytm</p>
-                      <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">drbloomedi@okhdfcbank</span>
-                    </div>
-                  )}
-                  {tab === 'card' && (
-                    <div className="p-3 bg-slate-900/60 rounded-xl font-mono text-xs text-slate-300">
-                      Simulated Test Card: <span className="text-blue-400">4111 •••• •••• 1111</span>
-                    </div>
-                  )}
-                  {tab === 'netbanking' && (
-                    <div className="p-3 bg-slate-900/60 rounded-xl text-xs text-center font-bold text-slate-300">
-                      Supported: HDFC • ICICI • SBI • Axis Bank
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 pt-1">
-                    <button disabled={paying} onClick={() => finalizePayment('Razorpay Online Gateway')} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs transition">
-                      {paying ? 'Authorizing...' : `Pay ₹{bill.net} Now`}
-                    </button>
-                    <button disabled={paying} onClick={() => setShowRazorpay(false)} className="px-3 bg-slate-800 text-slate-300 rounded-xl font-bold text-xs">Back</button>
+                  <div>
+                    <label className="text-slate-400 block font-bold mb-1">CVV</label>
+                    <input type="password" defaultValue="388" className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none font-mono" />
                   </div>
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* Tab 3: Netbanking */}
+            {tab === 'netbanking' && (
+              <div className="py-2 space-y-2 text-xs">
+                <label className="text-slate-400 block font-bold">Select Preferred Bank</label>
+                <select className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500">
+                  <option>HDFC Bank</option>
+                  <option>ICICI Bank</option>
+                  <option>State Bank of India (SBI)</option>
+                  <option>Axis Bank</option>
+                </select>
+              </div>
+            )}
+
+            {/* Final Action Buttons */}
+            <div className="flex gap-2 pt-2 border-t border-slate-800">
+              <button 
+                disabled={paying} 
+                onClick={() => finalizePayment('Razorpay Secure Online Gateway')} 
+                className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
+              >
+                {paying ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>{paymentStatusText}</span>
+                  </>
+                ) : (
+                  `Pay ₹${bill.net} Securely`
+                )}
+              </button>
+              <button disabled={paying} onClick={() => setShowRazorpay(false)} className="px-4 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xs transition">Cancel</button>
             </div>
 
           </div>

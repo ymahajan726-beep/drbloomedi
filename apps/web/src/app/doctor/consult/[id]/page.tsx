@@ -32,26 +32,47 @@ export default function DoctorConsultPage() {
     },
   ]);
 
-  // Lab Tests Suggested (Pathology Investigations)
-  const [labTests, setLabTests] = useState<{ testName: string; testPrice: number }[]>([]);
-  const [selectedLabTest, setSelectedLabTest] = useState('');
+  // Lab Tests Suggested with Fallback Default Catalog to prevent empty dropdown
+  const defaultLabCatalog = [
+    { id: 'test_1', testName: 'Complete Blood Count (CBC)', price: 350 },
+    { id: 'test_2', testName: 'Dengue Serology NS1/IgM', price: 600 },
+    { id: 'test_3', testName: 'Liver Function Test (LFT)', price: 750 },
+    { id: 'test_4', testName: 'Widal Slide Agglutination', price: 250 },
+    { id: 'test_5', testName: 'Random Blood Sugar (RBS)', price: 100 },
+    { id: 'test_6', testName: 'Serum Electrolytes', price: 450 },
+    { id: 'test_7', testName: 'Urine Routine & Microscopic', price: 200 },
+  ];
 
-  // Standard Lab Catalog with Realistic Pricing
-  const labCatalog: Record<string, number> = {
-    'Complete Blood Count (CBC)': 350,
-    'Dengue Serology NS1/IgM': 600,
-    'Liver Function Test (LFT)': 750,
-    'Widal Slide Agglutination': 250,
-    'Random Blood Sugar (RBS)': 100,
-    'Serum Electrolytes': 450,
-    'Urine Routine & Microscopic': 200,
-  };
+  const [labTests, setLabTests] = useState<{ id?: string; testName: string; testPrice: number }[]>([]);
+  const [availableTestsCatalog, setAvailableTestsCatalog] = useState<any[]>(defaultLabCatalog);
+  const [selectedLabTestId, setSelectedLabTestId] = useState('');
 
   useEffect(() => {
     if (appointmentId) {
       fetchPatientConsultData();
+      fetchLabCatalog();
     }
   }, [appointmentId]);
+
+  const fetchLabCatalog = async () => {
+    try {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/lab/tests');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // Map backend format to UI format
+          const formatted = data.map((t: any) => ({
+            id: t.id,
+            testName: t.testName || t.name,
+            price: Number(t.price || 350),
+          }));
+          setAvailableTestsCatalog(formatted);
+        }
+      }
+    } catch (e) {
+      console.warn('Using default lab catalog fallback due to network/server response:', e);
+    }
+  };
 
   const fetchPatientConsultData = async () => {
     try {
@@ -140,17 +161,21 @@ export default function DoctorConsultPage() {
   };
 
   const addLabTest = () => {
-    if (!selectedLabTest) return;
-    const price = labCatalog[selectedLabTest] || 350;
-    setLabTests([...labTests, { testName: selectedLabTest, testPrice: price }]);
-    setSelectedLabTest('');
+    if (!selectedLabTestId) return;
+    const testObj = availableTestsCatalog.find((t) => String(t.id) === String(selectedLabTestId));
+    if (testObj) {
+      if (!labTests.some((t) => t.testName === testObj.testName)) {
+        setLabTests([...labTests, { id: testObj.id, testName: testObj.testName, testPrice: testObj.price }]);
+      }
+    }
+    setSelectedLabTestId('');
   };
 
   const removeLabTest = (index: number) => {
     setLabTests(labTests.filter((_, idx) => idx !== index));
   };
 
-  // Save Consultation & Transmit Lab Tests to Reception
+  // Save Consultation & Transmit Lab Tests via Backend Endpoint & Billing
   const handleSaveAndPrint = async () => {
     if (!diagnosis.trim()) {
       alert('Please enter a clinical diagnosis');
@@ -192,7 +217,7 @@ export default function DoctorConsultPage() {
       };
 
       // 1. Save Prescription to Backend
-      const res = await fetch('https://drbloomedi-backend.onrender.com/prescriptions', {
+      await fetch('https://drbloomedi-backend.onrender.com/prescriptions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,28 +226,29 @@ export default function DoctorConsultPage() {
         body: JSON.stringify(payload),
       });
 
-      // 2. Save Pathology Lab Orders to Backend & Sync
-      if (labTests.length > 0) {
-        for (const test of labTests) {
-          try {
-            await fetch('https://drbloomedi-backend.onrender.com/lab-orders', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-              body: JSON.stringify({
-                patientId: targetPatientId,
-                doctorId: Number(doctorId),
-                appointmentId: appointmentId || undefined,
-                testName: test.testName,
-                price: test.testPrice,
-              }),
-            });
-          } catch (_) {}
+      // 2. Save Pathology Lab Orders using the Unified /lab/consultation-orders Endpoint
+      if (labTests.length > 0 && appointmentId) {
+        try {
+          // Filter real backend IDs if available, else send names/fallback
+          const testIds = labTests.map((t) => t.id).filter(id => id && !String(id).startsWith('test_'));
+          
+          await fetch('https://drbloomedi-backend.onrender.com/lab/consultation-orders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              appointmentId: appointmentId,
+              patientId: targetPatientId,
+              labTestIds: testIds.length > 0 ? testIds : labTests.map(t => t.testName),
+            }),
+          });
+        } catch (e) {
+          console.error('Failed to sync consultation lab orders:', e);
         }
 
-        // Live Counter Storage for instant Reception Desk Billing
+        // Live Counter Storage Fallback for instant Reception Desk Billing
         try {
           localStorage.setItem(
             `drbloomedi_lab_orders_${appointmentId}`,
@@ -245,7 +271,7 @@ export default function DoctorConsultPage() {
         } catch (_) {}
       }
 
-      alert('Prescription and Lab Tests saved successfully! Transmitting to Reception Desk.');
+      alert('Prescription and Lab Tests saved successfully! Transmitting to Lab Portal & Billing Desk.');
       window.print();
       router.push('/reception/dashboard');
     } catch (err: any) {
@@ -483,25 +509,23 @@ export default function DoctorConsultPage() {
 
         {/* Right Column */}
         <div className="space-y-6">
-          {/* Lab Tests */}
+          {/* Lab Tests Catalog Selection with Fallback Support */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
               Suggest Pathology Tests
             </h2>
             <div className="flex gap-2 print:hidden">
               <select
-                value={selectedLabTest}
-                onChange={(e) => setSelectedLabTest(e.target.value)}
+                value={selectedLabTestId}
+                onChange={(e) => setSelectedLabTestId(e.target.value)}
                 className="w-full p-2.5 text-xs border border-slate-200 rounded-xl font-bold bg-slate-50 outline-none"
               >
                 <option value="">-- Select Investigation --</option>
-                <option value="Complete Blood Count (CBC)">Complete Blood Count (CBC) - ₹350</option>
-                <option value="Dengue Serology NS1/IgM">Dengue Serology NS1/IgM - ₹600</option>
-                <option value="Liver Function Test (LFT)">Liver Function Test (LFT) - ₹750</option>
-                <option value="Widal Slide Agglutination">Widal Slide Agglutination - ₹250</option>
-                <option value="Random Blood Sugar (RBS)">Random Blood Sugar (RBS) - ₹100</option>
-                <option value="Serum Electrolytes">Serum Electrolytes - ₹450</option>
-                <option value="Urine Routine & Microscopic">Urine Routine & Microscopic - ₹200</option>
+                {availableTestsCatalog.map((test) => (
+                  <option key={test.id} value={test.id}>
+                    {test.testName} - ₹{test.price}
+                  </option>
+                ))}
               </select>
               <button
                 type="button"

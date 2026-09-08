@@ -27,7 +27,7 @@ export class LabController {
     return this.labService.createTest(body);
   }
 
-  // 3. Get all lab orders (Queue for Lab Technician)
+  // 3. Get all lab orders (Queue for Lab Technician - Sorted Old to New)
   @Get('orders')
   async getAllOrders() {
     return this.labService.getAllOrders();
@@ -40,7 +40,21 @@ export class LabController {
     return this.labService.bookTest(body);
   }
 
-  // 5. Update Sample Collection Status
+  // 5. Doctor consultation se multiple lab orders create karne aur billing update karne ka route
+  @Post('consultation-orders')
+  @HttpCode(HttpStatus.CREATED)
+  async createOrdersFromConsultation(
+    @Body()
+    data: {
+      appointmentId: string;
+      patientId: string;
+      labTestIds: string[];
+    },
+  ) {
+    return this.labService.createOrdersFromConsultation(data);
+  }
+
+  // 6. Update Sample Collection Status
   @Patch('orders/:id/sample-status')
   async updateSampleStatus(
     @Param('id') id: string,
@@ -49,7 +63,7 @@ export class LabController {
     return this.labService.updateSampleStatus(id, status);
   }
 
-  // 6. Report Generation & Submit Observed Values
+  // 7. Report Generation & Submit Observed Values (PDF Upload support)
   @Post('orders/:id/report')
   @HttpCode(HttpStatus.OK)
   async submitReport(
@@ -59,7 +73,7 @@ export class LabController {
     return this.labService.submitReport(id, body);
   }
 
-  // 7. Get single order detail (For Report View & Online Access)
+  // 8. Get single order detail (For Report View & Online Access)
   @Get('orders/:id')
   async getOrderById(@Param('id') id: string) {
     return this.labService.getOrderById(id);
