@@ -5,6 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { performLogout } from '@/utils/logout';
 
+const BACKEND_URL = 'https://drbloomedi-backend.onrender.com';
+
 export default function ReceptionDashboardPage() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -37,9 +39,9 @@ export default function ReceptionDashboardPage() {
     fetchAppointments();
   }, []);
 
-  // 2. Real-time WebSockets setup
+  // 2. Real-time WebSockets setup linked to live Render backend
   useEffect(() => {
-    const socket: Socket = io('http://localhost:4000', {
+    const socket: Socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -85,7 +87,16 @@ export default function ReceptionDashboardPage() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/appointments');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      const res = await fetch(`${BACKEND_URL}/appointments`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+      });
+
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data) ? data : [];
@@ -147,11 +158,16 @@ export default function ReceptionDashboardPage() {
     setIsProcessingPayment(true);
 
     const txnId = `pay_${Date.now().toString().slice(-8)}`;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
     try {
-      await fetch('http://localhost:4000/payments/verify', {
+      await fetch(`${BACKEND_URL}/payments/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           razorpay_order_id: `order_${Date.now()}`,
           razorpay_payment_id: txnId,
@@ -176,11 +192,16 @@ export default function ReceptionDashboardPage() {
   const handleCashPayment = async () => {
     if (!selectedAptForPay) return;
     const txnId = `CASH-${Date.now().toString().slice(-6)}`;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
     try {
-      await fetch('http://localhost:4000/payments/verify', {
+      await fetch(`${BACKEND_URL}/payments/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           razorpay_order_id: `cash_${Date.now()}`,
           razorpay_payment_id: txnId,

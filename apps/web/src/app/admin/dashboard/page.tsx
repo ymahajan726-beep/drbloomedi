@@ -11,7 +11,7 @@ type DashboardStats = {
   totalDepartments: number;
 };
 
-const API_URL = "http://localhost:4000";
+const API_URL = "https://drbloomedi-backend.onrender.com";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -32,8 +32,14 @@ export default function DashboardPage() {
         setLoading(true);
         setError("");
 
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
         const response = await fetch(`${API_URL}/dashboard/admin`, {
           method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           credentials: "include",
         });
 
@@ -42,7 +48,7 @@ export default function DashboardPage() {
             router.replace("/login");
             return;
           }
-          throw new Error("Failed to load dashboard statistics");
+          throw new Error(`Failed to load dashboard statistics (Status ${response.status})`);
         }
 
         const data = await response.json();
@@ -55,7 +61,7 @@ export default function DashboardPage() {
       } catch (error) {
         console.error("Dashboard loading failed:", error);
         setError(
-          error instanceof Error ? error.message : "Unable to connect to backend",
+          error instanceof Error ? error.message : "Unable to connect to backend"
         );
       } finally {
         setLoading(false);
@@ -67,14 +73,21 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
       await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         credentials: "include",
       });
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
       localStorage.clear();
+      document.cookie = "token=; path=/; max-age=0;";
+      document.cookie = "userRole=; path=/; max-age=0;";
       document.cookie = "access_token=; path=/; max-age=0;";
       document.cookie = "user_role=; path=/; max-age=0;";
       router.replace("/login");

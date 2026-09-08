@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { performLogout } from '@/utils/logout';
 
+const BACKEND_URL = 'https://drbloomedi-backend.onrender.com';
+
 interface Appointment {
   id: string;
   appointmentNumber: string;
@@ -53,7 +55,16 @@ export default function DoctorDashboard() {
   const loadAppointments = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/appointments');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+      const res = await fetch(`${BACKEND_URL}/appointments`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+      });
+
       if (res.ok) {
         const data = await res.json();
         setAppointments(Array.isArray(data) ? data : []);
@@ -67,9 +78,15 @@ export default function DoctorDashboard() {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      await fetch(`http://localhost:4000/appointments/${id}/status`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+      await fetch(`${BACKEND_URL}/appointments/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
       await loadAppointments();
@@ -81,7 +98,7 @@ export default function DoctorDashboard() {
     }
   };
 
-  // अनधिकृत लोड से बचाव
+  // Guard display
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
@@ -116,6 +133,12 @@ export default function DoctorDashboard() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={loadAppointments}
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+          >
+            🔄 Refresh Queue
+          </button>
           <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded-full">
             ● Consultation Active
           </span>

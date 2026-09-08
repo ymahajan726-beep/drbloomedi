@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 
+const BACKEND_URL = 'https://drbloomedi-backend.onrender.com';
+
 export default function PatientPortalPage() {
   const [phoneInput, setPhoneInput] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -56,7 +58,7 @@ export default function PatientPortalPage() {
 
   const fetchDoctors = async () => {
     try {
-      const res = await fetch('http://localhost:4000/doctors');
+      const res = await fetch(`${BACKEND_URL}/doctors`);
       if (res.ok) setDoctors(await res.json());
     } catch (err) {
       console.error('Failed to load doctors list', err);
@@ -72,7 +74,7 @@ export default function PatientPortalPage() {
       setVerifyError('');
       setBookingSuccessAlert(null);
 
-      const res = await fetch('http://localhost:4000/patient-portal/auth/verify', {
+      const res = await fetch(`${BACKEND_URL}/patient-portal/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneInput.trim() }),
@@ -103,7 +105,7 @@ export default function PatientPortalPage() {
   const loadDossier = async (patientId: string) => {
     try {
       setLoadingHistory(true);
-      const res = await fetch(`http://localhost:4000/patient-portal/history/${patientId}`);
+      const res = await fetch(`${BACKEND_URL}/patient-portal/history/${patientId}`);
       if (res.ok) {
         setHistory(await res.json());
       }
@@ -123,7 +125,7 @@ export default function PatientPortalPage() {
 
     try {
       setRegistering(true);
-      const res = await fetch('http://localhost:4000/patient-portal/auth/register-and-book', {
+      const res = await fetch(`${BACKEND_URL}/patient-portal/auth/register-and-book`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -169,9 +171,13 @@ export default function PatientPortalPage() {
 
     try {
       setBookingExisting(true);
-      const res = await fetch('http://localhost:4000/appointments', {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await fetch(`${BACKEND_URL}/appointments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           patientId: patient.id,
           doctorId: existingDoctorId,
@@ -216,10 +222,10 @@ export default function PatientPortalPage() {
               Module 4 • Patient Portal
             </span>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Patient Portal Access[cite: 1]
+              Patient Portal Access
             </h1>
             <p className="text-xs text-slate-500">
-              Verify your mobile number to view medical records or book a consultation[cite: 1].
+              Verify your mobile number to view medical records or book a consultation.
             </p>
           </div>
 
@@ -254,7 +260,7 @@ export default function PatientPortalPage() {
           </form>
 
           <p className="text-[11px] text-center text-slate-400">
-            Existing patients will be redirected to their full history. New patients will get instant registration[cite: 1].
+            Existing patients will be redirected to their full history. New patients will get instant registration.
           </p>
         </div>
       </div>
@@ -354,7 +360,7 @@ export default function PatientPortalPage() {
 
             <div className="pt-2 border-t border-slate-100 space-y-3">
               <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
-                Select Doctor & Slot (Transmitted to Reception Desk)[cite: 1]
+                Select Doctor & Slot (Transmitted to Reception Desk)
               </span>
 
               <div>
@@ -432,7 +438,7 @@ export default function PatientPortalPage() {
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-bold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full uppercase">
-            Verified Patient Dossier[cite: 1]
+            Verified Patient Dossier
           </span>
           <h1 className="text-2xl font-black text-slate-900 mt-1">
             {history?.profile?.fullName || patient?.fullName}
@@ -518,7 +524,7 @@ export default function PatientPortalPage() {
                   onClick={() => setViewRx(history.prescriptions[0])}
                   className="px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-[11px]"
                 >
-                  Print Prescription[cite: 1]
+                  Print Prescription
                 </button>
               </div>
             ) : (
@@ -576,7 +582,7 @@ export default function PatientPortalPage() {
                     onClick={() => setViewRx(rx)}
                     className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white text-[11px] font-bold rounded-xl shadow-sm"
                   >
-                    View & Print Rx[cite: 1]
+                    View & Print Rx
                   </button>
                 </div>
               ))
@@ -616,7 +622,7 @@ export default function PatientPortalPage() {
                         onClick={() => setViewLabReport(lab)}
                         className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold rounded-xl shadow-sm"
                       >
-                        Download Report[cite: 1]
+                        Download Report
                       </button>
                     )}
                   </div>
@@ -661,7 +667,7 @@ export default function PatientPortalPage() {
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-4">
           <h2 className="text-sm font-black text-slate-900 uppercase">Book Follow-up Consultation</h2>
           <p className="text-xs text-slate-500">
-            Booking from this screen directly updates the live queue on the Reception Desk[cite: 1].
+            Booking from this screen directly updates the live queue on the Reception Desk.
           </p>
 
           <form onSubmit={handleExistingBook} className="space-y-4 text-xs">
@@ -733,7 +739,7 @@ export default function PatientPortalPage() {
             <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full uppercase">
-                  Digital E-Prescription[cite: 1]
+                  Digital E-Prescription
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">DRBLOOMEDI HEALTHCARE</h2>
               </div>
@@ -757,7 +763,7 @@ export default function PatientPortalPage() {
                 onClick={() => window.print()}
                 className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
               >
-                Print Rx[cite: 1]
+                Print Rx
               </button>
               <button
                 type="button"
@@ -777,7 +783,7 @@ export default function PatientPortalPage() {
             <div className="border-b-2 border-purple-900 pb-3 flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-bold px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full uppercase">
-                  Verified Lab Report[cite: 1]
+                  Verified Lab Report
                 </span>
                 <h2 className="text-xl font-black text-slate-900 mt-1">DRBLOOMEDI DIAGNOSTICS</h2>
               </div>
@@ -801,7 +807,7 @@ export default function PatientPortalPage() {
                 onClick={() => window.print()}
                 className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold"
               >
-                Print Report[cite: 1]
+                Print Report
               </button>
               <button
                 type="button"
