@@ -19,13 +19,17 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.userRepository.findOne({ where: { email } });
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await this.userRepository.findOne({ where: { email: cleanEmail } });
+    
     if (!user) {
+      console.log(`[AUTH] User not found: ${cleanEmail}`);
       return null;
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
+      console.log(`[AUTH] Password mismatch for: ${cleanEmail}`);
       return null;
     }
 
@@ -42,12 +46,15 @@ export class AuthService {
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
       accessToken: this.jwtService.sign(payload),
+      token: this.jwtService.sign(payload), // Frontend compatibility ke liye
+      role: user.role,
       user,
     };
   }
 
   async forgotPassword(email: string) {
-    const user = await this.userRepository.findOne({ where: { email: email.trim().toLowerCase() } });
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await this.userRepository.findOne({ where: { email: cleanEmail } });
     if (!user) {
       throw new NotFoundException('User with this email does not exist.');
     }
@@ -72,7 +79,7 @@ export class AuthService {
     return {
       success: true,
       message: 'Reset token generated successfully.',
-      token: resetToken, // Directly returned for instant local testing
+      token: resetToken,
     };
   }
 
