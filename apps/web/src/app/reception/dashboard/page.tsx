@@ -15,6 +15,18 @@ export default function ReceptionDashboardPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
 
+  // Walk-in Patient Form State
+  const [walkinForm, setWalkinForm] = useState({
+    fullName: '',
+    phone: '',
+    age: '',
+    gender: 'Male',
+    specialist: 'General Physician',
+    slot: '10:00 AM',
+    reason: 'General Checkup',
+  });
+  const [registering, setRegistering] = useState(false);
+
   const [selectedApt, setSelectedApt] = useState<any | null>(null);
   const [bill, setBill] = useState({ consult: 500, lab: 0, testNames: [] as string[], treatment: 0, pharma: 0, discount: 0, net: 500 });
   const [showRazorpay, setShowRazorpay] = useState(false);
@@ -68,6 +80,42 @@ export default function ReceptionDashboardPage() {
       }
     } catch (e) { console.error(e); }
     finally { if (!isBg) setLoading(false); }
+  };
+
+  const handleWalkinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!walkinForm.fullName || !walkinForm.phone) {
+      alert('Please enter patient name and phone number');
+      return;
+    }
+    setRegistering(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await fetch(`${BACKEND_URL}/appointments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          patientName: walkinForm.fullName,
+          phone: walkinForm.phone,
+          age: Number(walkinForm.age) || 30,
+          gender: walkinForm.gender,
+          specialty: walkinForm.specialist,
+          timeSlot: walkinForm.slot,
+          reason: walkinForm.reason,
+          patientType: 'Outpatient'
+        }),
+      });
+      if (res.ok) {
+        setWalkinForm({ fullName: '', phone: '', age: '', gender: 'Male', specialist: 'General Physician', slot: '10:00 AM', reason: 'General Checkup' });
+        fetchAppointments();
+      } else {
+        alert('Failed to issue walk-in token');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRegistering(false);
+    }
   };
 
   const openBilling = async (apt: any) => {
@@ -178,71 +226,178 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      {/* Queue Table Container */}
-      <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-          <h2 className="text-sm font-black text-white uppercase tracking-wider">OPD & Consultation Queue</h2>
-          <input 
-            type="text" 
-            placeholder="Search patient name, phone, token..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
-            className="w-full sm:w-72 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 transition" 
-          />
+      {/* TWO COLUMN LAYOUT: Walk-in Form (Left) & Live Queue Table (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* Left: Walk-in Patient Token Issue Form */}
+        <div className="lg:col-span-4 bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+          <div className="border-b border-slate-800 pb-3">
+            <h2 className="text-sm font-black text-white uppercase tracking-wider">Walk-in Patient Token Issue</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">Instant counter registration & queue assignment</p>
+          </div>
+
+          <form onSubmit={handleWalkinSubmit} className="space-y-3.5 text-xs">
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Patient Name *</label>
+              <input
+                type="text"
+                placeholder="e.g. Ramesh Kulkarni"
+                value={walkinForm.fullName}
+                onChange={e => setWalkinForm({ ...walkinForm, fullName: e.target.value })}
+                className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Mobile Number *</label>
+              <input
+                type="text"
+                placeholder="10-digit phone"
+                value={walkinForm.phone}
+                onChange={e => setWalkinForm({ ...walkinForm, phone: e.target.value })}
+                className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Age</label>
+                <input
+                  type="number"
+                  placeholder="35"
+                  value={walkinForm.age}
+                  onChange={e => setWalkinForm({ ...walkinForm, age: e.target.value })}
+                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Gender</label>
+                <select
+                  value={walkinForm.gender}
+                  onChange={e => setWalkinForm({ ...walkinForm, gender: e.target.value })}
+                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+                >
+                  <option value="Male" className="bg-slate-900">Male</option>
+                  <option value="Female" className="bg-slate-900">Female</option>
+                  <option value="Other" className="bg-slate-900">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-bold mb-1">Assign Specialist</label>
+              <select
+                value={walkinForm.specialist}
+                onChange={e => setWalkinForm({ ...walkinForm, specialist: e.target.value })}
+                className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+              >
+                <option value="General Physician" className="bg-slate-900">General Physician</option>
+                <option value="Cardiologist" className="bg-slate-900">Cardiologist</option>
+                <option value="Orthopedic" className="bg-slate-900">Orthopedic</option>
+                <option value="Pediatrician" className="bg-slate-900">Pediatrician</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Time Slot</label>
+                <input
+                  type="text"
+                  value={walkinForm.slot}
+                  onChange={e => setWalkinForm({ ...walkinForm, slot: e.target.value })}
+                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Consult Reason</label>
+                <input
+                  type="text"
+                  value={walkinForm.reason}
+                  onChange={e => setWalkinForm({ ...walkinForm, reason: e.target.value })}
+                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={registering}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition mt-2 disabled:opacity-50"
+            >
+              {registering ? 'Issuing Token...' : '⚡ Generate Token & Assign Queue'}
+            </button>
+          </form>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[650px]">
-            <thead>
-              <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase text-[10px]">
-                <th className="py-3">Token</th>
-                <th className="py-3">Patient Name</th>
-                <th className="py-3">Mobile No</th>
-                <th className="py-3">Slot</th>
-                <th className="py-3 text-center">Status</th>
-                <th className="py-3 text-right">Billing Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
-              {loading ? (
-                <tr><td colSpan={6} className="py-8 text-center text-slate-500 font-mono">Synchronizing live queue...</td></tr>
-              ) : list.length === 0 ? (
-                <tr><td colSpan={6} className="py-8 text-center text-slate-500">No active appointments found.</td></tr>
-              ) : (
-                list.map(a => {
-                  const paid = paidMap[a.id]?.isPaid || a.isPaid || a.paymentStatus === 'PAID';
-                  return (
-                    <tr key={a.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-3.5 font-mono font-bold text-blue-400">{a.appointmentNumber || 'APT'}</td>
-                      <td className="py-3.5 font-bold text-white">{a.patient?.fullName || 'Walk-in'}</td>
-                      <td className="py-3.5 text-slate-400 font-mono">{a.patient?.phone || 'N/A'}</td>
-                      <td className="py-3.5 text-slate-300">{a.timeSlot || '10:00 AM'}</td>
-                      <td className="py-3.5 text-center">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                          {a.status || 'Scheduled'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 text-right">
-                        {paid ? (
-                          <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-xl text-[10px] font-black border border-emerald-500/20">
-                            ✓ Settled
+        {/* Right: Live Queue Table Container */}
+        <div className="lg:col-span-8 bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+            <h2 className="text-sm font-black text-white uppercase tracking-wider">OPD & Consultation Queue</h2>
+            <input 
+              type="text" 
+              placeholder="Search patient name, phone, token..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              className="w-full sm:w-72 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 transition" 
+            />
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[600px]">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase text-[10px]">
+                  <th className="py-3">Token</th>
+                  <th className="py-3">Patient Name</th>
+                  <th className="py-3">Mobile No</th>
+                  <th className="py-3">Slot</th>
+                  <th className="py-3 text-center">Status</th>
+                  <th className="py-3 text-right">Billing Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-medium">
+                {loading ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-500 font-mono">Synchronizing live queue...</td></tr>
+                ) : list.length === 0 ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">No active appointments found.</td></tr>
+                ) : (
+                  list.map(a => {
+                    const paid = paidMap[a.id]?.isPaid || a.isPaid || a.paymentStatus === 'PAID';
+                    return (
+                      <tr key={a.id} className="hover:bg-slate-800/40 transition">
+                        <td className="py-3.5 font-mono font-bold text-blue-400">{a.appointmentNumber || 'APT'}</td>
+                        <td className="py-3.5 font-bold text-white">{a.patient?.fullName || 'Walk-in'}</td>
+                        <td className="py-3.5 text-slate-400 font-mono">{a.patient?.phone || 'N/A'}</td>
+                        <td className="py-3.5 text-slate-300">{a.timeSlot || '10:00 AM'}</td>
+                        <td className="py-3.5 text-center">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            {a.status || 'Scheduled'}
                           </span>
-                        ) : (
-                          <button 
-                            onClick={() => openBilling(a)} 
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-bold shadow-md transition active:scale-95"
-                          >
-                            💳 Settle Bill
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                        <td className="py-3.5 text-right">
+                          {paid ? (
+                            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-xl text-[10px] font-black border border-emerald-500/20">
+                              ✓ Settled
+                            </span>
+                          ) : (
+                            <button 
+                              onClick={() => openBilling(a)} 
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-bold shadow-md transition active:scale-95"
+                            >
+                              💳 Settle Bill
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
       </div>
 
       {/* SLIDE-OVER BILLING SIDEBAR */}

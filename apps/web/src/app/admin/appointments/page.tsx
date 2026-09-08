@@ -69,13 +69,17 @@ export default function AppointmentsPage() {
 
   const handleDelete = async (id: string, token: string) => {
     if (!confirm(`Cancel and delete appointment ${token}?`)) return;
+    
+    // Optimistically update local state immediately so it vanishes from the UI
+    setAppointments((prev) => prev.filter((apt) => apt.id !== id));
+
     try {
       await fetch(`https://drbloomedi-backend.onrender.com/appointments/${id}`, {
         method: 'DELETE',
       });
-      loadAppointments();
     } catch (err) {
       console.error(err);
+      loadAppointments(); // Revert/reload if backend request fails
     }
   };
 

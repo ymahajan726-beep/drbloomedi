@@ -152,7 +152,7 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 disabled:opacity-50"
             >
-              {loading ? 'Sending Code...' : 'Get Verification Code →'}
+              {loading ? 'Sending Code...' : 'Forget Password →'}
             </button>
           </form>
         ) : (
