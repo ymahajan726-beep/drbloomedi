@@ -3,9 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-// Dynamic API URL: Vercel env var use karega, fallback localhost
-const API_URL =
+// Trailing slash ko sanitize karein taaki 308 redirect trigger na ho
+const RAW_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://drbloomedi-backend.onrender.com";
+const API_URL = RAW_API_URL.replace(/\/+$/, "");
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,7 +21,10 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch(`${API_URL}/auth/login`, {
+      const endpoint = `${API_URL}/auth/login`;
+      console.log("Submitting login to:", endpoint);
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -29,12 +33,16 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Invalid credentials. Please verify.");
+        throw new Error(
+          errData.message || `Authentication failed with status ${res.status}`
+        );
       }
 
       const data = await res.json();
       const userRole = (data.user?.role || data.role || "ADMIN").toUpperCase();
-      const token = data.access_token || data.token || "";
+      
+      // Backend accessToken, token ya access_token teeno me se koi bhi return kare handle hoga
+      const token = data.accessToken || data.access_token || data.token || "";
 
       if (!token) {
         throw new Error("No token received from backend.");
@@ -43,12 +51,12 @@ export default function LoginPage() {
       // 1. LocalStorage Store
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userEmail", data.user?.email || email);
+      localStorage.setItem("userEmail", data.user?.email || email.trim().toLowerCase());
 
       // 2. Set Cookies with Secure & SameSite flags for HTTPS/Vercel
-      const isHttps = window.location.protocol === "https:";
+      const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
       const cookieSuffix = `; path=/; max-age=86400; SameSite=Lax${isHttps ? "; Secure" : ""}`;
-      
+
       document.cookie = `token=${token}${cookieSuffix}`;
       document.cookie = `userRole=${userRole}${cookieSuffix}`;
 
@@ -61,6 +69,7 @@ export default function LoginPage() {
         window.location.href = "/admin/dashboard";
       }
     } catch (err: any) {
+      console.error("Login catch block:", err);
       setError(err.message || "Unable to authenticate.");
     } finally {
       setLoading(false);
