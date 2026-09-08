@@ -22,12 +22,13 @@ export class AuthController {
     @Body('password') password: string,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const result = await this.authService.login(email, password);
+    const result: any = await this.authService.login(email, password);
+    const token = result.token || result.access_token || result.accessToken;
 
-    response.cookie('access_token', result.accessToken, {
+    response.cookie('token', token, {
       httpOnly: false,
-      secure: false,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       path: '/',
       maxAge: 24 * 60 * 60 * 1000,
     });
@@ -38,8 +39,21 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Res({ passthrough: true }) response: Response) {
-    response.clearCookie('access_token', { path: '/' });
-    response.clearCookie('user_role', { path: '/' });
+    response.clearCookie('token', {
+      path: '/',
+      secure: true,
+      sameSite: 'none',
+    });
+    response.clearCookie('access_token', {
+      path: '/',
+      secure: true,
+      sameSite: 'none',
+    });
+    response.clearCookie('user_role', {
+      path: '/',
+      secure: true,
+      sameSite: 'none',
+    });
     return { success: true, message: 'Logged out successfully' };
   }
 
