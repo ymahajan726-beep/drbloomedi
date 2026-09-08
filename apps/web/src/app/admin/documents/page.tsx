@@ -23,8 +23,8 @@ export default function DocumentVaultPage() {
     try {
       setLoading(true);
       const [docsRes, patientsRes] = await Promise.all([
-        fetch('http://localhost:4000/documents').then((r) => (r.ok ? r.json() : [])),
-        fetch('http://localhost:4000/patients').then((r) => (r.ok ? r.json() : [])),
+        fetch('https://drbloomedi-backend.onrender.com/documents').then((r) => (r.ok ? r.json() : [])),
+        fetch('https://drbloomedi-backend.onrender.com/patients').then((r) => (r.ok ? r.json() : [])),
       ]);
       setDocuments(Array.isArray(docsRes) ? docsRes : []);
       setPatients(Array.isArray(patientsRes) ? patientsRes : []);
@@ -50,7 +50,7 @@ export default function DocumentVaultPage() {
       formData.append('documentType', docType);
       if (remarks) formData.append('remarks', remarks);
 
-      const res = await fetch('http://localhost:4000/documents/upload', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/documents/upload', {
         method: 'POST',
         body: formData,
       });
@@ -254,7 +254,7 @@ export default function DocumentVaultPage() {
                             href={
                                 doc.fileUrl?.startsWith('http')
                                 ? doc.fileUrl
-                                : `http://localhost:4000/documents/download/${doc.fileName}`
+                                : `https://drbloomedi-backend.onrender.com/documents/download/${doc.fileName}`
                             }
                             target="_blank"
                             rel="noopener noreferrer"

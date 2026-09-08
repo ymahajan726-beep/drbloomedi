@@ -65,9 +65,9 @@ export default function LaboratoryManagementPage() {
     try {
       setLoading(true);
       const [ordersRes, testsRes, patientsRes] = await Promise.all([
-        fetch('http://localhost:4000/lab/orders').catch(() => null),
-        fetch('http://localhost:4000/lab/tests').catch(() => null),
-        fetch('http://localhost:4000/patients').catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/lab/orders').catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/lab/tests').catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/patients').catch(() => null),
       ]);
 
       if (ordersRes?.ok) setOrders(await ordersRes.json());
@@ -83,7 +83,7 @@ export default function LaboratoryManagementPage() {
   // 1. Update Sample Collection Status
   const handleStatusUpdate = async (orderId: string, nextStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/lab/orders/${orderId}/sample-status`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${orderId}/sample-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),
@@ -101,7 +101,7 @@ export default function LaboratoryManagementPage() {
     if (!reportingOrder) return;
     try {
       setSubmittingReport(true);
-      const res = await fetch(`http://localhost:4000/lab/orders/${reportingOrder.id}/report`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${reportingOrder.id}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -131,7 +131,7 @@ export default function LaboratoryManagementPage() {
       return;
     }
     try {
-      const res = await fetch('http://localhost:4000/lab/orders', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/lab/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -155,7 +155,7 @@ export default function LaboratoryManagementPage() {
     e.preventDefault();
     if (!newTestName || !newTestPrice) return;
     try {
-      const res = await fetch('http://localhost:4000/lab/tests', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/lab/tests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

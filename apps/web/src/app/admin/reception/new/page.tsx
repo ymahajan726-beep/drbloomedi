@@ -24,7 +24,7 @@ export default function NewReceptionPage() {
     setSaving(true);
 
     try {
-      const res = await fetch('http://localhost:4000/reception', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/reception', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

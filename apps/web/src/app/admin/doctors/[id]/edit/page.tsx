@@ -35,14 +35,14 @@ export default function EditDoctorPage() {
         setLoading(true);
 
         // Fetch Departments
-        const deptRes = await fetch('http://localhost:4000/departments');
+        const deptRes = await fetch('https://drbloomedi-backend.onrender.com/departments');
         if (deptRes.ok) {
           const deptData = await deptRes.json();
           if (Array.isArray(deptData)) setDepartments(deptData);
         }
 
         // Fetch Doctor by ID
-        const docRes = await fetch(`http://localhost:4000/doctors/${doctorId}`);
+        const docRes = await fetch(`https://drbloomedi-backend.onrender.com/doctors/${doctorId}`);
         if (!docRes.ok) throw new Error('Doctor profile not found');
         const doc = await docRes.json();
 
@@ -73,7 +73,7 @@ export default function EditDoctorPage() {
       setSubmitting(true);
       setErrorMsg('');
 
-      const res = await fetch(`http://localhost:4000/doctors/${doctorId}`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/doctors/${doctorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

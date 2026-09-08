@@ -23,7 +23,7 @@ export default function ReceptionPortalPage() {
     loadData();
 
     // 1. Direct Socket.IO Connection to NestJS Port 4000
-    const socket: Socket = io('http://localhost:4000', {
+    const socket: Socket = io('https://drbloomedi-backend.onrender.com', {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -74,8 +74,8 @@ export default function ReceptionPortalPage() {
     try {
       setLoading(true);
       const [aptRes, docRes] = await Promise.all([
-        fetch('http://localhost:4000/appointments').then((r) => r.json()),
-        fetch('http://localhost:4000/doctors').then((r) => r.json()),
+        fetch('https://drbloomedi-backend.onrender.com/appointments').then((r) => r.json()),
+        fetch('https://drbloomedi-backend.onrender.com/doctors').then((r) => r.json()),
       ]);
       setAppointments(Array.isArray(aptRes) ? aptRes : []);
       setDoctors(Array.isArray(docRes) ? docRes : []);
@@ -95,7 +95,7 @@ export default function ReceptionPortalPage() {
 
     try {
       setBooking(true);
-      const res = await fetch('http://localhost:4000/patient-portal/auth/register-and-book', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/patient-portal/auth/register-and-book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

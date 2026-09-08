@@ -22,7 +22,7 @@ export const processHospitalPayment = async (options: PayOptions) => {
 
   // 2. Online Razorpay Flow
   try {
-    const res = await fetch('http://localhost:4000/payments/create-order', {
+    const res = await fetch('https://drbloomedi-backend.onrender.com/payments/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -34,7 +34,7 @@ export const processHospitalPayment = async (options: PayOptions) => {
     const orderData = await res.json();
 
     // Verify on backend
-    const verifyRes = await fetch('http://localhost:4000/payments/verify', {
+    const verifyRes = await fetch('https://drbloomedi-backend.onrender.com/payments/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

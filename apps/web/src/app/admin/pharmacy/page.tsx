@@ -52,8 +52,8 @@ export default function PharmacyPage() {
     try {
       setLoading(true);
       const [medsRes, patRes] = await Promise.all([
-        fetch('http://localhost:4000/pharmacy/inventory').catch(() => null),
-        fetch('http://localhost:4000/patients').catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/pharmacy/inventory').catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/patients').catch(() => null),
       ]);
 
       if (medsRes?.ok) {
@@ -135,7 +135,7 @@ export default function PharmacyPage() {
         paymentMethod: 'CASH',
       };
 
-      const res = await fetch('http://localhost:4000/pharmacy/dispense-bill', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/pharmacy/dispense-bill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -162,7 +162,7 @@ export default function PharmacyPage() {
   const handleAddMedicine = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:4000/pharmacy/inventory', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/pharmacy/inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

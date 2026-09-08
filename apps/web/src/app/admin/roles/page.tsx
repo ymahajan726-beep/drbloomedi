@@ -48,12 +48,12 @@ export default function RolesManagementPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      let usersUrl = `http://localhost:4000/roles/users?search=${encodeURIComponent(search)}`;
+      let usersUrl = `https://drbloomedi-backend.onrender.com/roles/users?search=${encodeURIComponent(search)}`;
       if (roleFilter) usersUrl += `&role=${encodeURIComponent(roleFilter)}`;
 
       const [usersRes, matrixRes] = await Promise.all([
         fetch(usersUrl),
-        fetch('http://localhost:4000/roles/matrix'),
+        fetch('https://drbloomedi-backend.onrender.com/roles/matrix'),
       ]);
 
       if (usersRes.ok) {
@@ -77,7 +77,7 @@ export default function RolesManagementPage() {
 
   const handleRoleChange = async (userId: string, newRoleValue: string) => {
     try {
-      await fetch(`http://localhost:4000/roles/users/${userId}/role`, {
+      await fetch(`https://drbloomedi-backend.onrender.com/roles/users/${userId}/role`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRoleValue }),
@@ -90,7 +90,7 @@ export default function RolesManagementPage() {
 
   const handleToggleActive = async (userId: string) => {
     try {
-      await fetch(`http://localhost:4000/roles/users/${userId}/toggle`, {
+      await fetch(`https://drbloomedi-backend.onrender.com/roles/users/${userId}/toggle`, {
         method: 'PATCH',
       });
       loadData();
@@ -118,7 +118,7 @@ export default function RolesManagementPage() {
 
     try {
       setSubmitting(true);
-      const res = await fetch('http://localhost:4000/admin/users/create', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/admin/users/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

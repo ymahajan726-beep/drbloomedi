@@ -39,7 +39,7 @@ export default function ReportsPage() {
   const loadReport = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/reports/summary');
+      const res = await fetch('https://drbloomedi-backend.onrender.com/reports/summary');
       if (res.ok) {
         const json = await res.json();
         setData(json);

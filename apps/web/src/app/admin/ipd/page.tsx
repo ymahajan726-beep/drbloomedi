@@ -87,10 +87,10 @@ export default function IpdManagementPage() {
     try {
       setLoading(true);
       const [bedsRes, admissionsRes, patientsRes, docsRes] = await Promise.all([
-        fetch('http://localhost:4000/ipd/beds'),
-        fetch('http://localhost:4000/ipd/admissions?status=Admitted'),
-        fetch('http://localhost:4000/patients'),
-        fetch('http://localhost:4000/doctors'),
+        fetch('https://drbloomedi-backend.onrender.com/ipd/beds'),
+        fetch('https://drbloomedi-backend.onrender.com/ipd/admissions?status=Admitted'),
+        fetch('https://drbloomedi-backend.onrender.com/patients'),
+        fetch('https://drbloomedi-backend.onrender.com/doctors'),
       ]);
 
       if (bedsRes.ok) setBeds(await bedsRes.json());
@@ -115,7 +115,7 @@ export default function IpdManagementPage() {
     e.preventDefault();
     try {
       setActionLoading(true);
-      const res = await fetch('http://localhost:4000/ipd/beds', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/ipd/beds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,7 +151,7 @@ export default function IpdManagementPage() {
 
     try {
       setActionLoading(true);
-      const res = await fetch('http://localhost:4000/ipd/admit', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/ipd/admit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -187,7 +187,7 @@ export default function IpdManagementPage() {
 
     try {
       setActionLoading(true);
-      const res = await fetch(`http://localhost:4000/ipd/discharge/${dischargeTarget.id}`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/ipd/discharge/${dischargeTarget.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

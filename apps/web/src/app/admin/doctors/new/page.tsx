@@ -27,7 +27,7 @@ export default function NewDoctorPage() {
 
   // Fetch Departments for Dropdown
   useEffect(() => {
-    fetch('http://localhost:4000/departments')
+    fetch('https://drbloomedi-backend.onrender.com/departments')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setDepartments(data);
@@ -42,7 +42,7 @@ export default function NewDoctorPage() {
       setErrorMsg('');
 
       // Yaha par payload me fullName bhejna hai:
-      const res = await fetch('http://localhost:4000/doctors', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/doctors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

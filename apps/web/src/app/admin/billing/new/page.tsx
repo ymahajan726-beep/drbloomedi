@@ -66,8 +66,8 @@ export default function NewBillingPage() {
     async function loadData() {
       try {
         const [patientsRes, doctorsRes] = await Promise.all([
-          fetch('http://localhost:4000/patients'),
-          fetch('http://localhost:4000/doctors'),
+          fetch('https://drbloomedi-backend.onrender.com/patients'),
+          fetch('https://drbloomedi-backend.onrender.com/doctors'),
         ]);
 
         if (patientsRes.ok) {
@@ -125,7 +125,7 @@ export default function NewBillingPage() {
         notes: notes.trim() || undefined,
       };
 
-      const res = await fetch('http://localhost:4000/billing', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/billing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

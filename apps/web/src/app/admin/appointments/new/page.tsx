@@ -43,8 +43,8 @@ export default function NewAppointmentPage() {
       try {
         setLoadingData(true);
         const [patientsRes, doctorsRes] = await Promise.all([
-          fetch('http://localhost:4000/patients'),
-          fetch('http://localhost:4000/doctors'),
+          fetch('https://drbloomedi-backend.onrender.com/patients'),
+          fetch('https://drbloomedi-backend.onrender.com/doctors'),
         ]);
 
         if (patientsRes.ok) {
@@ -95,7 +95,7 @@ export default function NewAppointmentPage() {
       setSubmitting(true);
       setErrorMsg('');
 
-      const res = await fetch('http://localhost:4000/appointments', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

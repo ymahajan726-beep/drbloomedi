@@ -44,8 +44,8 @@ export default function PatientEMRPage() {
   const fetchPatients = async (query = '') => {
     try {
       const url = query.trim()
-        ? `http://localhost:4000/patients?search=${encodeURIComponent(query.trim())}`
-        : 'http://localhost:4000/patients';
+        ? `https://drbloomedi-backend.onrender.com/patients?search=${encodeURIComponent(query.trim())}`
+        : 'https://drbloomedi-backend.onrender.com/patients';
 
       const res = await fetch(url);
       if (res.ok) {
@@ -73,7 +73,7 @@ export default function PatientEMRPage() {
     try {
       setLoading(true);
       setFetchError(null);
-      const res = await fetch(`http://localhost:4000/emr/patient/${patientId}`);
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/emr/patient/${patientId}`);
       if (!res.ok) {
         throw new Error(`Server returned ${res.status}: Failed to load timeline`);
       }

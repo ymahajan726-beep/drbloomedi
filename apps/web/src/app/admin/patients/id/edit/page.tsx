@@ -29,7 +29,7 @@ export default function EditPatientPage() {
     async function loadPatient() {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:4000/patients/${patientId}`);
+        const res = await fetch(`https://drbloomedi-backend.onrender.com/patients/${patientId}`);
         if (res.ok) {
           const data = await res.json();
           setForm({
@@ -62,7 +62,7 @@ export default function EditPatientPage() {
     setSaving(true);
 
     try {
-      const res = await fetch(`http://localhost:4000/patients/${patientId}`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/patients/${patientId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -25,7 +25,7 @@ export default function EditReceptionPage() {
     async function loadStaff() {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:4000/reception/${staffId}`);
+        const res = await fetch(`https://drbloomedi-backend.onrender.com/reception/${staffId}`);
         if (res.ok) {
           const data = await res.json();
           setForm({
@@ -54,7 +54,7 @@ export default function EditReceptionPage() {
     setSaving(true);
 
     try {
-      const res = await fetch(`http://localhost:4000/reception/${staffId}`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/reception/${staffId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API_URL = "http://localhost:4000";
+const API_URL = "https://drbloomedi-backend.onrender.com";
 
 type User = {
   id: number;

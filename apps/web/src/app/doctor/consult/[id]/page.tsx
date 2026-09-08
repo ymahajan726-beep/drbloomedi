@@ -47,12 +47,12 @@ export default function DoctorConsultPage() {
       setLoading(true);
 
       let aptData: any = null;
-      const directAptRes = await fetch(`http://localhost:4000/appointments/${appointmentId}`).catch(() => null);
+      const directAptRes = await fetch(`https://drbloomedi-backend.onrender.com/appointments/${appointmentId}`).catch(() => null);
       
       if (directAptRes && directAptRes.ok) {
         aptData = await directAptRes.json();
       } else {
-        const listRes = await fetch('http://localhost:4000/appointments').catch(() => null);
+        const listRes = await fetch('https://drbloomedi-backend.onrender.com/appointments').catch(() => null);
         if (listRes && listRes.ok) {
           const list = await listRes.json();
           aptData = Array.isArray(list) ? list.find((a: any) => String(a.id) === String(appointmentId)) : null;
@@ -67,7 +67,7 @@ export default function DoctorConsultPage() {
 
         const pat = aptData.patient;
         if (pat?.id) {
-          const emrRes = await fetch(`http://localhost:4000/emr/patient/${pat.id}`).catch(() => null);
+          const emrRes = await fetch(`https://drbloomedi-backend.onrender.com/emr/patient/${pat.id}`).catch(() => null);
           if (emrRes && emrRes.ok) {
             const emrData = await emrRes.json();
             const loadedPatient = emrData.patient || emrData;
@@ -177,7 +177,7 @@ export default function DoctorConsultPage() {
       };
 
       // Corrected to POST /prescriptions
-      const res = await fetch('http://localhost:4000/prescriptions', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/prescriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

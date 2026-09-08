@@ -63,7 +63,7 @@ export default function BillingDirectoryPage() {
       if (search.trim()) queryParams.append('search', search.trim());
       if (statusFilter) queryParams.append('status', statusFilter);
 
-      const res = await fetch(`http://localhost:4000/billing?${queryParams.toString()}`);
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/billing?${queryParams.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setBills(Array.isArray(data) ? data : []);
@@ -84,7 +84,7 @@ export default function BillingDirectoryPage() {
   // 3. Quick Status Change (Type-Safe)
   const handleQuickStatusChange = async (id: string, newStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/billing/${id}/status`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/billing/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -103,7 +103,7 @@ export default function BillingDirectoryPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to remove this invoice?')) return;
     try {
-      const res = await fetch(`http://localhost:4000/billing/${id}`, {
+      const res = await fetch(`https://drbloomedi-backend.onrender.com/billing/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {

@@ -35,7 +35,7 @@ export default function AppointmentsPage() {
   const loadAppointments = async () => {
     try {
       setLoading(true);
-      let url = `http://localhost:4000/appointments?search=${encodeURIComponent(search)}`;
+      let url = `https://drbloomedi-backend.onrender.com/appointments?search=${encodeURIComponent(search)}`;
       if (statusFilter) url += `&status=${encodeURIComponent(statusFilter)}`;
 
       const res = await fetch(url);
@@ -56,7 +56,7 @@ export default function AppointmentsPage() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      await fetch(`http://localhost:4000/appointments/${id}/status`, {
+      await fetch(`https://drbloomedi-backend.onrender.com/appointments/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -70,7 +70,7 @@ export default function AppointmentsPage() {
   const handleDelete = async (id: string, token: string) => {
     if (!confirm(`Cancel and delete appointment ${token}?`)) return;
     try {
-      await fetch(`http://localhost:4000/appointments/${id}`, {
+      await fetch(`https://drbloomedi-backend.onrender.com/appointments/${id}`, {
         method: 'DELETE',
       });
       loadAppointments();

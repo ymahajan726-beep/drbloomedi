@@ -25,7 +25,7 @@ export class DocumentsService {
     }
 
     // Direct controller-served endpoint
-    const publicUrl = `http://localhost:4000/documents/download/${file.filename}`;
+    const publicUrl = `https://drbloomedi-backend.onrender.com/documents/download/${file.filename}`;
 
     const newDoc = this.docRepo.create({
       fileName: file.filename,

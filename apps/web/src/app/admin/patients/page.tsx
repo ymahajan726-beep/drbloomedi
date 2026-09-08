@@ -26,7 +26,7 @@ export default function PatientsListPage() {
     try {
       setLoading(true);
       const res = await fetch(
-        `http://localhost:4000/patients?search=${encodeURIComponent(query)}`
+        `https://drbloomedi-backend.onrender.com/patients?search=${encodeURIComponent(query)}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -46,7 +46,7 @@ export default function PatientsListPage() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to remove records for ${name}?`)) return;
     try {
-      await fetch(`http://localhost:4000/patients/${id}`, {
+      await fetch(`https://drbloomedi-backend.onrender.com/patients/${id}`, {
         method: 'DELETE',
       });
       loadPatients(search);

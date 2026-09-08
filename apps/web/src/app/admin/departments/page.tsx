@@ -30,7 +30,7 @@ export default function DepartmentsPage() {
   const loadDepartments = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/departments');
+      const res = await fetch('https://drbloomedi-backend.onrender.com/departments');
       if (res.ok) {
         const data = await res.json();
         setDepartments(Array.isArray(data) ? data : []);
@@ -52,7 +52,7 @@ export default function DepartmentsPage() {
     setSaving(true);
 
     try {
-      const res = await fetch('http://localhost:4000/departments', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/departments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -82,7 +82,7 @@ export default function DepartmentsPage() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Delete ${name} department?`)) return;
     try {
-      await fetch(`http://localhost:4000/departments/${id}`, { method: 'DELETE' });
+      await fetch(`https://drbloomedi-backend.onrender.com/departments/${id}`, { method: 'DELETE' });
       loadDepartments();
     } catch (err) {
       console.error(err);

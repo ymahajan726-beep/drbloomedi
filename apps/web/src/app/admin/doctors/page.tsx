@@ -39,7 +39,7 @@ export default function DoctorPortalPage() {
   const loadAppointments = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:4000/appointments');
+      const res = await fetch('https://drbloomedi-backend.onrender.com/appointments');
       if (res.ok) {
         const data = await res.json();
         setAppointments(data);
@@ -78,7 +78,7 @@ export default function DoctorPortalPage() {
 
     try {
       setAiLoading(true);
-      const res = await fetch('http://localhost:4000/ai/suggest-prescription', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/ai/suggest-prescription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ diagnosis, symptoms }),
@@ -113,10 +113,10 @@ export default function DoctorPortalPage() {
     try {
       setSummaryLoading(true);
       // Fetch full patient history for EMR summarization
-      const histRes = await fetch(`http://localhost:4000/patient-portal/history/${patient.id}`).catch(() => null);
+      const histRes = await fetch(`https://drbloomedi-backend.onrender.com/patient-portal/history/${patient.id}`).catch(() => null);
       const histData = histRes?.ok ? await histRes.json() : {};
 
-      const res = await fetch('http://localhost:4000/ai/patient-summary', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/ai/patient-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -185,7 +185,7 @@ export default function DoctorPortalPage() {
         medicines: validMeds,
       };
 
-      const res = await fetch('http://localhost:4000/prescriptions', {
+      const res = await fetch('https://drbloomedi-backend.onrender.com/prescriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
