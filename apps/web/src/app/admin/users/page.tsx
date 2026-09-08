@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 const API_URL = "https://drbloomedi-backend.onrender.com";
 
 type User = {
-  id: number;
+  id: string | number;
   email: string;
   role: string;
   isActive: boolean;
   name?: string;
+  fullName?: string;
   phone?: string;
 };
 
@@ -28,12 +29,23 @@ export default function UsersPage() {
     password: "",
     role: "DOCTOR",
     phone: "",
+    specialization: "General Physician",
+    consultationFee: 500,
   });
+
+  const getHeaders = () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
 
   async function fetchUsers() {
     try {
       const response = await fetch(`${API_URL}/users`, {
         method: "GET",
+        headers: getHeaders(),
         credentials: "include",
         cache: "no-store",
       });
@@ -45,9 +57,8 @@ export default function UsersPage() {
       }
 
       const data = await response.json();
-      console.log("USERS RESPONSE:", data);
-
-      const staffOnly = data.filter((u: User) => u.role?.toUpperCase() !== "PATIENT");
+      const list = Array.isArray(data) ? data : [];
+      const staffOnly = list.filter((u: User) => u.role?.toUpperCase() !== "PATIENT");
       setUsers(staffOnly);
     } catch (error) {
       console.error("USERS FETCH ERROR:", error);
@@ -66,20 +77,23 @@ export default function UsersPage() {
     setFormError(null);
 
     try {
-      // Backend database enum standard format: DOCTOR | RECEPTION | ADMIN
-      const payload = {
+      const payload: any = {
         name: formData.name.trim(),
+        fullName: formData.name.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         role: formData.role.toUpperCase(),
         phone: formData.phone.trim() || undefined,
       };
 
+      if (formData.role.toUpperCase() === "DOCTOR") {
+        payload.specialization = formData.specialization.trim() || "General Physician";
+        payload.consultationFee = Number(formData.consultationFee) || 500;
+      }
+
       const response = await fetch(`${API_URL}/users`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getHeaders(),
         credentials: "include",
         body: JSON.stringify(payload),
       });
@@ -91,37 +105,51 @@ export default function UsersPage() {
         throw new Error(errData.message || "Failed to create staff account. Email may already be taken.");
       }
 
+      // If doctor role, trigger doctor profile entry guarantee
+      if (formData.role.toUpperCase() === "DOCTOR") {
+        try {
+          await fetch(`${API_URL}/doctors`, {
+            method: "POST",
+            headers: getHeaders(),
+            credentials: "include",
+            body: JSON.stringify({
+              email: formData.email.trim().toLowerCase(),
+              specialization: formData.specialization.trim() || "General Physician",
+              consultationFee: Number(formData.consultationFee) || 500,
+            }),
+          });
+        } catch (_) {}
+      }
+
       setFormData({
         name: "",
         email: "",
         password: "",
         role: "DOCTOR",
         phone: "",
+        specialization: "General Physician",
+        consultationFee: 500,
       });
       setShowModal(false);
       await fetchUsers();
     } catch (error: any) {
       console.error("CREATE USER ERROR:", error);
-      setFormError(error.message || "Error saving staff member. Check database enum format.");
+      setFormError(error.message || "Error saving staff member.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function toggleStatus(id: number, currentStatus: boolean) {
+  async function toggleStatus(id: string | number, currentStatus: boolean) {
     try {
       const response = await fetch(`${API_URL}/users/${id}/active`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getHeaders(),
         credentials: "include",
         body: JSON.stringify({
           isActive: !currentStatus,
         }),
       });
-
-      console.log("STATUS UPDATE:", response.status);
 
       if (!response.ok) {
         throw new Error("Failed to update user status");
@@ -133,7 +161,7 @@ export default function UsersPage() {
     }
   }
 
-  async function deleteUser(id: number) {
+  async function deleteUser(id: string | number) {
     const confirmed = window.confirm(
       "Are you sure you want to permanently delete this staff member?",
     );
@@ -145,10 +173,9 @@ export default function UsersPage() {
     try {
       const response = await fetch(`${API_URL}/users/${id}`, {
         method: "DELETE",
+        headers: getHeaders(),
         credentials: "include",
       });
-
-      console.log("DELETE STATUS:", response.status);
 
       if (!response.ok) {
         throw new Error("Failed to delete user");
@@ -249,13 +276,13 @@ export default function UsersPage() {
               <tbody className="divide-y divide-gray-200">
                 {filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">
-                      {user.id}
+                    <td className="px-6 py-4 font-mono text-xs text-gray-600">
+                      {String(user.id).slice(0, 8)}
                     </td>
 
                     <td className="px-6 py-4 font-medium text-gray-900">
                       <p className="font-bold text-gray-900">
-                        {user.name || user.email.split("@")[0]}
+                        {user.fullName || user.name || user.email.split("@")[0]}
                       </p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                       {user.phone && (
@@ -278,7 +305,7 @@ export default function UsersPage() {
                     </td>
 
                     <td className="px-6 py-4">
-                      {user.isActive ? (
+                      {user.isActive !== false ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                           <span className="h-1.5 w-1.5 rounded-full bg-green-600"></span> Active
                         </span>
@@ -294,11 +321,11 @@ export default function UsersPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            toggleStatus(user.id, user.isActive)
+                            toggleStatus(user.id, user.isActive !== false)
                           }
                           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100"
                         >
-                          {user.isActive ? "Deactivate" : "Activate"}
+                          {user.isActive !== false ? "Deactivate" : "Activate"}
                         </button>
 
                         <button
@@ -421,6 +448,40 @@ export default function UsersPage() {
                   <option value="ADMIN">Hospital Administrator</option>
                 </select>
               </div>
+
+              {formData.role === "DOCTOR" && (
+                <div className="space-y-3 rounded-xl bg-blue-50/60 p-3 border border-blue-100">
+                  <div>
+                    <label className="block font-semibold text-blue-900 mb-1">
+                      Doctor Specialization *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Cardiologist, General Physician"
+                      value={formData.specialization}
+                      onChange={(e) =>
+                        setFormData({ ...formData, specialization: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-gray-900 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-blue-900 mb-1">
+                      Consultation Fee (₹)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="500"
+                      value={formData.consultationFee}
+                      onChange={(e) =>
+                        setFormData({ ...formData, consultationFee: Number(e.target.value) })
+                      }
+                      className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-gray-900 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 border-t pt-4">
                 <button
