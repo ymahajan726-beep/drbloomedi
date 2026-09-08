@@ -19,18 +19,16 @@ export default function ReceptionDashboardPage() {
   const [selectedAptForPay, setSelectedAptForPay] = useState<any | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(500);
 
-  // Itemized Billing Breakdown State (Kal wala auto-calculate logic)
+  // Clinical OPD + Lab Breakdown State (Sirf Doctor Fee + Lab Tests)
   const [billBreakdown, setBillBreakdown] = useState<{
     consultationFee: number;
     labTestsFee: number;
     labTestNames: string[];
-    pharmacyFee: number;
     total: number;
   }>({
     consultationFee: 500,
     labTestsFee: 0,
     labTestNames: [],
-    pharmacyFee: 0,
     total: 500,
   });
 
@@ -117,7 +115,7 @@ export default function ReceptionDashboardPage() {
         const list = Array.isArray(data) ? data : [];
         setAppointments(list);
 
-        // Sirf actual paid records track honge (Completed status se auto-paid nahi hoga)
+        // Track verified paid records
         setPaidIds((prev) => {
           const updated = { ...prev };
           list.forEach((item) => {
@@ -141,7 +139,7 @@ export default function ReceptionDashboardPage() {
     }
   };
 
-  // Auto-Calculate Consolidated Billing (Doctor Fee + Lab Tests + Prescriptions)
+  // Auto-Calculate OPD Clearance (Doctor Consultation Fee + Doctor-Advised Lab Tests ONLY)
   const handleOpenBillingModal = async (apt: any) => {
     setSelectedAptForPay(apt);
 
@@ -149,7 +147,6 @@ export default function ReceptionDashboardPage() {
     const consultFee = Number(apt.doctor?.consultationFee) || 500;
     let labTotal = 0;
     let labNames: string[] = [];
-    let rxTotal = 0;
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -166,21 +163,13 @@ export default function ReceptionDashboardPage() {
         if (res.ok) {
           const history = await res.json();
 
-          // Calculate Lab Tests ordered by doctor
+          // Calculate Lab Tests ordered by doctor (WBC, Serology, CBC etc.)
           if (Array.isArray(history.labOrders) && history.labOrders.length > 0) {
             history.labOrders.forEach((lab: any) => {
               const fee = Number(lab.labTest?.price) || Number(lab.price) || 350;
               labTotal += fee;
-              labNames.push(lab.labTest?.testName || 'Lab Investigation');
+              labNames.push(lab.labTest?.testName || 'Diagnostic Lab Investigation');
             });
-          }
-
-          // Calculate Prescribed Medicines
-          if (Array.isArray(history.prescriptions) && history.prescriptions.length > 0) {
-            const latestRx = history.prescriptions[0];
-            if (Array.isArray(latestRx.medicines) && latestRx.medicines.length > 0) {
-              rxTotal = latestRx.medicines.length * 150;
-            }
           }
         }
       }
@@ -188,19 +177,18 @@ export default function ReceptionDashboardPage() {
       console.warn('Fallback billing calculation', e);
     }
 
-    // Doctor ke prescription/symptoms context fallback
-    if (labTotal === 0 && apt.symptoms && apt.symptoms.toLowerCase().includes('test')) {
-      labTotal = 400;
+    // Doctor ke prescription/symptoms context fallback agar direct symptoms me test note ho
+    if (labTotal === 0 && apt.symptoms && (apt.symptoms.toLowerCase().includes('test') || apt.symptoms.toLowerCase().includes('blood'))) {
+      labTotal = 350;
       labNames.push('Diagnostic Blood Panel');
     }
 
-    const finalTotal = consultFee + labTotal + rxTotal;
+    const finalTotal = consultFee + labTotal;
 
     setBillBreakdown({
       consultationFee: consultFee,
       labTestsFee: labTotal,
       labTestNames: labNames,
-      pharmacyFee: rxTotal,
       total: finalTotal,
     });
 
@@ -322,7 +310,7 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* Top Header Card With Logout Button */}
+      {/* Top Header Card */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -345,7 +333,7 @@ export default function ReceptionDashboardPage() {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Patient check-ins, appointment tracking, and consolidated discharge billing
+            Patient check-ins, appointment tracking, and OPD & Diagnostic billing clearance
           </p>
         </div>
 
@@ -394,7 +382,7 @@ export default function ReceptionDashboardPage() {
                 <th className="py-3">Contact</th>
                 <th className="py-3">Date & Slot</th>
                 <th className="py-3 text-center">Status</th>
-                <th className="py-3 text-right">Discharge Billing</th>
+                <th className="py-3 text-right">OPD Billing</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -466,13 +454,13 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      {/* 💳 INITIAL COUNTER MODAL WITH CONSOLIDATED BILLING BREAKDOWN */}
+      {/* 💳 INITIAL COUNTER MODAL (OPD + LAB CHARGES ONLY) */}
       {selectedAptForPay && !showRazorpayModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-base font-black text-slate-900">Hospital Billing Clearance</h3>
+                <h3 className="text-base font-black text-slate-900">OPD & Diagnostic Billing Clearance</h3>
                 <p className="text-[11px] text-slate-400">
                   Patient: {selectedAptForPay.patient?.fullName} • Token: #{selectedAptForPay.appointmentNumber}
                 </p>
@@ -485,7 +473,7 @@ export default function ReceptionDashboardPage() {
               </button>
             </div>
 
-            {/* Itemized Charges List */}
+            {/* Itemized Charges (Doctor Fee + Lab Tests) */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2.5 text-xs">
               <div className="flex justify-between items-center">
                 <span className="text-slate-600">🩺 OPD Doctor Consultation Fee</span>
@@ -495,7 +483,7 @@ export default function ReceptionDashboardPage() {
               {billBreakdown.labTestsFee > 0 && (
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className="text-slate-600">🧪 Diagnostic & Lab Investigations</span>
+                    <span className="text-slate-600">🧪 Doctor Advised Lab Tests</span>
                     {billBreakdown.labTestNames.length > 0 && (
                       <p className="text-[10px] text-purple-600 font-medium">
                         ({billBreakdown.labTestNames.join(', ')})
@@ -506,18 +494,15 @@ export default function ReceptionDashboardPage() {
                 </div>
               )}
 
-              {billBreakdown.pharmacyFee > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-600">💊 Prescribed Medicines / Pharmacy</span>
-                  <span className="font-bold text-blue-700">₹{billBreakdown.pharmacyFee}.00</span>
-                </div>
-              )}
-
               <div className="border-t border-slate-200 pt-2 flex justify-between items-center text-sm">
-                <span className="font-black text-slate-900">Consolidated Payable:</span>
+                <span className="font-black text-slate-900">Total Hospital Payable:</span>
                 <span className="font-black text-emerald-600 text-base">₹{paymentAmount}.00</span>
               </div>
             </div>
+
+            <p className="text-[11px] text-slate-400 italic">
+              ℹ️ Note: Pharmacy medicines are dispensed and billed separately at the Pharmacy Counter.
+            </p>
 
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">Adjust Total Amount (₹)</label>
@@ -701,7 +686,7 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* 📄 FINAL TAX INVOICE PRINTABLE RECEIPT MODAL (WITH ITEMIZATION) */}
+      {/* 📄 FINAL TAX INVOICE PRINTABLE RECEIPT MODAL */}
       {paidReceipt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
@@ -709,8 +694,8 @@ export default function ReceptionDashboardPage() {
               <span className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center text-xl mb-1">
                 ✓
               </span>
-              <h2 className="text-xl font-black text-slate-900">Payment Completed!</h2>
-              <p className="text-[11px] text-slate-400">DrBlooMedi Healthcare Official Tax Invoice</p>
+              <h2 className="text-xl font-black text-slate-900">Hospital Payment Clearance</h2>
+              <p className="text-[11px] text-slate-400">DrBlooMedi Healthcare Official OPD & Diagnostic Receipt</p>
             </div>
 
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2 text-xs">
@@ -734,25 +719,19 @@ export default function ReceptionDashboardPage() {
               {/* Itemized summary on receipt */}
               <div className="border-t border-slate-200 pt-2 space-y-1 text-[11px]">
                 <div className="flex justify-between text-slate-600">
-                  <span>Consultation Fee:</span>
+                  <span>OPD Consultation Fee:</span>
                   <span>₹{paidReceipt.breakdown?.consultationFee || 500}.00</span>
                 </div>
                 {paidReceipt.breakdown?.labTestsFee > 0 && (
                   <div className="flex justify-between text-purple-700 font-medium">
-                    <span>Lab Investigations:</span>
+                    <span>Diagnostic Lab Tests:</span>
                     <span>₹{paidReceipt.breakdown.labTestsFee}.00</span>
-                  </div>
-                )}
-                {paidReceipt.breakdown?.pharmacyFee > 0 && (
-                  <div className="flex justify-between text-blue-700 font-medium">
-                    <span>Pharmacy / Medicines:</span>
-                    <span>₹{paidReceipt.breakdown.pharmacyFee}.00</span>
                   </div>
                 )}
               </div>
 
               <div className="border-t border-slate-200 pt-2 flex justify-between text-sm">
-                <span className="font-bold text-slate-900">Total Paid:</span>
+                <span className="font-bold text-slate-900">Total Cleared:</span>
                 <span className="font-black text-slate-900">₹{paidReceipt.amount}.00</span>
               </div>
             </div>
