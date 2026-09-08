@@ -1,38 +1,38 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './modules/app.module';
-import cookieParser from 'cookie-parser';
+import cookieParser = require('cookie-parser');
 import { json, urlencoded } from 'express';
-import {join} from 'path';
-import * as express from 'express';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Cookie parser middleware
   app.use(cookieParser());
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Dynamic CORS configuration (Handles localhost, IP, and local network requests smoothly)
+  // Dynamic CORS configuration for local + production
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
-      
+
       const allowedOrigins = [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
+        'https://drbloomedi.vercel.app',
       ];
 
-      // Allow any localhost port or configured frontend origin
       if (
         allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
         origin.startsWith('http://localhost:') ||
         origin.startsWith('http://127.0.0.1:')
       ) {
         return callback(null, true);
       }
 
-      return callback(null, true); // Dev environment me safe access allow karta hai
+      return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
@@ -47,9 +47,14 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
-  // Explicitly bind to '0.0.0.0' taaki localhost aur IPv4/IPv6 dono traffic smoothly receive ho
-  const port = process.env.PORT || 4000;
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
+  
+  // Render ke liye 0.0.0.0 bind karna zaroori hai
   await app.listen(port, '0.0.0.0');
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`🚀 Application is running on port: ${port}`);
 }
-bootstrap();
+
+bootstrap().catch((err) => {
+  console.error('Fatal bootstrap error:', err);
+  process.exit(1);
+});
