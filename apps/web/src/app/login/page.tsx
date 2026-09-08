@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const API_URL = "http://localhost:4000";
+// Dynamic API URL: Vercel env var use karega, fallback localhost
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://drbloomedi-backend.onrender.com";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,19 +36,29 @@ export default function LoginPage() {
       const userRole = (data.user?.role || data.role || "ADMIN").toUpperCase();
       const token = data.access_token || data.token || "";
 
+      if (!token) {
+        throw new Error("No token received from backend.");
+      }
+
+      // 1. LocalStorage Store
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", userRole);
       localStorage.setItem("userEmail", data.user?.email || email);
 
-      document.cookie = `token=${token}; path=/; max-age=86400;`;
-      document.cookie = `userRole=${userRole}; path=/; max-age=86400;`;
+      // 2. Set Cookies with Secure & SameSite flags for HTTPS/Vercel
+      const isHttps = window.location.protocol === "https:";
+      const cookieSuffix = `; path=/; max-age=86400; SameSite=Lax${isHttps ? "; Secure" : ""}`;
+      
+      document.cookie = `token=${token}${cookieSuffix}`;
+      document.cookie = `userRole=${userRole}${cookieSuffix}`;
 
+      // 3. Full navigation so middleware picks up cookies reliably
       if (userRole === "DOCTOR") {
-        router.push("/doctor/dashboard");
+        window.location.href = "/doctor/dashboard";
       } else if (userRole === "RECEPTION") {
-        router.push("/reception/dashboard");
+        window.location.href = "/reception/dashboard";
       } else {
-        router.push("/admin/dashboard");
+        window.location.href = "/admin/dashboard";
       }
     } catch (err: any) {
       setError(err.message || "Unable to authenticate.");
@@ -188,7 +198,7 @@ export default function LoginPage() {
             </form>
           </div>
 
-          {/* Quick Access Footbar (Balanced & Clean) */}
+          {/* Quick Access Footbar */}
           <div className="pt-6 border-t border-slate-100 mt-6 space-y-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
