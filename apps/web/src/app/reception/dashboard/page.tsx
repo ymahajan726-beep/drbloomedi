@@ -102,14 +102,12 @@ export default function ReceptionDashboardPage() {
         const list = Array.isArray(data) ? data : [];
         setAppointments(list);
 
-        // Auto mark as paid if database shows completed/isPaid
+        // Sirf wahi appointments paid maane jayenge jinka payment confirm hua ho (Status 'Completed' se auto-paid nahi hoga)
         setPaidIds((prev) => {
           const updated = { ...prev };
           list.forEach((item) => {
             if (
-              item.isPaid ||
-              item.status === 'Completed' ||
-              item.status === 'COMPLETED' ||
+              item.isPaid === true ||
               item.paymentStatus === 'PAID'
             ) {
               updated[item.id] = true;
@@ -331,11 +329,10 @@ export default function ReceptionDashboardPage() {
                 </tr>
               ) : (
                 filteredAppointments.map((apt) => {
+                  // Actual Payment check: Only true if payment was recorded
                   const isPaid =
-                    paidIds[apt.id] ||
-                    apt.isPaid ||
-                    apt.status === 'Completed' ||
-                    apt.status === 'COMPLETED' ||
+                    paidIds[apt.id] === true ||
+                    apt.isPaid === true ||
                     apt.paymentStatus === 'PAID';
 
                   return (
@@ -356,12 +353,12 @@ export default function ReceptionDashboardPage() {
                       <td className="py-3.5 text-center">
                         <span
                           className={`px-3 py-1 text-[10px] font-bold rounded-full border ${
-                            isPaid
+                            apt.status === 'Completed' || apt.status === 'COMPLETED'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : 'bg-blue-50 text-blue-700 border-blue-200'
                           }`}
                         >
-                          {isPaid ? 'Completed' : (apt.status || 'Scheduled')}
+                          {apt.status || 'Scheduled'}
                         </span>
                       </td>
                       <td className="py-3.5 text-right">
@@ -375,7 +372,7 @@ export default function ReceptionDashboardPage() {
                               setSelectedAptForPay(apt);
                               setPaymentAmount(500);
                             }}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 transition"
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 transition shadow-sm"
                           >
                             💳 Collect Bill
                           </button>
