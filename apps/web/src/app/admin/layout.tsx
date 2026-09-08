@@ -162,7 +162,7 @@ export default function AdminLayout({
 
                   <div className="space-y-0.5">
                     {group.items.map((item) => {
-                      if (isReception && item.adminOnly) return null;
+                      if (isReception && (item as any).adminOnly) return null;
                       const isActive =
                         item.href === '/admin/dashboard'
                           ? pathname === item.href
