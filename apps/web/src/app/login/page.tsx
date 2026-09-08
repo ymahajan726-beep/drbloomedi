@@ -3,10 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 
-// Trailing slash ko sanitize karein taaki 308 redirect trigger na ho
-const RAW_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://drbloomedi-backend.onrender.com";
-const API_URL = RAW_API_URL.replace(/\/+$/, "");
+const BACKEND_URL = "https://drbloomedi-backend.onrender.com";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -21,14 +18,17 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const endpoint = `${API_URL}/auth/login`;
-      console.log("Submitting login to:", endpoint);
+      const cleanEmail = email.trim().toLowerCase();
+      const loginEndpoint = `${BACKEND_URL}/auth/login`;
 
-      const res = await fetch(endpoint, {
+      const res = await fetch(loginEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
         credentials: "include",
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        body: JSON.stringify({ email: cleanEmail, password }),
       });
 
       if (!res.ok) {
@@ -40,27 +40,25 @@ export default function LoginPage() {
 
       const data = await res.json();
       const userRole = (data.user?.role || data.role || "ADMIN").toUpperCase();
-      
-      // Backend accessToken, token ya access_token teeno me se koi bhi return kare handle hoga
       const token = data.accessToken || data.access_token || data.token || "";
 
       if (!token) {
-        throw new Error("No token received from backend.");
+        throw new Error("No authorization token returned by backend.");
       }
 
-      // 1. LocalStorage Store
+      // LocalStorage update
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userEmail", data.user?.email || email.trim().toLowerCase());
+      localStorage.setItem("userEmail", data.user?.email || cleanEmail);
 
-      // 2. Set Cookies with Secure & SameSite flags for HTTPS/Vercel
+      // Secure cookies set for SSR/middleware
       const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
-      const cookieSuffix = `; path=/; max-age=86400; SameSite=Lax${isHttps ? "; Secure" : ""}`;
+      const cookieConfig = `; path=/; max-age=86400; SameSite=Lax${isHttps ? "; Secure" : ""}`;
 
-      document.cookie = `token=${token}${cookieSuffix}`;
-      document.cookie = `userRole=${userRole}${cookieSuffix}`;
+      document.cookie = `token=${token}${cookieConfig}`;
+      document.cookie = `userRole=${userRole}${cookieConfig}`;
 
-      // 3. Full navigation so middleware picks up cookies reliably
+      // Navigation by role
       if (userRole === "DOCTOR") {
         window.location.href = "/doctor/dashboard";
       } else if (userRole === "RECEPTION") {
@@ -69,7 +67,6 @@ export default function LoginPage() {
         window.location.href = "/admin/dashboard";
       }
     } catch (err: any) {
-      console.error("Login catch block:", err);
       setError(err.message || "Unable to authenticate.");
     } finally {
       setLoading(false);
@@ -238,7 +235,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Compact Horizontal Patient Portal Strip */}
+            {/* Patient Portal Strip */}
             <Link
               href="/patient-portal"
               className="flex items-center justify-between p-2.5 bg-blue-50/70 hover:bg-blue-100/60 border border-blue-200/80 rounded-xl transition group"
