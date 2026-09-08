@@ -21,7 +21,7 @@ export class AuthService {
   async validateUser(email: string, pass: string): Promise<any> {
     const cleanEmail = email.trim().toLowerCase();
     const user = await this.userRepository.findOne({ where: { email: cleanEmail } });
-    
+
     if (!user) {
       console.log(`[AUTH] User not found: ${cleanEmail}`);
       return null;
@@ -46,9 +46,54 @@ export class AuthService {
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
       accessToken: this.jwtService.sign(payload),
-      token: this.jwtService.sign(payload), // Frontend compatibility ke liye
+      token: this.jwtService.sign(payload),
       role: user.role,
       user,
+    };
+  }
+
+  async setupInitialAdmin() {
+    const salt = await bcrypt.genSalt(10);
+
+    const usersToSeed = [
+      { email: 'admin@drbloomedi.com', pass: 'Admin@1234', role: 'ADMIN', name: 'System Admin' },
+      { email: 'doctor@gmail.com', pass: '11111111', role: 'DOCTOR', name: 'Dr. Sharma' },
+      { email: 'rajesh@gmail.com', pass: '22222222', role: 'RECEPTION', name: 'Rajesh Reception' },
+    ];
+
+    const results: string[] = [];
+
+    for (const item of usersToSeed) {
+      const cleanEmail = item.email.trim().toLowerCase();
+      const hashedPassword = await bcrypt.hash(item.pass, salt);
+
+      const existingUser = await this.userRepository.findOne({ where: { email: cleanEmail } });
+
+      if (existingUser) {
+        existingUser.password = hashedPassword;
+        existingUser.role = item.role as any;
+        if ('isActive' in existingUser) {
+          (existingUser as any).isActive = true;
+        }
+        await this.userRepository.save(existingUser);
+        results.push(`Updated: ${cleanEmail}`);
+      } else {
+        const newUser = this.userRepository.create({
+          email: cleanEmail,
+          password: hashedPassword,
+          name: item.name,
+          role: item.role as any,
+          isActive: true,
+        } as any);
+        await this.userRepository.save(newUser);
+        results.push(`Created: ${cleanEmail}`);
+      }
+    }
+
+    return {
+      status: 'SUCCESS',
+      message: 'All accounts seeded directly into Neon DB!',
+      details: results,
     };
   }
 
@@ -59,10 +104,7 @@ export class AuthService {
       throw new NotFoundException('User with this email does not exist.');
     }
 
-    // 6-digit numeric reset token
     const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Token valid for 15 minutes
     const expires = new Date();
     expires.setMinutes(expires.getMinutes() + 15);
 
@@ -100,11 +142,8 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired. Please request a new one.');
     }
 
-    // Hash the new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPass, salt);
-
-    // Clear reset token fields
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
 

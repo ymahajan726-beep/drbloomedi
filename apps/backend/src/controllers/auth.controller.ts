@@ -15,6 +15,12 @@ import { AuthService } from '../services/auth.service';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('setup-admin')
+  @HttpCode(HttpStatus.OK)
+  async setupAdmin() {
+    return this.authService.setupInitialAdmin();
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
