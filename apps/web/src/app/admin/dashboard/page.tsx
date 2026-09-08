@@ -9,9 +9,9 @@ type DashboardStats = {
   totalPatients: number;
   totalReception: number;
   totalDepartments: number;
-  grossRevenue?: number;
-  completedConsultations?: number;
-  waitingQueue?: number;
+  grossRevenue: number;
+  completedConsultations: number;
+  waitingQueue: number;
 };
 
 const API_URL = "https://drbloomedi-backend.onrender.com";
@@ -23,7 +23,7 @@ export default function DashboardPage() {
     totalDoctors: 0,
     totalPatients: 0,
     totalReception: 0,
-    totalDepartments: 0,
+    totalDepartments: 4,
     grossRevenue: 0,
     completedConsultations: 0,
     waitingQueue: 0,
@@ -39,46 +39,78 @@ export default function DashboardPage() {
         setError("");
 
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const headers = {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
 
-        const response = await fetch(`${API_URL}/dashboard/admin`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          credentials: "include",
-        });
+        // Fetch admin base stats and live appointments simultaneously from database
+        const [dashRes, aptRes] = await Promise.all([
+          fetch(`${API_URL}/dashboard/admin`, { headers, credentials: "include" }).catch(() => null),
+          fetch(`${API_URL}/appointments`, { headers, credentials: "include" }).catch(() => null),
+        ]);
 
-        if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            router.replace("/login");
-            return;
-          }
-          throw new Error(`Failed to load dashboard statistics (Status ${response.status})`);
+        let docCount = 0, patCount = 0, recCount = 0, deptCount = 4;
+        if (dashRes && dashRes.ok) {
+          const dashData = await dashRes.json();
+          docCount = dashData.totalDoctors || 0;
+          patCount = dashData.totalPatients || 0;
+          recCount = dashData.totalReception || 0;
+          deptCount = dashData.totalDepartments || 4;
         }
 
-        const data = await response.json();
-        
-        // Also compute dynamic financial fallback if stored locally from counter bills
-        let localRevenue = 0;
+        let waiting = 0;
+        let completed = 0;
+        let revenue = 0;
+
+        if (aptRes && aptRes.ok) {
+          const aptList = await aptRes.json();
+          if (Array.isArray(aptList)) {
+            aptList.forEach((apt: any) => {
+              const isDone =
+                apt.status === "Completed" ||
+                apt.status === "COMPLETED" ||
+                apt.paymentStatus === "PAID" ||
+                apt.isPaid === true;
+
+              if (isDone) {
+                completed++;
+                revenue += Number(apt.doctor?.consultationFee) || 500;
+              } else {
+                waiting++;
+              }
+            });
+
+            // If backend totalPatients is 0, fallback to total appointment records count
+            if (patCount === 0) {
+              patCount = aptList.length;
+            }
+          }
+        }
+
+        // Sync local paid ledger bills if processed at reception counter
         try {
-          const ledger = localStorage.getItem('drbloomedi_paid_appointments_v2');
+          const ledger = localStorage.getItem("drbloomedi_paid_appointments_v2");
           if (ledger) {
             const parsed = JSON.parse(ledger);
+            let ledgerRev = 0;
             Object.values(parsed).forEach((p: any) => {
-              if (p?.isPaid) localRevenue += Number(p?.amount || 500);
+              if (p?.isPaid) ledgerRev += Number(p?.amount || 500);
             });
+            if (ledgerRev > revenue) {
+              revenue = ledgerRev;
+            }
           }
         } catch {}
 
         setStats({
-          totalDoctors: data.totalDoctors || 0,
-          totalPatients: data.totalPatients || 0,
-          totalReception: data.totalReception || 0,
-          totalDepartments: data.totalDepartments || 4,
-          grossRevenue: data.grossRevenue || localRevenue || (data.totalPatients * 500),
-          completedConsultations: data.completedConsultations || 7,
-          waitingQueue: data.waitingQueue || 17,
+          totalDoctors: docCount,
+          totalPatients: patCount,
+          totalReception: recCount,
+          totalDepartments: deptCount,
+          grossRevenue: revenue || (completed * 500),
+          completedConsultations: completed,
+          waitingQueue: waiting,
         });
       } catch (error) {
         console.error("Dashboard loading failed:", error);
@@ -91,7 +123,7 @@ export default function DashboardPage() {
     }
 
     loadDashboard();
-    const interval = setInterval(loadDashboard, 20000); // Poll every 20s for live pulse
+    const interval = setInterval(loadDashboard, 15000); // Live sync every 15s
     return () => clearInterval(interval);
   }, [router]);
 
@@ -300,17 +332,17 @@ export default function DashboardPage() {
               <div className="grid grid-cols-3 gap-4 py-6 text-center">
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <p className="text-[11px] font-bold text-slate-400 uppercase">Live Queue</p>
-                  <p className="text-3xl font-black text-blue-600 mt-1">{stats.waitingQueue}</p>
+                  <p className="text-3xl font-black text-blue-600 mt-1">{loading ? "..." : stats.waitingQueue}</p>
                   <span className="text-[11px] text-slate-500 font-medium">Patients in Waiting</span>
                 </div>
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <p className="text-[11px] font-bold text-slate-400 uppercase">Consulted Today</p>
-                  <p className="text-3xl font-black text-emerald-600 mt-1">{stats.completedConsultations}</p>
+                  <p className="text-3xl font-black text-emerald-600 mt-1">{loading ? "..." : stats.completedConsultations}</p>
                   <span className="text-[11px] text-slate-500 font-medium">Rx Finalized</span>
                 </div>
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <p className="text-[11px] font-bold text-slate-400 uppercase">Total Patients</p>
-                  <p className="text-3xl font-black text-purple-600 mt-1">{stats.totalPatients}</p>
+                  <p className="text-3xl font-black text-purple-600 mt-1">{loading ? "..." : stats.totalPatients}</p>
                   <span className="text-[11px] text-slate-500 font-medium">Registered Database</span>
                 </div>
               </div>
