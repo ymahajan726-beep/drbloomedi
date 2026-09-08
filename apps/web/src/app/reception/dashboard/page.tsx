@@ -15,7 +15,7 @@ export default function ReceptionDashboardPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
 
-  // Walk-in Patient Form State
+  // Walk-in Patient Form State with auto-detect support
   const [walkinForm, setWalkinForm] = useState({
     fullName: '',
     phone: '',
@@ -24,6 +24,7 @@ export default function ReceptionDashboardPage() {
     specialist: 'General Physician',
     slot: '10:00 AM',
     reason: 'General Checkup',
+    patientId: '',
   });
   const [registering, setRegistering] = useState(false);
 
@@ -82,6 +83,37 @@ export default function ReceptionDashboardPage() {
     finally { if (!isBg) setLoading(false); }
   };
 
+  // Smart Mobile Number Auto-Lookup & Autofill Logic
+  const handlePhoneChange = async (phoneVal: string) => {
+    setWalkinForm(prev => ({ ...prev, phone: phoneVal }));
+    if (phoneVal.length === 10) {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const res = await fetch(`${BACKEND_URL}/patients?search=${encodeURIComponent(phoneVal)}`, {
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const patients = await res.json();
+          if (Array.isArray(patients) && patients.length > 0) {
+            const matched = patients.find((p: any) => p.phone === phoneVal);
+            if (matched) {
+              setWalkinForm(prev => ({
+                ...prev,
+                fullName: matched.fullName || prev.fullName,
+                age: matched.age ? String(matched.age) : prev.age,
+                gender: matched.gender || prev.gender,
+                patientId: matched.id,
+              }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error looking up patient by phone', err);
+      }
+    }
+  };
+
   const handleWalkinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walkinForm.fullName || !walkinForm.phone) {
@@ -91,28 +123,59 @@ export default function ReceptionDashboardPage() {
     setRegistering(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      // Step 1: Ensure patient exists or create new if patientId is missing
+      let pId = walkinForm.patientId;
+      if (!pId) {
+        const patRes = await fetch(`${BACKEND_URL}/patients`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: 'include',
+          body: JSON.stringify({
+            fullName: walkinForm.fullName,
+            phone: walkinForm.phone,
+            age: Number(walkinForm.age) || 30,
+            gender: walkinForm.gender,
+            bloodGroup: 'O+',
+            patientType: 'Outpatient'
+          }),
+        });
+        if (patRes.ok) {
+          const newPat = await patRes.json();
+          pId = newPat.id || newPat._id;
+        }
+      }
+
+      // Step 2: Create appointment / issue token
       const res = await fetch(`${BACKEND_URL}/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: 'include',
         body: JSON.stringify({
+          patientId: pId,
           patientName: walkinForm.fullName,
           phone: walkinForm.phone,
           age: Number(walkinForm.age) || 30,
           gender: walkinForm.gender,
           specialty: walkinForm.specialist,
           timeSlot: walkinForm.slot,
-          reason: walkinForm.reason,
-          patientType: 'Outpatient'
+          symptoms: walkinForm.reason,
+          patientType: 'Outpatient',
+          appointmentDate: new Date().toISOString().split('T')[0],
+          status: 'Scheduled'
         }),
       });
+
       if (res.ok) {
-        setWalkinForm({ fullName: '', phone: '', age: '', gender: 'Male', specialist: 'General Physician', slot: '10:00 AM', reason: 'General Checkup' });
+        setWalkinForm({ fullName: '', phone: '', age: '', gender: 'Male', specialist: 'General Physician', slot: '10:00 AM', reason: 'General Checkup', patientId: '' });
         fetchAppointments();
       } else {
-        alert('Failed to issue walk-in token');
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.message || 'Failed to issue walk-in token.');
       }
     } catch (err) {
       console.error(err);
+      alert('Network error while issuing token.');
     } finally {
       setRegistering(false);
     }
@@ -238,24 +301,24 @@ export default function ReceptionDashboardPage() {
 
           <form onSubmit={handleWalkinSubmit} className="space-y-3.5 text-xs">
             <div>
-              <label className="block text-slate-300 font-bold mb-1">Patient Name *</label>
+              <label className="block text-slate-300 font-bold mb-1">Mobile Number *</label>
               <input
                 type="text"
-                placeholder="e.g. Ramesh Kulkarni"
-                value={walkinForm.fullName}
-                onChange={e => setWalkinForm({ ...walkinForm, fullName: e.target.value })}
+                placeholder="10-digit phone (auto-detects patient)"
+                value={walkinForm.phone}
+                onChange={e => handlePhoneChange(e.target.value)}
                 className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold mb-1">Mobile Number *</label>
+              <label className="block text-slate-300 font-bold mb-1">Patient Name *</label>
               <input
                 type="text"
-                placeholder="10-digit phone"
-                value={walkinForm.phone}
-                onChange={e => setWalkinForm({ ...walkinForm, phone: e.target.value })}
+                placeholder="e.g. Ramesh Kulkarni"
+                value={walkinForm.fullName}
+                onChange={e => setWalkinForm({ ...walkinForm, fullName: e.target.value })}
                 className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
                 required
               />
