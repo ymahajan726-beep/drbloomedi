@@ -23,12 +23,13 @@ async function bootstrap() {
         'https://drbloomedi.vercel.app',
       ];
 
-      if (
+      const isAllowed =
         allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
         origin.startsWith('http://localhost:') ||
-        origin.startsWith('http://127.0.0.1:')
-      ) {
+        origin.startsWith('http://127.0.0.1:') ||
+        /\.vercel\.app$/.test(new URL(origin).hostname);
+
+      if (isAllowed) {
         return callback(null, true);
       }
 
@@ -48,8 +49,8 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
-  
-  // Render ke liye 0.0.0.0 bind karna zaroori hai
+
+  // Render binding
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Application is running on port: ${port}`);
 }
