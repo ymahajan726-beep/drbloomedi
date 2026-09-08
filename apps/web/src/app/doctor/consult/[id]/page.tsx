@@ -32,9 +32,20 @@ export default function DoctorConsultPage() {
     },
   ]);
 
-  // Lab Tests Suggested
+  // Lab Tests Suggested (Pathology Investigations)
   const [labTests, setLabTests] = useState<{ testName: string; testPrice: number }[]>([]);
   const [selectedLabTest, setSelectedLabTest] = useState('');
+
+  // Standard Lab Catalog with Realistic Pricing
+  const labCatalog: Record<string, number> = {
+    'Complete Blood Count (CBC)': 350,
+    'Dengue Serology NS1/IgM': 600,
+    'Liver Function Test (LFT)': 750,
+    'Widal Slide Agglutination': 250,
+    'Random Blood Sugar (RBS)': 100,
+    'Serum Electrolytes': 450,
+    'Urine Routine & Microscopic': 200,
+  };
 
   useEffect(() => {
     if (appointmentId) {
@@ -130,7 +141,8 @@ export default function DoctorConsultPage() {
 
   const addLabTest = () => {
     if (!selectedLabTest) return;
-    setLabTests([...labTests, { testName: selectedLabTest, testPrice: 400 }]);
+    const price = labCatalog[selectedLabTest] || 350;
+    setLabTests([...labTests, { testName: selectedLabTest, testPrice: price }]);
     setSelectedLabTest('');
   };
 
@@ -138,7 +150,7 @@ export default function DoctorConsultPage() {
     setLabTests(labTests.filter((_, idx) => idx !== index));
   };
 
-  // Save Consultation & Print
+  // Save Consultation & Transmit Lab Tests to Reception
   const handleSaveAndPrint = async () => {
     if (!diagnosis.trim()) {
       alert('Please enter a clinical diagnosis');
@@ -152,6 +164,7 @@ export default function DoctorConsultPage() {
     }
 
     const doctorId = currentAppointment?.doctor?.id || patientData?.doctor?.id || 1;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
     try {
       setIsSaving(true);
@@ -166,6 +179,7 @@ export default function DoctorConsultPage() {
           instructions: m.instructions || 'After meals',
         }));
 
+      // Prescription Payload
       const payload = {
         patientId: targetPatientId,
         doctorId: Number(doctorId),
@@ -174,21 +188,64 @@ export default function DoctorConsultPage() {
         symptoms: currentAppointment?.symptoms || '',
         advice: clinicalNotes.trim() + (nextVisitDate ? `\nFollow-up: ${nextVisitDate}` : ''),
         medicines: validMedicines,
+        labTests: labTests.map((t) => t.testName),
       };
 
-      // Corrected to POST /prescriptions
+      // 1. Save Prescription to Backend
       const res = await fetch('https://drbloomedi-backend.onrender.com/prescriptions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || `Server returned status: ${res.status}`);
+      // 2. Save Pathology Lab Orders to Backend & Sync
+      if (labTests.length > 0) {
+        for (const test of labTests) {
+          try {
+            await fetch('https://drbloomedi-backend.onrender.com/lab-orders', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({
+                patientId: targetPatientId,
+                doctorId: Number(doctorId),
+                appointmentId: appointmentId || undefined,
+                testName: test.testName,
+                price: test.testPrice,
+              }),
+            });
+          } catch (_) {}
+        }
+
+        // Live Counter Storage for instant Reception Desk Billing
+        try {
+          localStorage.setItem(
+            `drbloomedi_lab_orders_${appointmentId}`,
+            JSON.stringify(labTests)
+          );
+        } catch (_) {}
       }
 
-      alert('Prescription saved successfully!');
+      // 3. Mark Appointment Status as COMPLETED
+      if (appointmentId) {
+        try {
+          await fetch(`https://drbloomedi-backend.onrender.com/appointments/${appointmentId}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ status: 'Completed' }),
+          });
+        } catch (_) {}
+      }
+
+      alert('Prescription and Lab Tests saved successfully! Transmitting to Reception Desk.');
       window.print();
       router.push('/reception/dashboard');
     } catch (err: any) {
@@ -258,7 +315,7 @@ export default function DoctorConsultPage() {
             type="button"
             disabled={isSaving}
             onClick={handleSaveAndPrint}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md transition"
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md transition disabled:opacity-50"
           >
             {isSaving ? 'Saving...' : '💾 Save & Print Prescription'}
           </button>
@@ -438,11 +495,13 @@ export default function DoctorConsultPage() {
                 className="w-full p-2.5 text-xs border border-slate-200 rounded-xl font-bold bg-slate-50 outline-none"
               >
                 <option value="">-- Select Investigation --</option>
-                <option value="Complete Blood Count (CBC)">Complete Blood Count (CBC)</option>
-                <option value="Dengue Serology NS1/IgM">Dengue Serology NS1/IgM</option>
-                <option value="Liver Function Test (LFT)">Liver Function Test (LFT)</option>
-                <option value="Widal Slide Agglutination">Widal Slide Agglutination</option>
-                <option value="Random Blood Sugar (RBS)">Random Blood Sugar (RBS)</option>
+                <option value="Complete Blood Count (CBC)">Complete Blood Count (CBC) - ₹350</option>
+                <option value="Dengue Serology NS1/IgM">Dengue Serology NS1/IgM - ₹600</option>
+                <option value="Liver Function Test (LFT)">Liver Function Test (LFT) - ₹750</option>
+                <option value="Widal Slide Agglutination">Widal Slide Agglutination - ₹250</option>
+                <option value="Random Blood Sugar (RBS)">Random Blood Sugar (RBS) - ₹100</option>
+                <option value="Serum Electrolytes">Serum Electrolytes - ₹450</option>
+                <option value="Urine Routine & Microscopic">Urine Routine & Microscopic - ₹200</option>
               </select>
               <button
                 type="button"

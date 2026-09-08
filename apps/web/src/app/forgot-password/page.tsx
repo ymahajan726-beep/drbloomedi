@@ -20,7 +20,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Step 1: Request Reset Token and Auto-fill
+  // Step 1: Request Security Code and Auto-fill
   const handleRequestToken = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -36,14 +36,14 @@ export default function ForgotPasswordPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to request reset token');
+        throw new Error(data.message || 'Failed to request security code');
       }
 
-      // Auto-fill token from response
+      // Auto-fill code from response
       const generatedToken = data.token ? String(data.token).trim() : '';
       setToken(generatedToken);
 
-      setSuccessMsg('Reset token generated and auto-filled successfully!');
+      setSuccessMsg('Verification code sent and auto-filled successfully!');
       setStep(2);
     } catch (err: any) {
       setError(err.message || 'Server connection error');
@@ -52,14 +52,14 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  // Step 2: Set New Password
+  // Step 2: Set New Password & Handle Invalidation (Point 10 requirement)
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
 
     if (!token.trim()) {
-      setError('Reset token is missing.');
+      setError('Verification code is missing.');
       return;
     }
 
@@ -89,10 +89,17 @@ export default function ForgotPasswordPage() {
         throw new Error(data.message || 'Failed to reset password');
       }
 
-      setSuccessMsg('Password updated successfully! Redirecting to login...');
+      // Invalidate active sessions locally as requested in Point 10
+      localStorage.clear();
+      sessionStorage.clear();
+      document.cookie.split(';').forEach((c) => {
+        document.cookie = c.replace(/^ +/, '').replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+      });
+
+      setSuccessMsg('Password updated successfully! All sessions secured. Redirecting to login...');
       setTimeout(() => {
         router.push('/login');
-      }, 1500);
+      }, 1800);
     } catch (err: any) {
       setError(err.message || 'Error updating password');
     } finally {
@@ -101,33 +108,33 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-md border border-slate-200 p-8">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-800">Password Recovery</h1>
-          <p className="text-sm text-slate-500 mt-1">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans text-slate-100">
+      <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-800 p-8 space-y-6">
+        <div className="text-center space-y-1">
+          <h1 className="text-xl font-black text-white">Password Recovery</h1>
+          <p className="text-xs text-slate-400">
             {step === 1
-              ? 'Enter your registered email address'
-              : 'Set your new password'}
+              ? 'Enter your registered email address to receive recovery verification'
+              : 'Enter your verification code and set a secure new password'}
           </p>
         </div>
 
         {error && (
-          <div className="p-3 mb-4 text-sm bg-rose-50 text-rose-700 border border-rose-200 rounded-lg">
+          <div className="p-3 text-xs bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-xl font-medium">
             ⚠️ {error}
           </div>
         )}
 
         {successMsg && (
-          <div className="p-3 mb-4 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg">
+          <div className="p-3 text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded-xl font-medium">
             ✅ {successMsg}
           </div>
         )}
 
         {step === 1 ? (
-          <form onSubmit={handleRequestToken} className="space-y-4">
+          <form onSubmit={handleRequestToken} className="space-y-4 text-xs">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block font-bold uppercase tracking-wider text-[10px] text-slate-400 mb-1.5">
                 Registered Email Address
               </label>
               <input
@@ -135,28 +142,28 @@ export default function ForgotPasswordPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@drbloomedi.com"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your mail"
+                className="w-full px-3.5 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-blue-500 transition"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition shadow-lg shadow-blue-600/30 disabled:opacity-50"
             >
-              {loading ? 'Generating Token...' : 'Get Reset Token'}
+              {loading ? 'Sending Code...' : 'Get Verification Code →'}
             </button>
           </form>
         ) : (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            {/* Auto-filled Reset Token */}
+          <form onSubmit={handleResetPassword} className="space-y-4 text-xs">
+            {/* Auto-filled Security Code */}
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="block text-xs font-semibold text-slate-600">
-                  Reset Token
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block font-bold uppercase tracking-wider text-[10px] text-slate-400">
+                  Security Verification Code
                 </label>
-                <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                   ✓ Auto-filled
                 </span>
               </div>
@@ -165,14 +172,14 @@ export default function ForgotPasswordPage() {
                 required
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                placeholder="6-digit token"
-                className="w-full px-3 py-2 border border-emerald-300 bg-emerald-50/40 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 font-mono tracking-widest font-semibold text-center"
+                placeholder="Enter security code"
+                className="w-full px-3.5 py-3 bg-emerald-950/20 border border-emerald-800/40 rounded-xl text-xs text-emerald-300 outline-none focus:border-emerald-500 font-mono tracking-widest font-semibold text-center"
               />
             </div>
 
-            {/* New Password with Show/Hide */}
+            {/* New Password */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block font-bold uppercase tracking-wider text-[10px] text-slate-400 mb-1.5">
                 New Password
               </label>
               <div className="relative">
@@ -182,21 +189,21 @@ export default function ForgotPasswordPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full pl-3 pr-14 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-3.5 pr-14 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-blue-500 transition"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute inset-y-0 right-0 px-3 flex items-center text-xs font-semibold text-slate-500 hover:text-slate-800"
+                  className="absolute inset-y-0 right-0 px-3.5 flex items-center text-[11px] font-bold text-slate-400 hover:text-white"
                 >
                   {showNewPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
             </div>
 
-            {/* Confirm New Password with Show/Hide */}
+            {/* Confirm New Password */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
+              <label className="block font-bold uppercase tracking-wider text-[10px] text-slate-400 mb-1.5">
                 Confirm New Password
               </label>
               <div className="relative">
@@ -206,12 +213,12 @@ export default function ForgotPasswordPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter password"
-                  className="w-full pl-3 pr-14 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-3.5 pr-14 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-blue-500 transition"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 px-3 flex items-center text-xs font-semibold text-slate-500 hover:text-slate-800"
+                  className="absolute inset-y-0 right-0 px-3.5 flex items-center text-[11px] font-bold text-slate-400 hover:text-white"
                 >
                   {showConfirmPassword ? 'Hide' : 'Show'}
                 </button>
@@ -222,24 +229,24 @@ export default function ForgotPasswordPage() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-1/3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg"
+                className="w-1/3 py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl transition border border-slate-700"
               >
                 Back
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-2/3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition disabled:opacity-50"
+                className="w-2/3 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-600/30 disabled:opacity-50"
               >
-                {loading ? 'Updating...' : 'Set New Password'}
+                {loading ? 'Securing...' : 'Update Password →'}
               </button>
             </div>
           </form>
         )}
 
-        <div className="mt-6 text-center">
-          <Link href="/login" className="text-xs font-semibold text-blue-600 hover:underline">
-            ← Back to Login
+        <div className="text-center pt-2">
+          <Link href="/login" className="text-xs font-bold text-blue-400 hover:underline">
+            ← Back to Login Portal
           </Link>
         </div>
       </div>

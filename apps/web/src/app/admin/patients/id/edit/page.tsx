@@ -4,10 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
+const BACKEND_URL = 'https://drbloomedi-backend.onrender.com';
+
 export default function EditPatientPage() {
   const router = useRouter();
   const params = useParams();
-  const patientId = params.id;
+  
+  // Safe extraction of ID for Next.js app router
+  const patientId = params?.id ? (Array.isArray(params.id) ? params.id[0] : params.id) : null;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,9 +31,19 @@ export default function EditPatientPage() {
 
   useEffect(() => {
     async function loadPatient() {
+      if (!patientId) return;
       try {
         setLoading(true);
-        const res = await fetch(`https://drbloomedi-backend.onrender.com/patients/${patientId}`);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        
+        const res = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: 'include',
+        });
+
         if (res.ok) {
           const data = await res.json();
           setForm({
@@ -43,28 +57,35 @@ export default function EditPatientPage() {
             emergencyContact: data.emergencyContact || '',
             medicalHistory: data.medicalHistory || '',
           });
+        } else {
+          setErrorMsg('Failed to load patient dossier from database.');
         }
       } catch (err) {
         console.error(err);
+        setErrorMsg('Network error while connecting to backend.');
       } finally {
         setLoading(false);
       }
     }
 
-    if (patientId) {
-      loadPatient();
-    }
+    loadPatient();
   }, [patientId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!patientId) return;
     setErrorMsg('');
     setSaving(true);
 
     try {
-      const res = await fetch(`https://drbloomedi-backend.onrender.com/patients/${patientId}`, {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           ...form,
           age: Number(form.age),
@@ -72,7 +93,7 @@ export default function EditPatientPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to update patient');
+      if (!res.ok) throw new Error(data.message || 'Failed to update patient profile');
 
       router.push('/admin/patients');
     } catch (err: any) {
@@ -83,56 +104,63 @@ export default function EditPatientPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-400 text-xs">Loading patient details...</div>;
+    return (
+      <div className="min-h-screen bg-slate-100/70 flex items-center justify-center text-slate-500 font-mono text-xs">
+        🔄 Loading patient dossier and health records...
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 font-sans">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-slate-100/70 p-4 sm:p-6 md:p-8 font-sans text-slate-900 max-w-3xl mx-auto space-y-6">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">Edit Patient Profile</h1>
-          <p className="text-xs text-slate-500 mt-1">Update demographics and medical history</p>
+          <h1 className="text-xl font-black text-slate-900">Edit Patient Profile</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Update demographics, contact numbers, and medical history</p>
         </div>
-        <Link href="/admin/patients" className="text-xs font-semibold text-slate-500 hover:text-slate-800">
-          ← Back to Patients
+        <Link href="/admin/patients" className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+          ← Back
         </Link>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      {/* Form Card */}
+      <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
-            {errorMsg}
+          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl font-medium">
+            ⚠️ {errorMsg}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Full Name</label>
               <input
                 type="text"
                 required
                 value={form.fullName}
                 onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:border-blue-600 text-slate-900 transition"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Contact Phone</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Contact Phone</label>
               <input
                 type="tel"
                 required
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:border-blue-600 text-slate-900 transition"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Age</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Age</label>
               <input
                 type="number"
                 min={1}
@@ -140,16 +168,16 @@ export default function EditPatientPage() {
                 required
                 value={form.age}
                 onChange={(e) => setForm({ ...form, age: Number(e.target.value) })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:border-blue-600 text-slate-900 transition"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Gender</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Gender</label>
               <select
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-900 outline-none focus:border-blue-600 transition"
               >
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -158,28 +186,26 @@ export default function EditPatientPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Blood Group</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Blood Group</label>
               <select
                 value={form.bloodGroup}
                 onChange={(e) => setForm({ ...form, bloodGroup: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-900 outline-none focus:border-blue-600 transition"
               >
                 {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bg) => (
-                  <option key={bg} value={bg}>
-                    {bg}
-                  </option>
+                  <option key={bg} value={bg}>{bg}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Patient Category</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Patient Category</label>
               <select
                 value={form.patientType}
                 onChange={(e) => setForm({ ...form, patientType: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-900 outline-none focus:border-blue-600 transition"
               >
                 <option value="Outpatient">Outpatient (OPD)</option>
                 <option value="Inpatient">Inpatient (IPD)</option>
@@ -188,47 +214,47 @@ export default function EditPatientPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Emergency Contact</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Emergency Contact</label>
               <input
                 type="text"
                 value={form.emergencyContact}
                 onChange={(e) => setForm({ ...form, emergencyContact: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:border-blue-600 text-slate-900 transition"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Residential Address</label>
+            <label className="block text-xs font-bold text-slate-600 mb-1">Residential Address</label>
             <input
               type="text"
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:border-blue-600 text-slate-900 transition"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Medical History / Allergies</label>
+            <label className="block text-xs font-bold text-slate-600 mb-1">Medical History / Allergies</label>
             <textarea
-              rows={2}
+              rows={3}
               value={form.medicalHistory}
               onChange={(e) => setForm({ ...form, medicalHistory: e.target.value })}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-none focus:border-blue-600 text-slate-900 transition"
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Link
               href="/admin/patients"
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
+              className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-blue-600/20"
             >
               {saving ? 'Updating...' : 'Update Patient'}
             </button>
