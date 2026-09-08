@@ -123,47 +123,77 @@ export default function ReceptionDashboardPage() {
     setRegistering(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      
-      // Step 1: Ensure patient exists or create new if patientId is missing
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
+      // Step 1: Check if patient already exists or create a new one
       let pId = walkinForm.patientId;
       if (!pId) {
-        const patRes = await fetch(`${BACKEND_URL}/patients`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          credentials: 'include',
-          body: JSON.stringify({
-            fullName: walkinForm.fullName,
-            phone: walkinForm.phone,
-            age: Number(walkinForm.age) || 30,
-            gender: walkinForm.gender,
-            bloodGroup: 'O+',
-            patientType: 'Outpatient'
-          }),
-        });
-        if (patRes.ok) {
-          const newPat = await patRes.json();
-          pId = newPat.id || newPat._id;
+        const searchRes = await fetch(`${BACKEND_URL}/patients?search=${encodeURIComponent(walkinForm.phone)}`, { headers, credentials: 'include' });
+        if (searchRes.ok) {
+          const list = await searchRes.json();
+          const found = Array.isArray(list) ? list.find((p: any) => p.phone === walkinForm.phone) : null;
+          if (found) {
+            pId = found.id;
+          }
+        }
+
+        if (!pId) {
+          const patRes = await fetch(`${BACKEND_URL}/patients`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({
+              fullName: walkinForm.fullName,
+              phone: walkinForm.phone,
+              age: Number(walkinForm.age) || 30,
+              gender: walkinForm.gender,
+              bloodGroup: 'O+',
+              patientType: 'Outpatient',
+              email: `${walkinForm.phone}@drbloomedi.local`,
+            }),
+          });
+          if (patRes.ok) {
+            const newPat = await patRes.json();
+            pId = newPat.id || newPat._id;
+          } else {
+            const errBody = await patRes.json().catch(() => ({}));
+            throw new Error(errBody.message || 'Failed to register walk-in patient record.');
+          }
         }
       }
 
-      // Step 2: Create appointment / issue token
+      // Step 2: Fetch an active doctor/specialist reference if required by backend schema
+      let doctorId = undefined;
+      try {
+        const docRes = await fetch(`${BACKEND_URL}/doctors`, { headers, credentials: 'include' });
+        if (docRes.ok) {
+          const docs = await docRes.json();
+          if (Array.isArray(docs) && docs.length > 0) {
+            doctorId = docs[0].id;
+          }
+        }
+      } catch {}
+
+      // Step 3: Create the appointment payload matching backend entity expectations
+      const appointmentPayload: any = {
+        patientId: pId,
+        appointmentDate: new Date().toISOString().split('T')[0],
+        timeSlot: walkinForm.slot || '10:00 AM',
+        status: 'Scheduled',
+        symptoms: walkinForm.reason || 'Walk-in Consultation',
+      };
+      if (doctorId) {
+        appointmentPayload.doctorId = doctorId;
+      }
+
       const res = await fetch(`${BACKEND_URL}/appointments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers,
         credentials: 'include',
-        body: JSON.stringify({
-          patientId: pId,
-          patientName: walkinForm.fullName,
-          phone: walkinForm.phone,
-          age: Number(walkinForm.age) || 30,
-          gender: walkinForm.gender,
-          specialty: walkinForm.specialist,
-          timeSlot: walkinForm.slot,
-          symptoms: walkinForm.reason,
-          patientType: 'Outpatient',
-          appointmentDate: new Date().toISOString().split('T')[0],
-          status: 'Scheduled'
-        }),
+        body: JSON.stringify(appointmentPayload),
       });
 
       if (res.ok) {
@@ -173,9 +203,9 @@ export default function ReceptionDashboardPage() {
         const errData = await res.json().catch(() => ({}));
         alert(errData.message || 'Failed to issue walk-in token.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Network error while issuing token.');
+      alert(err.message || 'Network error while issuing token.');
     } finally {
       setRegistering(false);
     }
