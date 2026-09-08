@@ -19,6 +19,21 @@ export default function ReceptionDashboardPage() {
   const [selectedAptForPay, setSelectedAptForPay] = useState<any | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number>(500);
 
+  // Itemized Billing Breakdown State (Kal wala auto-calculate logic)
+  const [billBreakdown, setBillBreakdown] = useState<{
+    consultationFee: number;
+    labTestsFee: number;
+    labTestNames: string[];
+    pharmacyFee: number;
+    total: number;
+  }>({
+    consultationFee: 500,
+    labTestsFee: 0,
+    labTestNames: [],
+    pharmacyFee: 0,
+    total: 500,
+  });
+
   // Razorpay Interactive Modal State
   const [showRazorpayModal, setShowRazorpayModal] = useState(false);
   const [selectedPaymentTab, setSelectedPaymentTab] = useState<'upi' | 'card' | 'netbanking'>('upi');
@@ -102,7 +117,7 @@ export default function ReceptionDashboardPage() {
         const list = Array.isArray(data) ? data : [];
         setAppointments(list);
 
-        // Sirf wahi appointments paid maane jayenge jinka payment confirm hua ho (Status 'Completed' se auto-paid nahi hoga)
+        // Sirf actual paid records track honge (Completed status se auto-paid nahi hoga)
         setPaidIds((prev) => {
           const updated = { ...prev };
           list.forEach((item) => {
@@ -126,6 +141,72 @@ export default function ReceptionDashboardPage() {
     }
   };
 
+  // Auto-Calculate Consolidated Billing (Doctor Fee + Lab Tests + Prescriptions)
+  const handleOpenBillingModal = async (apt: any) => {
+    setSelectedAptForPay(apt);
+
+    // 1. Doctor Consultation Fee
+    const consultFee = Number(apt.doctor?.consultationFee) || 500;
+    let labTotal = 0;
+    let labNames: string[] = [];
+    let rxTotal = 0;
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const pId = apt.patientId || apt.patient?.id;
+
+      if (pId) {
+        const res = await fetch(`${BACKEND_URL}/patient-portal/history/${pId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+
+        if (res.ok) {
+          const history = await res.json();
+
+          // Calculate Lab Tests ordered by doctor
+          if (Array.isArray(history.labOrders) && history.labOrders.length > 0) {
+            history.labOrders.forEach((lab: any) => {
+              const fee = Number(lab.labTest?.price) || Number(lab.price) || 350;
+              labTotal += fee;
+              labNames.push(lab.labTest?.testName || 'Lab Investigation');
+            });
+          }
+
+          // Calculate Prescribed Medicines
+          if (Array.isArray(history.prescriptions) && history.prescriptions.length > 0) {
+            const latestRx = history.prescriptions[0];
+            if (Array.isArray(latestRx.medicines) && latestRx.medicines.length > 0) {
+              rxTotal = latestRx.medicines.length * 150;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Fallback billing calculation', e);
+    }
+
+    // Doctor ke prescription/symptoms context fallback
+    if (labTotal === 0 && apt.symptoms && apt.symptoms.toLowerCase().includes('test')) {
+      labTotal = 400;
+      labNames.push('Diagnostic Blood Panel');
+    }
+
+    const finalTotal = consultFee + labTotal + rxTotal;
+
+    setBillBreakdown({
+      consultationFee: consultFee,
+      labTestsFee: labTotal,
+      labTestNames: labNames,
+      pharmacyFee: rxTotal,
+      total: finalTotal,
+    });
+
+    setPaymentAmount(finalTotal);
+  };
+
   const markAppointmentAsPaid = (aptId: string, txnId: string, mode: string) => {
     const updated = { ...paidIds, [aptId]: true };
     setPaidIds(updated);
@@ -137,6 +218,7 @@ export default function ReceptionDashboardPage() {
       patient: selectedAptForPay?.patient,
       appointmentNumber: selectedAptForPay?.appointmentNumber,
       amount: paymentAmount,
+      breakdown: billBreakdown,
       paymentId: txnId,
       mode: mode,
       date: new Date().toLocaleDateString(),
@@ -171,6 +253,7 @@ export default function ReceptionDashboardPage() {
           razorpay_payment_id: txnId,
           appointmentId: selectedAptForPay.id,
           billId: selectedAptForPay.id,
+          amount: paymentAmount,
         }),
       });
     } catch (err) {
@@ -205,6 +288,7 @@ export default function ReceptionDashboardPage() {
           razorpay_payment_id: txnId,
           appointmentId: selectedAptForPay.id,
           billId: selectedAptForPay.id,
+          amount: paymentAmount,
         }),
       });
     } catch {}
@@ -279,7 +363,6 @@ export default function ReceptionDashboardPage() {
           >
             + New Appointment
           </a>
-          {/* Dedicated Logout Button */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition shadow-sm"
@@ -311,7 +394,7 @@ export default function ReceptionDashboardPage() {
                 <th className="py-3">Contact</th>
                 <th className="py-3">Date & Slot</th>
                 <th className="py-3 text-center">Status</th>
-                <th className="py-3 text-right">Payment</th>
+                <th className="py-3 text-right">Discharge Billing</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -329,7 +412,6 @@ export default function ReceptionDashboardPage() {
                 </tr>
               ) : (
                 filteredAppointments.map((apt) => {
-                  // Actual Payment check: Only true if payment was recorded
                   const isPaid =
                     paidIds[apt.id] === true ||
                     apt.isPaid === true ||
@@ -364,14 +446,11 @@ export default function ReceptionDashboardPage() {
                       <td className="py-3.5 text-right">
                         {isPaid ? (
                           <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-[10px] font-black inline-flex items-center gap-1">
-                            ✓ Paid
+                            ✓ Bill Paid
                           </span>
                         ) : (
                           <button
-                            onClick={() => {
-                              setSelectedAptForPay(apt);
-                              setPaymentAmount(500);
-                            }}
+                            onClick={() => handleOpenBillingModal(apt)}
                             className="px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 rounded-xl text-[11px] font-bold inline-flex items-center gap-1 transition shadow-sm"
                           >
                             💳 Collect Bill
@@ -387,15 +466,15 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      {/* 💳 INITIAL COUNTER MODAL */}
+      {/* 💳 INITIAL COUNTER MODAL WITH CONSOLIDATED BILLING BREAKDOWN */}
       {selectedAptForPay && !showRazorpayModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900">Hospital Billing Clearance</h3>
                 <p className="text-[11px] text-slate-400">
-                  Patient: {selectedAptForPay.patient?.fullName}
+                  Patient: {selectedAptForPay.patient?.fullName} • Token: #{selectedAptForPay.appointmentNumber}
                 </p>
               </div>
               <button
@@ -406,13 +485,47 @@ export default function ReceptionDashboardPage() {
               </button>
             </div>
 
+            {/* Itemized Charges List */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">🩺 OPD Doctor Consultation Fee</span>
+                <span className="font-bold text-slate-900">₹{billBreakdown.consultationFee}.00</span>
+              </div>
+
+              {billBreakdown.labTestsFee > 0 && (
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="text-slate-600">🧪 Diagnostic & Lab Investigations</span>
+                    {billBreakdown.labTestNames.length > 0 && (
+                      <p className="text-[10px] text-purple-600 font-medium">
+                        ({billBreakdown.labTestNames.join(', ')})
+                      </p>
+                    )}
+                  </div>
+                  <span className="font-bold text-purple-700">₹{billBreakdown.labTestsFee}.00</span>
+                </div>
+              )}
+
+              {billBreakdown.pharmacyFee > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">💊 Prescribed Medicines / Pharmacy</span>
+                  <span className="font-bold text-blue-700">₹{billBreakdown.pharmacyFee}.00</span>
+                </div>
+              )}
+
+              <div className="border-t border-slate-200 pt-2 flex justify-between items-center text-sm">
+                <span className="font-black text-slate-900">Consolidated Payable:</span>
+                <span className="font-black text-emerald-600 text-base">₹{paymentAmount}.00</span>
+              </div>
+            </div>
+
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Total Bill Amount (₹)</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Adjust Total Amount (₹)</label>
               <input
                 type="number"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-black text-slate-900 text-lg outline-none"
+                className="w-full p-3 bg-white border border-slate-200 rounded-xl font-black text-slate-900 text-lg outline-none focus:border-blue-500"
               />
             </div>
 
@@ -421,7 +534,7 @@ export default function ReceptionDashboardPage() {
                 onClick={() => setShowRazorpayModal(true)}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition"
               >
-                <span>⚡</span> Pay via Razorpay (Online Gateway)
+                <span>⚡</span> Pay via Razorpay (UPI / Cards / NetBanking)
               </button>
 
               <button
@@ -588,7 +701,7 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* 📄 FINAL TAX INVOICE PRINTABLE RECEIPT MODAL */}
+      {/* 📄 FINAL TAX INVOICE PRINTABLE RECEIPT MODAL (WITH ITEMIZATION) */}
       {paidReceipt && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
@@ -617,6 +730,27 @@ export default function ReceptionDashboardPage() {
                 <span className="text-slate-400">Payment Mode:</span>
                 <span className="font-bold text-emerald-700">{paidReceipt.mode}</span>
               </div>
+
+              {/* Itemized summary on receipt */}
+              <div className="border-t border-slate-200 pt-2 space-y-1 text-[11px]">
+                <div className="flex justify-between text-slate-600">
+                  <span>Consultation Fee:</span>
+                  <span>₹{paidReceipt.breakdown?.consultationFee || 500}.00</span>
+                </div>
+                {paidReceipt.breakdown?.labTestsFee > 0 && (
+                  <div className="flex justify-between text-purple-700 font-medium">
+                    <span>Lab Investigations:</span>
+                    <span>₹{paidReceipt.breakdown.labTestsFee}.00</span>
+                  </div>
+                )}
+                {paidReceipt.breakdown?.pharmacyFee > 0 && (
+                  <div className="flex justify-between text-blue-700 font-medium">
+                    <span>Pharmacy / Medicines:</span>
+                    <span>₹{paidReceipt.breakdown.pharmacyFee}.00</span>
+                  </div>
+                )}
+              </div>
+
               <div className="border-t border-slate-200 pt-2 flex justify-between text-sm">
                 <span className="font-bold text-slate-900">Total Paid:</span>
                 <span className="font-black text-slate-900">₹{paidReceipt.amount}.00</span>
