@@ -215,7 +215,6 @@ export default function LaboratoryManagementPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-bold px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full uppercase">
@@ -256,7 +255,6 @@ export default function LaboratoryManagementPage() {
         </div>
       </div>
 
-      {/* 1. WORKLIST ORDERS TAB */}
       {activeTab === 'worklist' && (
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -394,7 +392,6 @@ export default function LaboratoryManagementPage() {
         </div>
       )}
 
-      {/* 2. BOOK TEST TAB */}
       {activeTab === 'booking' && (
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-4">
           <h2 className="text-sm font-black text-slate-900 uppercase">Book Laboratory Test</h2>
@@ -447,7 +444,6 @@ export default function LaboratoryManagementPage() {
         </div>
       )}
 
-      {/* 3. TEST CATALOG TAB */}
       {activeTab === 'catalog' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
@@ -523,7 +519,6 @@ export default function LaboratoryManagementPage() {
         </div>
       )}
 
-      {/* MODAL: ENTER TEST RESULTS & VERIFY */}
       {reportingOrder && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
@@ -591,7 +586,6 @@ export default function LaboratoryManagementPage() {
         </div>
       )}
 
-      {/* MODAL: PRINTABLE OFFICIAL LAB REPORT DOSSIER */}
       {viewingReport && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-100 space-y-6">

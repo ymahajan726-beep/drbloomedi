@@ -49,7 +49,7 @@ export default function LoginPage() {
       const roleKey = userRole === "RECEPTIONIST" ? "RECEPTION" : userRole;
       const lowerKey = roleKey.toLowerCase();
 
-      // 1. Save standard universal keys so middleware and layout guards never trigger 307 redirect loops
+      // 1. Save standard universal keys so server guards never trigger 307 redirect loops
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", userRole);
       localStorage.setItem("userEmail", data.user?.email || cleanEmail);
@@ -60,7 +60,7 @@ export default function LoginPage() {
       localStorage.setItem(`${lowerKey}_email`, data.user?.email || cleanEmail);
       localStorage.setItem("session_started_at", Date.now().toString());
 
-      // 3. Set standard universal cookies alongside role-specific ones to satisfy server-side guards
+      // 3. Set universal cookies alongside role-specific ones
       const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
       const cookieConfig = `; path=/; max-age=86400; SameSite=Lax${isHttps ? "; Secure" : ""}`;
       
@@ -100,14 +100,11 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen w-full bg-[#070b19] flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden">
-      {/* Background Neon Glowing Orbs */}
       <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
 
-      {/* Main Floating Glass Container */}
       <div className="bg-slate-900/80 backdrop-blur-2xl rounded-[2.5rem] max-w-4xl w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800/80 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px] relative z-10">
         
-        {/* Left Style Panel */}
         <div className="md:col-span-5 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-800 p-8 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)] pointer-events-none"></div>
           
@@ -141,10 +138,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Form Panel */}
         <div className="md:col-span-7 p-8 sm:p-10 flex flex-col justify-between bg-slate-900/40 text-slate-100">
           <div>
-            {/* Header / Logo */}
             <div className="flex items-center gap-3 mb-6">
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-black text-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                 +
@@ -165,7 +160,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Form */}
             <form onSubmit={handleLogin} className="space-y-4 text-xs">
               <div>
                 <label className="font-bold uppercase tracking-wider text-[10px] text-slate-400 block mb-1.5">
@@ -223,7 +217,6 @@ export default function LoginPage() {
             </form>
           </div>
 
-          {/* Footer Quick Tools */}
           <div className="pt-6 border-t border-slate-800/80 mt-6 space-y-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
@@ -254,7 +247,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Patient Portal Link Card */}
             <Link
               href="/patient-portal"
               className="flex items-center justify-between p-3 bg-blue-950/40 hover:bg-blue-900/40 border border-blue-800/40 rounded-xl transition group"

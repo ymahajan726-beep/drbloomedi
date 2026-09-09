@@ -1,92 +1,88 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+// src/middleware.ts
+
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Static फ़ाइल्स, Next.js इंटरनल्स, API और पब्लिक रूट्स छोड़ें
+  /*
+   * IMPORTANT
+   * ----------
+   * Middleware browser ke sessionStorage ko access nahi kar sakta.
+   *
+   * sessionStorage per browser TAB hota hai.
+   * Cookies browser-wide/shared hoti hain.
+   *
+   * Isliye Admin, Doctor aur Reception ke parallel sessions
+   * ko middleware ke cookie-based token/role se validate nahi karna hai.
+   *
+   * Active session validation client-side guards aur backend API
+   * Authorization header ke through handle hogi.
+   */
+
+  // ------------------------------------------------------------
+  // 1. PUBLIC / NEXT.JS INTERNAL ROUTES
+  // ------------------------------------------------------------
+
   if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/static') ||
-    pathname.includes('.') ||
-    pathname === '/login' ||
-    pathname === '/forgot-password'
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/static") ||
+    pathname.includes(".") ||
+    pathname === "/login" ||
+    pathname === "/forgot-password"
   ) {
     return NextResponse.next();
   }
 
-  // 2. Cookie से टोकन और रोल निकालें
-  const token = request.cookies.get('token')?.value;
-  const role = request.cookies.get('userRole')?.value?.toUpperCase();
+  // ------------------------------------------------------------
+  // 2. PROTECTED APPLICATION ROUTES
+  // ------------------------------------------------------------
+  //
+  // Middleware yahan token ya role cookie check nahi karega.
+  //
+  // Reason:
+  // Middleware sessionStorage nahi padh sakta.
+  //
+  // Example:
+  //
+  // Tab 1 -> Admin
+  // Tab 2 -> Doctor
+  // Tab 3 -> Reception
+  //
+  // Agar middleware shared cookie check karega to ek tab ka login
+  // doosre tab ke session ko affect kar sakta hai.
+  //
+  // Isliye request ko allow kar rahe hain.
+  // Client-side role guards current TAB ka sessionStorage check karenge.
+  //
 
-  // 3. अगर टोकन नहीं है -> तुरंत लॉगिन पेज पर भेजें (कोई भी रूट नहीं खुलेगा)
-  if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/doctor") ||
+    pathname.startsWith("/reception") ||
+    pathname.startsWith("/patient")
+  ) {
+    return NextResponse.next();
   }
 
-  // 4. DOCTOR ROUTES GUARD
-  if (pathname.startsWith('/doctor')) {
-    if (role !== 'DOCTOR') {
-      return getRoleRedirect(role, request.url);
-    }
-  }
-
-  // 5. RECEPTION DESK ROUTES GUARD
-  if (pathname.startsWith('/reception')) {
-    if (role !== 'RECEPTION' && role !== 'ADMIN') {
-      return getRoleRedirect(role, request.url);
-    }
-  }
-
-  // 6. PATIENT PORTAL GUARD
-  if (pathname.startsWith('/patient')) {
-    if (role !== 'PATIENT') {
-      return getRoleRedirect(role, request.url);
-    }
-  }
-
-  // 7. ADMIN SUB-ROUTES PERMISSION MATRIX
-  if (pathname.startsWith('/admin')) {
-    // अगर Reception लॉगिन है, तो उसे सिर्फ इन 3 रूट्स की इजाजत है:
-    const receptionAllowedRoutes = [
-      '/admin/patients',
-      '/admin/appointments',
-      '/admin/billing',
-    ];
-
-    const isAllowedForReception = receptionAllowedRoutes.some((route) =>
-      pathname.startsWith(route)
-    );
-
-    if (role === 'RECEPTION') {
-      // अगर रिसेप्शनिस्ट Departments, Doctors, Reports, Roles, Dashboard में घुसने की कोशिश करे -> ब्लॉक
-      if (!isAllowedForReception) {
-        return NextResponse.redirect(new URL('/reception/dashboard', request.url));
-      }
-    } else if (role !== 'ADMIN') {
-      // अगर Admin भी नहीं है और Reception भी नहीं (जैसे Doctor/Patient) -> सीधा उनके पोर्टल पर भेजें
-      return getRoleRedirect(role, request.url);
-    }
-  }
+  // ------------------------------------------------------------
+  // 3. ALL OTHER ROUTES
+  // ------------------------------------------------------------
 
   return NextResponse.next();
 }
 
-function getRoleRedirect(role: string | undefined, baseUrl: string) {
-  if (role === 'ADMIN') return NextResponse.redirect(new URL('/admin/dashboard', baseUrl));
-  if (role === 'DOCTOR') return NextResponse.redirect(new URL('/doctor/dashboard', baseUrl));
-  if (role === 'RECEPTION') return NextResponse.redirect(new URL('/reception/dashboard', baseUrl));
-  if (role === 'PATIENT') return NextResponse.redirect(new URL('/patient/dashboard', baseUrl));
-  return NextResponse.redirect(new URL('/login', baseUrl));
-}
+// ------------------------------------------------------------
+// 4. MIDDLEWARE MATCHER
+// ------------------------------------------------------------
 
-// यह मैचर आपके सभी 9 रूट्स और उनके इनर पेजों को सुरक्षित करता है
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/doctor/:path*',
-    '/reception/:path*',
-    '/patient/:path*',
+    "/admin/:path*",
+    "/doctor/:path*",
+    "/reception/:path*",
+    "/patient/:path*",
   ],
 };
