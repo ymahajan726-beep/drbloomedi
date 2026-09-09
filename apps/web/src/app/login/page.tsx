@@ -46,23 +46,26 @@ export default function LoginPage() {
         throw new Error("No authorization token returned by backend.");
       }
 
-      // Scratch-level Isolated Multi-Login Key Mapping
       const roleKey = userRole === "RECEPTIONIST" ? "RECEPTION" : userRole;
       const lowerKey = roleKey.toLowerCase();
 
-      // 1. Clear any conflicting generic legacy keys to prevent cross-tab bleeding
-      localStorage.removeItem("token");
-      localStorage.removeItem("userRole");
+      // 1. Save standard universal keys so middleware and layout guards never trigger 307 redirect loops
+      localStorage.setItem("token", token);
+      localStorage.setItem("userRole", userRole);
+      localStorage.setItem("userEmail", data.user?.email || cleanEmail);
 
-      // 2. Save exclusively to role-specific independent slots
+      // 2. Save role-specific keys for parallel tabs isolation
       localStorage.setItem(`${lowerKey}_token`, token);
       localStorage.setItem(`${lowerKey}_role`, userRole);
       localStorage.setItem(`${lowerKey}_email`, data.user?.email || cleanEmail);
       localStorage.setItem("session_started_at", Date.now().toString());
 
-      // 3. Set secure role-specific cookie without overwriting global namespace
+      // 3. Set standard universal cookies alongside role-specific ones to satisfy server-side guards
       const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
       const cookieConfig = `; path=/; max-age=86400; SameSite=Lax${isHttps ? "; Secure" : ""}`;
+      
+      document.cookie = `token=${token}${cookieConfig}`;
+      document.cookie = `userRole=${userRole}${cookieConfig}`;
       document.cookie = `${lowerKey}_token=${token}${cookieConfig}`;
       document.cookie = `active_role=${userRole}${cookieConfig}`;
 
