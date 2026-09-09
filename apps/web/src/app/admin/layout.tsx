@@ -215,7 +215,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-100 font-sans antialiased overflow-x-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 bg-slate-900 text-slate-300 flex-col justify-between shrink-0 z-20 border-r border-slate-800 h-screen sticky top-0">
+      <aside className="hidden md:flex w-64 lg:w-72 bg-slate-900 text-slate-300 flex-col justify-between shrink-0 z-20 border-r border-slate-800 h-screen sticky top-0">
         {sidebarContent}
       </aside>
 
@@ -232,14 +232,14 @@ export default function AdminLayout({
         </div>
       )}
 
-      {/* Main Workspace */}
+      {/* Main Workspace with Fluid Responsive Scaling */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full">
-        <header className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0 z-10">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center gap-3">
             {/* Mobile Hamburger Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition font-bold text-sm"
+              className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition font-bold text-xs sm:text-sm"
             >
               ☰ Menu
             </button>
@@ -260,7 +260,8 @@ export default function AdminLayout({
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full max-w-full">
+        {/* Fluid Container matching Mobile, Tablets, Laptops & Desktops */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
           {children}
         </main>
       </div>
