@@ -1,9 +1,11 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 
-const API_BASE = 'https://drbloomedi-backend.onrender.com';
+const API_BASE =
+  'https://drbloomedi-backend.onrender.com';
 
 type LabTest = {
   id: string;
@@ -21,216 +23,383 @@ type Medicine = {
 
 export default function DoctorConsultPage() {
   const params = useParams();
-  const router = useRouter();
   const appointmentId = params?.id as string;
 
   const [loading, setLoading] = useState(true);
-  const [patientData, setPatientData] = useState<any>(null);
-  const [currentAppointment, setCurrentAppointment] = useState<any>(null);
-  const [isOldPatient, setIsOldPatient] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Clinical Consultation States
-  const [diagnosis, setDiagnosis] = useState('');
-  const [clinicalNotes, setClinicalNotes] = useState('');
-  const [nextVisitDate, setNextVisitDate] = useState('');
-  const [consultationFee, setConsultationFee] = useState('500');
-  const [isListening, setIsListening] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [patient, setPatient] = useState<any>(null);
+  const [appointment, setAppointment] =
+    useState<any>(null);
+  const [oldPatient, setOldPatient] =
+    useState(false);
 
-  // Medicines
-  const [meds, setMeds] = useState<Medicine[]>([
-    {
-      medicineName: '',
-      dosage: '1 Tab',
-      frequency: '1-0-1',
-      duration: '5 Days',
-      instructions: 'After food',
-    },
-  ]);
+  const [diagnosis, setDiagnosis] =
+    useState('');
+  const [clinicalNotes, setClinicalNotes] =
+    useState('');
+  const [followUpDate, setFollowUpDate] =
+    useState('');
 
-  // Lab Tests
-  // IMPORTANT: Only backend/database tests are used.
-  const [labTests, setLabTests] = useState<LabTest[]>([]);
-  const [availableTestsCatalog, setAvailableTestsCatalog] = useState<LabTest[]>([]);
-  const [selectedLabTestId, setSelectedLabTestId] = useState('');
-  const [loadingLabTests, setLoadingLabTests] = useState(false);
+  const [medicines, setMedicines] =
+    useState<Medicine[]>([
+      {
+        medicineName: '',
+        dosage: '1 Tab',
+        frequency: '1-0-1',
+        duration: '5 Days',
+        instructions: 'After food',
+      },
+    ]);
+
+  const [availableTests, setAvailableTests] =
+    useState<LabTest[]>([]);
+  const [selectedTestId, setSelectedTestId] =
+    useState('');
+  const [selectedTests, setSelectedTests] =
+    useState<LabTest[]>([]);
+  const [loadingTests, setLoadingTests] =
+    useState(false);
+
+  const [listening, setListening] =
+    useState(false);
 
   useEffect(() => {
     if (!appointmentId) return;
 
-    fetchPatientConsultData();
-    fetchLabCatalog();
+    loadAppointment();
+    loadLabTests();
   }, [appointmentId]);
 
-  // ============================================================
-  // GET LAB TESTS FROM BACKEND
-  // ============================================================
-  const fetchLabCatalog = async () => {
-    try {
-      setLoadingLabTests(true);
+  const getToken = () =>
+    typeof window !== 'undefined'
+      ? localStorage.getItem('token')
+      : null;
 
-      const res = await fetch(`${API_BASE}/lab/tests`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
+  const authHeaders = () => {
+    const token = getToken();
 
-      if (!res.ok) {
-        throw new Error(`Failed to load lab tests (${res.status})`);
-      }
-
-      const data = await res.json();
-
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid lab test response from backend');
-      }
-
-      const formatted: LabTest[] = data
-        .filter((t: any) => t?.id)
-        .map((t: any) => ({
-          id: String(t.id),
-          testName: String(t.testName || t.name || 'Unnamed Test'),
-          testPrice: Number(t.price ?? t.testPrice ?? 0),
-        }));
-
-      setAvailableTestsCatalog(formatted);
-    } catch (error) {
-      console.error('Error loading lab catalog:', error);
-      setAvailableTestsCatalog([]);
-    } finally {
-      setLoadingLabTests(false);
-    }
+    return {
+      'Content-Type': 'application/json',
+      ...(token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {}),
+    };
   };
 
   // ============================================================
-  // GET APPOINTMENT + PATIENT DATA
+  // APPOINTMENT
   // ============================================================
-  const fetchPatientConsultData = async () => {
+
+  const loadAppointment = async () => {
     try {
       setLoading(true);
 
-      let aptData: any = null;
+      let data: any = null;
 
-      const directAptRes = await fetch(
+      const response = await fetch(
         `${API_BASE}/appointments/${appointmentId}`,
         {
+          headers: authHeaders(),
           cache: 'no-store',
         }
-      ).catch(() => null);
+      );
 
-      if (directAptRes && directAptRes.ok) {
-        aptData = await directAptRes.json();
+      if (response.ok) {
+        data = await response.json();
       } else {
-        const listRes = await fetch(`${API_BASE}/appointments`, {
-          cache: 'no-store',
-        }).catch(() => null);
+        const listResponse = await fetch(
+          `${API_BASE}/appointments`,
+          {
+            headers: authHeaders(),
+            cache: 'no-store',
+          }
+        );
 
-        if (listRes && listRes.ok) {
-          const list = await listRes.json();
+        if (listResponse.ok) {
+          const list =
+            await listResponse.json();
 
-          aptData = Array.isArray(list)
-            ? list.find(
-                (a: any) => String(a.id) === String(appointmentId)
-              )
-            : null;
+          if (Array.isArray(list)) {
+            data = list.find(
+              (item: any) =>
+                String(item.id) ===
+                String(appointmentId)
+            );
+          }
         }
       }
 
-      if (!aptData) {
-        console.error('Appointment not found:', appointmentId);
+      if (!data) {
+        throw new Error(
+          'Appointment not found.'
+        );
+      }
+
+      setAppointment(data);
+
+      const patientData = data.patient;
+
+      if (!patientData?.id) {
+        setPatient(patientData);
         return;
       }
 
-      setCurrentAppointment(aptData);
-
-      if (aptData.symptoms) {
-        setClinicalNotes(`Complaints: ${aptData.symptoms}`);
-      }
-
-      const pat = aptData.patient;
-
-      if (pat?.id) {
-        const emrRes = await fetch(
-          `${API_BASE}/emr/patient/${pat.id}`,
-          {
-            cache: 'no-store',
-          }
-        ).catch(() => null);
-
-        if (emrRes && emrRes.ok) {
-          const emrData = await emrRes.json();
-
-          const loadedPatient = emrData.patient || emrData;
-
-          const prescriptions =
-            emrData.prescriptions ||
-            loadedPatient.prescriptions ||
-            [];
-
-          const labOrders =
-            emrData.labOrders ||
-            loadedPatient.labOrders ||
-            [];
-
-          setPatientData({
-            ...pat,
-            ...loadedPatient,
-            prescriptions,
-            labOrders,
-          });
-
-          setIsOldPatient(prescriptions.length > 0);
-        } else {
-          setPatientData(pat);
+      const emrResponse = await fetch(
+        `${API_BASE}/emr/patient/${patientData.id}`,
+        {
+          headers: authHeaders(),
+          cache: 'no-store',
         }
+      );
+
+      if (emrResponse.ok) {
+        const emr =
+          await emrResponse.json();
+
+        const loadedPatient =
+          emr.patient || emr;
+
+        const prescriptions =
+          emr.prescriptions ||
+          loadedPatient.prescriptions ||
+          [];
+
+        setPatient({
+          ...patientData,
+          ...loadedPatient,
+          prescriptions,
+          labOrders:
+            emr.labOrders || [],
+        });
+
+        setOldPatient(
+          prescriptions.length > 0
+        );
+      } else {
+        setPatient(patientData);
       }
-    } catch (err) {
-      console.error('Error loading patient consult data:', err);
+
+      if (data.symptoms) {
+        setClinicalNotes(
+          `Complaints: ${data.symptoms}`
+        );
+      }
+    } catch (error: any) {
+      console.error(error);
+
+      alert(
+        error?.message ||
+          'Unable to load appointment.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   // ============================================================
-  // VOICE DICTATION
+  // LAB TESTS
   // ============================================================
-  const startVoiceDictation = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
+  const loadLabTests = async () => {
+    try {
+      setLoadingTests(true);
+
+      const response = await fetch(
+        `${API_BASE}/lab/tests`,
+        {
+          headers: authHeaders(),
+          cache: 'no-store',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          'Unable to load laboratory tests.'
+        );
+      }
+
+      const data =
+        await response.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error(
+          'Invalid laboratory test response.'
+        );
+      }
+
+      setAvailableTests(
+        data
+          .filter(
+            (test: any) => test?.id
+          )
+          .map((test: any) => ({
+            id: String(test.id),
+
+            testName: String(
+              test.testName ||
+                test.name ||
+                'Unnamed Test'
+            ),
+
+            testPrice: Number(
+              test.price ??
+                test.testPrice ??
+                0
+            ),
+          }))
+      );
+    } catch (error) {
+      console.error(
+        'Lab test error:',
+        error
+      );
+
+      setAvailableTests([]);
+    } finally {
+      setLoadingTests(false);
+    }
+  };
+
+  const addLabTest = () => {
+    if (!selectedTestId) return;
+
+    const test =
+      availableTests.find(
+        item =>
+          String(item.id) ===
+          String(selectedTestId)
+      );
+
+    if (!test) {
       alert(
-        'Voice dictation not supported on this browser. Please use Google Chrome.'
+        'Selected laboratory test was not found.'
       );
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    if (
+      selectedTests.some(
+        item =>
+          String(item.id) ===
+          String(test.id)
+      )
+    ) {
+      alert(
+        'This test is already selected.'
+      );
+      return;
+    }
 
-    recognition.continuous = false;
+    setSelectedTests(prev => [
+      ...prev,
+      test,
+    ]);
+
+    setSelectedTestId('');
+  };
+
+  const removeLabTest = (
+    index: number
+  ) => {
+    setSelectedTests(prev =>
+      prev.filter(
+        (_, i) => i !== index
+      )
+    );
+  };
+
+  // ============================================================
+  // MEDICINES
+  // ============================================================
+
+  const updateMedicine = (
+    index: number,
+    field: keyof Medicine,
+    value: string
+  ) => {
+    setMedicines(prev =>
+      prev.map((medicine, i) =>
+        i === index
+          ? {
+              ...medicine,
+              [field]: value,
+            }
+          : medicine
+      )
+    );
+  };
+
+  const addMedicine = () => {
+    setMedicines(prev => [
+      ...prev,
+      {
+        medicineName: '',
+        dosage: '1 Tab',
+        frequency: '1-0-1',
+        duration: '3 Days',
+        instructions: 'After food',
+      },
+    ]);
+  };
+
+  const removeMedicine = (
+    index: number
+  ) => {
+    setMedicines(prev =>
+      prev.filter(
+        (_, i) => i !== index
+      )
+    );
+  };
+
+  // ============================================================
+  // VOICE
+  // ============================================================
+
+  const startVoiceDictation = () => {
+    const SpeechRecognition =
+      (window as any)
+        .SpeechRecognition ||
+      (window as any)
+        .webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert(
+        'Voice dictation is not supported in this browser.'
+      );
+      return;
+    }
+
+    const recognition =
+      new SpeechRecognition();
+
     recognition.lang = 'en-US';
+    recognition.continuous = false;
 
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
+    recognition.onstart = () =>
+      setListening(true);
 
-    recognition.onend = () => {
-      setIsListening(false);
-    };
+    recognition.onend = () =>
+      setListening(false);
 
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
+    recognition.onerror = () =>
+      setListening(false);
 
-    recognition.onresult = (e: any) => {
-      const text = e.results?.[0]?.[0]?.transcript || '';
+    recognition.onresult = (
+      event: any
+    ) => {
+      const text =
+        event.results?.[0]?.[0]
+          ?.transcript || '';
 
       if (text) {
-        setClinicalNotes((prev) =>
-          prev ? `${prev} ${text}` : text
+        setClinicalNotes(prev =>
+          prev
+            ? `${prev} ${text}`
+            : text
         );
       }
     };
@@ -239,297 +408,172 @@ export default function DoctorConsultPage() {
   };
 
   // ============================================================
-  // MEDICINES
-  // ============================================================
-  const addMedRow = () => {
-    setMeds((prev) => [
-      ...prev,
-      {
-        medicineName: '',
-        dosage: '1 Tab',
-        frequency: '1-0-1',
-        duration: '3 Days',
-        instructions: 'After meals',
-      },
-    ]);
-  };
-
-  const removeMedRow = (index: number) => {
-    setMeds((prev) =>
-      prev.filter((_, idx) => idx !== index)
-    );
-  };
-
-  // ============================================================
-  // ADD LAB TEST
-  // ============================================================
-  const addLabTest = () => {
-    if (!selectedLabTestId) return;
-
-    const testObj = availableTestsCatalog.find(
-      (t) => String(t.id) === String(selectedLabTestId)
-    );
-
-    if (!testObj) {
-      alert('Selected lab test was not found in backend.');
-      return;
-    }
-
-    const alreadyAdded = labTests.some(
-      (t) => String(t.id) === String(testObj.id)
-    );
-
-    if (alreadyAdded) {
-      alert('This lab test is already added.');
-      setSelectedLabTestId('');
-      return;
-    }
-
-    setLabTests((prev) => [
-      ...prev,
-      {
-        id: String(testObj.id),
-        testName: testObj.testName,
-        testPrice: testObj.testPrice,
-      },
-    ]);
-
-    setSelectedLabTestId('');
-  };
-
-  const removeLabTest = (index: number) => {
-    setLabTests((prev) =>
-      prev.filter((_, idx) => idx !== index)
-    );
-  };
-
-  // ============================================================
   // SAVE CONSULTATION
   // ============================================================
-  const handleSaveAndPrint = async () => {
+
+  const saveConsultation = async () => {
     if (!diagnosis.trim()) {
-      alert('Please enter a clinical diagnosis');
-      return;
-    }
-
-    const targetPatientId =
-      patientData?.id ||
-      currentAppointment?.patient?.id;
-
-    if (!targetPatientId) {
       alert(
-        'Patient data not loaded yet. Please refresh the page.'
+        'Please enter a diagnosis.'
       );
       return;
     }
 
-    /*
-     * IMPORTANT:
-     * Do NOT use a hardcoded doctor ID.
-     * Take doctor ID from the current appointment.
-     */
-    const doctorId =
-      currentAppointment?.doctor?.id ||
-      currentAppointment?.doctorId ||
-      patientData?.doctor?.id;
+    const patientId =
+      patient?.id ||
+      appointment?.patient?.id;
 
-    if (!doctorId) {
+    if (!patientId) {
       alert(
-        'Doctor information is missing from this appointment.'
+        'Patient information is missing.'
       );
       return;
     }
-
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('token')
-        : null;
 
     try {
-      setIsSaving(true);
+      setSaving(true);
 
-      // --------------------------------------------------------
-      // Prepare medicines
-      // --------------------------------------------------------
-      const validMedicines = meds
-        .filter(
-          (m) =>
-            m.medicineName &&
-            m.medicineName.trim() !== ''
-        )
-        .map((m) => ({
-          medicineName: m.medicineName.trim(),
-          dosage: m.dosage?.trim() || '1 Tab',
-          frequency:
-            m.frequency?.trim() || '1-0-1',
-          duration:
-            m.duration?.trim() || '5 Days',
-          instructions:
-            m.instructions?.trim() || 'After meals',
-        }));
+      const validMedicines =
+        medicines
+          .filter(
+            medicine =>
+              medicine.medicineName.trim()
+          )
+          .map(medicine => ({
+            name:
+              medicine.medicineName.trim(),
 
-      // --------------------------------------------------------
-      // Prescription payload
-      // --------------------------------------------------------
-      const prescriptionPayload = {
-        patientId: targetPatientId,
-        doctorId: doctorId,
-        appointmentId: appointmentId || undefined,
-        diagnosis: diagnosis.trim(),
-        symptoms: currentAppointment?.symptoms || '',
-        advice:
-          clinicalNotes.trim() +
-          (nextVisitDate
-            ? `\nFollow-up: ${nextVisitDate}`
-            : ''),
-        medicines: validMedicines,
+            dosage:
+              medicine.dosage.trim() ||
+              '1 Tab',
 
-        // Keep the names also in prescription
-        labTests: labTests.map(
-          (test) => test.testName
-        ),
-      };
+            freq:
+              medicine.frequency.trim() ||
+              '1-0-1',
+
+            duration:
+              medicine.duration.trim() ||
+              '5 Days',
+
+            notes:
+              medicine.instructions.trim() ||
+              'After food',
+          }));
 
       // --------------------------------------------------------
       // 1. SAVE PRESCRIPTION
       // --------------------------------------------------------
-      const prescriptionRes = await fetch(
-        `${API_BASE}/prescriptions`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token
-              ? {
-                  Authorization: `Bearer ${token}`,
-                }
-              : {}),
-          },
-          body: JSON.stringify(
-            prescriptionPayload
-          ),
-        }
-      );
 
-      if (!prescriptionRes.ok) {
-        let errorMessage =
-          'Failed to save prescription';
+      const prescriptionResponse =
+        await fetch(
+          `${API_BASE}/prescriptions`,
+          {
+            method: 'POST',
+            headers: authHeaders(),
 
-        try {
-          const errorData =
-            await prescriptionRes.json();
+            body: JSON.stringify({
+              patientId,
 
-          errorMessage =
-            errorData?.message ||
-            errorData?.error ||
-            errorMessage;
-        } catch (_) {}
+              doctorId:
+                appointment?.doctor?.id ||
+                appointment?.doctorId,
 
-        throw new Error(errorMessage);
+              appointmentId,
+
+              diagnosis:
+                diagnosis.trim(),
+
+              symptoms:
+                appointment?.symptoms ||
+                '',
+
+              advice:
+                clinicalNotes.trim() +
+                (followUpDate
+                  ? `\nFollow-up: ${followUpDate}`
+                  : ''),
+
+              medicines:
+                validMedicines,
+
+              labTests:
+                selectedTests.map(
+                  test => test.testName
+                ),
+            }),
+          }
+        );
+
+      if (!prescriptionResponse.ok) {
+        throw new Error(
+          await getErrorMessage(
+            prescriptionResponse,
+            'Failed to save prescription.'
+          )
+        );
       }
 
       // --------------------------------------------------------
       // 2. CREATE LAB ORDERS
       // --------------------------------------------------------
-      if (labTests.length > 0) {
-        if (!appointmentId) {
+
+      if (selectedTests.length > 0) {
+        const labResponse =
+          await fetch(
+            `${API_BASE}/lab/consultation-orders`,
+            {
+              method: 'POST',
+              headers: authHeaders(),
+
+              /*
+               * IMPORTANT:
+               * Backend gets doctor from appointment.
+               * Therefore only these fields are sent.
+               */
+              body: JSON.stringify({
+                appointmentId,
+                patientId,
+
+                labTestIds:
+                  selectedTests.map(
+                    test =>
+                      String(test.id)
+                  ),
+              }),
+            }
+          );
+
+        if (!labResponse.ok) {
           throw new Error(
-            'Appointment ID is required to create lab orders.'
+            await getErrorMessage(
+              labResponse,
+              'Failed to transmit lab orders to Pathology Worklist.'
+            )
           );
         }
-
-        const testIds = labTests
-          .map((test) => test.id)
-          .filter(Boolean)
-          .map((id) => String(id));
-
-        if (testIds.length !== labTests.length) {
-          throw new Error(
-            'One or more selected lab tests do not have valid backend IDs.'
-          );
-        }
-
-        const labOrderPayload = {
-          appointmentId: appointmentId,
-          patientId: targetPatientId,
-          doctorId: doctorId,
-          labTestIds: testIds,
-        };
-
-        console.log(
-          'Creating lab orders:',
-          labOrderPayload
-        );
-
-        const labRes = await fetch(
-          `${API_BASE}/lab/consultation-orders`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token
-                ? {
-                    Authorization: `Bearer ${token}`,
-                  }
-                : {}),
-            },
-            body: JSON.stringify(
-              labOrderPayload
-            ),
-          }
-        );
-
-        if (!labRes.ok) {
-          let errorMessage =
-            'Failed to transmit lab orders to Pathology Worklist';
-
-          try {
-            const errorData =
-              await labRes.json();
-
-            errorMessage =
-              errorData?.message ||
-              errorData?.error ||
-              errorMessage;
-          } catch (_) {}
-
-          throw new Error(errorMessage);
-        }
-
-        console.log(
-          'Lab orders successfully transmitted.'
-        );
       }
 
       // --------------------------------------------------------
       // 3. COMPLETE APPOINTMENT
       // --------------------------------------------------------
-      if (appointmentId) {
-        const statusRes = await fetch(
-          `${API_BASE}/appointments/${appointmentId}/status`,
-          {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token
-                ? {
-                    Authorization: `Bearer ${token}`,
-                  }
-                : {}),
-            },
-            body: JSON.stringify({
-              status: 'Completed',
-            }),
-          }
-        );
 
-        /*
-         * Do not fail the whole consultation if only the
-         * appointment status update fails.
-         */
-        if (!statusRes.ok) {
+      if (appointmentId) {
+        const statusResponse =
+          await fetch(
+            `${API_BASE}/appointments/${appointmentId}/status`,
+            {
+              method: 'PATCH',
+              headers: authHeaders(),
+
+              body: JSON.stringify({
+                status: 'Completed',
+              }),
+            }
+          );
+
+        if (!statusResponse.ok) {
           console.warn(
-            'Appointment status update failed.'
+            'Appointment status could not be updated.'
           );
         }
       }
@@ -537,55 +581,77 @@ export default function DoctorConsultPage() {
       // --------------------------------------------------------
       // SUCCESS
       // --------------------------------------------------------
-      const successMessage =
-        labTests.length > 0
-          ? 'Prescription and Lab Tests saved successfully! Transmitted to Pathology Worklist.'
-          : 'Prescription saved successfully!';
 
-      alert(successMessage);
+      alert(
+        selectedTests.length > 0
+          ? 'Prescription and Lab Tests saved successfully! Transmitted to Pathology Worklist.'
+          : 'Prescription saved successfully!'
+      );
 
       window.print();
-
-      router.push('/reception/dashboard');
-    } catch (err: any) {
+    } catch (error: any) {
       console.error(
-        'Consultation save error:',
-        err
+        'Save consultation error:',
+        error
       );
 
       alert(
-        err?.message ||
-          'Error completing consultation. Please try again.'
+        error?.message ||
+          'Unable to complete consultation.'
       );
     } finally {
-      setIsSaving(false);
+      setSaving(false);
+    }
+  };
+
+  // ============================================================
+  // ERROR MESSAGE
+  // ============================================================
+
+  const getErrorMessage = async (
+    response: Response,
+    fallback: string
+  ) => {
+    try {
+      const data =
+        await response.json();
+
+      return (
+        data?.message ||
+        data?.error ||
+        fallback
+      );
+    } catch {
+      return fallback;
     }
   };
 
   // ============================================================
   // LOADING
   // ============================================================
+
   if (loading) {
     return (
-      <div className="p-12 font-bold text-slate-400 text-xs text-center font-mono">
+      <div className="min-h-screen flex items-center justify-center text-slate-500 font-semibold">
         Loading patient clinical chart...
       </div>
     );
   }
 
-  // ============================================================
-  // UI
-  // ============================================================
+  const patientName =
+    patient?.fullName ||
+    appointment?.patient?.fullName ||
+    'Patient Consultation';
+
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans space-y-6 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+
       <style>{`
         @media print {
-          aside,
-          header,
-          nav,
           button,
-          a,
-          select {
+          select,
+          nav,
+          header {
             display: none !important;
           }
 
@@ -600,345 +666,349 @@ export default function DoctorConsultPage() {
         }
       `}</style>
 
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-4">
+      {/* HEADER */}
+
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex justify-between items-center gap-4">
+
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+
             <h1 className="text-2xl font-black text-slate-900">
-              {patientData?.fullName ||
-                currentAppointment?.patient?.fullName ||
-                'Patient Consultation'}
+              {patientName}
             </h1>
 
             <span
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                isOldPatient
+              className={`px-3 py-1 rounded-full text-[10px] font-black ${
+                oldPatient
                   ? 'bg-amber-100 text-amber-800'
                   : 'bg-emerald-100 text-emerald-800'
               }`}
             >
-              {isOldPatient
-                ? 'Old Patient'
-                : 'New Patient'}
+              {oldPatient
+                ? 'OLD PATIENT'
+                : 'NEW PATIENT'}
             </span>
+
           </div>
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-2">
             Phone:{' '}
-            <strong className="text-slate-800">
-              {patientData?.phone ||
-                currentAppointment?.patient?.phone ||
+            <b>
+              {patient?.phone ||
+                appointment?.patient?.phone ||
                 'N/A'}
-            </strong>{' '}
-            • Age:{' '}
-            <strong className="text-slate-800">
-              {patientData?.age || 'N/A'} Yrs
-            </strong>{' '}
-            • Slot:{' '}
-            <strong className="text-blue-700">
-              {currentAppointment?.timeSlot ||
+            </b>
+
+            {' • '}
+
+            Age:{' '}
+            <b>
+              {patient?.age ||
+                'N/A'}{' '}
+              Yrs
+            </b>
+
+            {' • '}
+
+            Slot:{' '}
+            <b className="text-blue-600">
+              {appointment?.timeSlot ||
                 'Scheduled'}
-            </strong>
+            </b>
           </p>
         </div>
 
         <div className="flex gap-2 print:hidden">
+
           <button
-            type="button"
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+            onClick={() =>
+              window.print()
+            }
+            className="px-4 py-2 bg-slate-100 rounded-xl text-xs font-bold"
           >
             🖨️ Print
           </button>
 
           <button
-            type="button"
-            disabled={isSaving}
-            onClick={handleSaveAndPrint}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md transition disabled:opacity-50"
+            disabled={saving}
+            onClick={
+              saveConsultation
+            }
+            className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold disabled:opacity-50"
           >
-            {isSaving
+            {saving
               ? 'Saving...'
-              : '💾 Save & Print Prescription'}
+              : '💾 Save Prescription'}
           </button>
+
         </div>
+
       </div>
 
-      {/* ======================================================
-          MAIN GRID
-      ====================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ====================================================
-            LEFT COLUMN
-        ==================================================== */}
+        {/* LEFT */}
+
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Clinical Assessment */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+          {/* CLINICAL */}
+
+          <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+
+            <h2 className="text-sm font-black text-slate-900 uppercase">
               Clinical Assessment
             </h2>
 
-            {/* Diagnosis */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+
+              <label className="label">
                 Diagnosis *
               </label>
 
               <input
-                type="text"
-                required
-                placeholder="e.g. Acute Viral Pharyngitis"
                 value={diagnosis}
-                onChange={(e) =>
-                  setDiagnosis(e.target.value)
+                onChange={e =>
+                  setDiagnosis(
+                    e.target.value
+                  )
                 }
-                className="w-full p-3 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-900 focus:border-blue-600"
+                placeholder="Enter diagnosis"
+                className="input"
               />
+
             </div>
 
-            {/* Clinical Notes */}
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">
+
+              <div className="flex justify-between mb-1">
+
+                <label className="label">
                   Clinical Advice & Notes
                 </label>
 
                 <button
                   type="button"
-                  onClick={startVoiceDictation}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition flex items-center gap-1 print:hidden ${
-                    isListening
-                      ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  onClick={
+                    startVoiceDictation
+                  }
+                  className={`px-3 py-1 rounded-lg text-[10px] font-bold ${
+                    listening
+                      ? 'bg-red-500 text-white'
+                      : 'bg-slate-100 text-slate-700'
                   }`}
                 >
-                  <span>🎤</span>
-
-                  <span>
-                    {isListening
-                      ? 'Listening...'
-                      : 'Voice Dictate'}
-                  </span>
+                  🎤{' '}
+                  {listening
+                    ? 'Listening...'
+                    : 'Voice Dictate'}
                 </button>
+
               </div>
 
               <textarea
-                rows={3}
-                placeholder="Dietary instructions, rest, precautions..."
+                rows={4}
                 value={clinicalNotes}
-                onChange={(e) =>
-                  setClinicalNotes(e.target.value)
+                onChange={e =>
+                  setClinicalNotes(
+                    e.target.value
+                  )
                 }
-                className="w-full p-3 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-600"
+                placeholder="Clinical notes, advice..."
+                className="input"
               />
+
             </div>
 
-            {/* Follow-up + Fee */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                  Next Follow-up Date
-                </label>
+            <div>
 
-                <input
-                  type="date"
-                  value={nextVisitDate}
-                  onChange={(e) =>
-                    setNextVisitDate(e.target.value)
-                  }
-                  className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold"
-                />
-              </div>
+              <label className="label">
+                Next Follow-up
+              </label>
 
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                  Consultation Fee (₹)
-                </label>
+              <input
+                type="date"
+                value={followUpDate}
+                onChange={e =>
+                  setFollowUpDate(
+                    e.target.value
+                  )
+                }
+                className="input"
+              />
 
-                <input
-                  type="number"
-                  value={consultationFee}
-                  onChange={(e) =>
-                    setConsultationFee(e.target.value)
-                  }
-                  className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold"
-                />
-              </div>
             </div>
-          </div>
 
-          {/* ==================================================
-              MEDICINES
-          ================================================== */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          </section>
+
+          {/* MEDICINES */}
+
+          <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+
             <div className="flex justify-between items-center">
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                Prescribed Medicines (Rx)
+
+              <h2 className="text-sm font-black text-slate-900 uppercase">
+                Prescribed Medicines
               </h2>
 
               <button
-                type="button"
-                onClick={addMedRow}
-                className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition print:hidden"
+                onClick={addMedicine}
+                className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold"
               >
                 + Add Medicine
               </button>
+
             </div>
 
-            <div className="space-y-3">
-              {meds.map((m, idx) => (
+            {medicines.map(
+              (medicine, index) => (
+
                 <div
-                  key={idx}
-                  className="grid grid-cols-1 md:grid-cols-12 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100 items-center"
+                  key={index}
+                  className="grid grid-cols-1 md:grid-cols-4 gap-2 bg-slate-50 p-3 rounded-2xl"
                 >
+
                   <input
-                    type="text"
-                    placeholder="Medicine Name (e.g. Paracetamol 650mg)"
-                    value={m.medicineName}
-                    onChange={(e) => {
-                      const updated = [...meds];
-
-                      updated[idx] = {
-                        ...updated[idx],
-                        medicineName:
-                          e.target.value,
-                      };
-
-                      setMeds(updated);
-                    }}
-                    className="p-2 text-xs border border-slate-200 rounded-xl font-bold md:col-span-5 outline-none bg-white"
+                    placeholder="Medicine name"
+                    value={
+                      medicine.medicineName
+                    }
+                    onChange={e =>
+                      updateMedicine(
+                        index,
+                        'medicineName',
+                        e.target.value
+                      )
+                    }
+                    className="input"
                   />
 
                   <input
-                    type="text"
                     placeholder="Dosage"
-                    value={m.dosage}
-                    onChange={(e) => {
-                      const updated = [...meds];
-
-                      updated[idx] = {
-                        ...updated[idx],
-                        dosage: e.target.value,
-                      };
-
-                      setMeds(updated);
-                    }}
-                    className="p-2 text-xs border border-slate-200 rounded-xl md:col-span-2 outline-none bg-white"
+                    value={
+                      medicine.dosage
+                    }
+                    onChange={e =>
+                      updateMedicine(
+                        index,
+                        'dosage',
+                        e.target.value
+                      )
+                    }
+                    className="input"
                   />
 
                   <select
-                    value={m.frequency}
-                    onChange={(e) => {
-                      const updated = [...meds];
-
-                      updated[idx] = {
-                        ...updated[idx],
-                        frequency:
-                          e.target.value,
-                      };
-
-                      setMeds(updated);
-                    }}
-                    className="p-2 text-xs border border-slate-200 rounded-xl md:col-span-2 outline-none bg-white font-semibold"
+                    value={
+                      medicine.frequency
+                    }
+                    onChange={e =>
+                      updateMedicine(
+                        index,
+                        'frequency',
+                        e.target.value
+                      )
+                    }
+                    className="input"
                   >
                     <option value="1-0-1">
-                      1-0-1 (BD)
+                      1-0-1
                     </option>
-
                     <option value="1-1-1">
-                      1-1-1 (TDS)
+                      1-1-1
                     </option>
-
                     <option value="1-0-0">
-                      1-0-0 (OD)
+                      1-0-0
                     </option>
-
                     <option value="0-0-1">
-                      0-0-1 (Night)
+                      0-0-1
                     </option>
-
                     <option value="SOS">
                       SOS
                     </option>
                   </select>
 
-                  <input
-                    type="text"
-                    placeholder="Duration"
-                    value={m.duration}
-                    onChange={(e) => {
-                      const updated = [...meds];
+                  <div className="flex gap-2">
 
-                      updated[idx] = {
-                        ...updated[idx],
-                        duration:
-                          e.target.value,
-                      };
-
-                      setMeds(updated);
-                    }}
-                    className="p-2 text-xs border border-slate-200 rounded-xl md:col-span-2 outline-none bg-white"
-                  />
-
-                  {meds.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeMedRow(idx)
+                    <input
+                      placeholder="Duration"
+                      value={
+                        medicine.duration
                       }
-                      className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl text-center md:col-span-1 print:hidden font-bold"
-                    >
-                      ✕
-                    </button>
-                  )}
+                      onChange={e =>
+                        updateMedicine(
+                          index,
+                          'duration',
+                          e.target.value
+                        )
+                      }
+                      className="input flex-1"
+                    />
+
+                    {medicines.length >
+                      1 && (
+                      <button
+                        onClick={() =>
+                          removeMedicine(
+                            index
+                          )
+                        }
+                        className="px-3 text-red-500 font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+
+                  </div>
+
                 </div>
-              ))}
-            </div>
-          </div>
+              )
+            )}
+
+          </section>
+
         </div>
 
-        {/* ====================================================
-            RIGHT COLUMN
-        ==================================================== */}
+        {/* RIGHT */}
+
         <div className="space-y-6">
 
-          {/* ==================================================
-              LAB TESTS
-          ================================================== */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                Suggest Pathology Tests
+          {/* LAB */}
+
+          <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+
+            <div className="flex justify-between">
+
+              <h2 className="text-sm font-black text-slate-900 uppercase">
+                Pathology Tests
               </h2>
 
-              {loadingLabTests && (
-                <span className="text-[10px] font-bold text-blue-600">
+              {loadingTests && (
+                <span className="text-xs text-blue-600">
                   Loading...
                 </span>
               )}
+
             </div>
 
-            <div className="flex gap-2 print:hidden">
+            <div className="flex gap-2">
+
               <select
-                value={selectedLabTestId}
-                onChange={(e) =>
-                  setSelectedLabTestId(
+                value={selectedTestId}
+                onChange={e =>
+                  setSelectedTestId(
                     e.target.value
                   )
                 }
-                disabled={loadingLabTests}
-                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl font-bold bg-slate-50 outline-none disabled:opacity-50"
+                disabled={loadingTests}
+                className="input flex-1"
               >
+
                 <option value="">
-                  -- Select Investigation --
+                  Select Investigation
                 </option>
 
-                {availableTestsCatalog.map(
-                  (test) => (
+                {availableTests.map(
+                  test => (
                     <option
                       key={test.id}
                       value={test.id}
@@ -948,109 +1018,165 @@ export default function DoctorConsultPage() {
                     </option>
                   )
                 )}
+
               </select>
 
               <button
-                type="button"
                 onClick={addLabTest}
                 disabled={
-                  loadingLabTests ||
-                  !selectedLabTestId
+                  !selectedTestId
                 }
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition disabled:opacity-50"
+                className="px-4 bg-purple-600 text-white rounded-xl text-xs font-bold disabled:opacity-50"
               >
                 Add
               </button>
+
             </div>
 
-            {!loadingLabTests &&
-              availableTestsCatalog.length === 0 && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 text-[11px] font-semibold text-amber-700">
-                  No laboratory tests are currently
-                  available in the backend.
-                </div>
+            {!loadingTests &&
+              availableTests.length ===
+                0 && (
+                <p className="p-3 bg-amber-50 text-amber-700 rounded-xl text-xs">
+                  No laboratory tests found in backend.
+                </p>
               )}
 
-            {labTests.length > 0 && (
-              <div className="space-y-2 mt-2">
-                {labTests.map((test, i) => (
-                  <div
-                    key={`${test.id}-${i}`}
-                    className="flex justify-between items-center p-2.5 bg-purple-50 rounded-xl text-xs font-bold text-purple-900 border border-purple-100"
-                  >
+            {selectedTests.map(
+              (test, index) => (
+
+                <div
+                  key={test.id}
+                  className="flex justify-between items-center p-3 bg-purple-50 rounded-xl text-xs font-bold"
+                >
+
+                  <span>
+                    🔬 {test.testName}
+                  </span>
+
+                  <div className="flex gap-3">
+
                     <span>
-                      🔬 {test.testName}
+                      ₹{test.testPrice}
                     </span>
 
-                    <div className="flex items-center gap-2">
-                      <span>
-                        ₹{test.testPrice}
-                      </span>
+                    <button
+                      onClick={() =>
+                        removeLabTest(
+                          index
+                        )
+                      }
+                      className="text-red-500"
+                    >
+                      ✕
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeLabTest(i)
-                        }
-                        className="text-rose-500 hover:text-rose-700 print:hidden"
-                      >
-                        ✕
-                      </button>
-                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* ==================================================
-              PREVIOUS HISTORY
-          ================================================== */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                </div>
+              )
+            )}
+
+          </section>
+
+          {/* HISTORY */}
+
+          <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+
+            <h2 className="text-sm font-black text-slate-900 uppercase mb-4">
               Previous Consultations
             </h2>
 
-            {isOldPatient &&
-            patientData?.prescriptions?.length >
-              0 ? (
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1 text-xs">
-                {patientData.prescriptions.map(
-                  (p: any) => (
+            {oldPatient &&
+            patient?.prescriptions
+              ?.length ? (
+
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+
+                {patient.prescriptions.map(
+                  (
+                    prescription: any
+                  ) => (
+
                     <div
-                      key={p.id}
-                      className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1"
+                      key={
+                        prescription.id
+                      }
+                      className="p-3 bg-slate-50 rounded-xl"
                     >
-                      <div className="flex justify-between font-bold text-slate-800">
+
+                      <div className="flex justify-between text-xs font-bold">
+
                         <span>
-                          {p.diagnosis}
+                          {
+                            prescription.diagnosis
+                          }
                         </span>
 
-                        <span className="text-[10px] text-slate-400">
-                          {p.createdAt
+                        <span className="text-slate-400">
+
+                          {prescription.createdAt
                             ? new Date(
-                                p.createdAt
+                                prescription.createdAt
                               ).toLocaleDateString()
                             : '-'}
+
                         </span>
+
                       </div>
 
-                      <p className="text-[11px] text-slate-500">
-                        {p.advice || '-'}
+                      <p className="text-xs text-slate-500 mt-1">
+                        {
+                          prescription.advice ||
+                          '-'
+                        }
                       </p>
+
                     </div>
                   )
                 )}
+
               </div>
+
             ) : (
-              <p className="text-xs text-slate-400 py-6 text-center italic">
-                First clinical consultation
-                recorded.
+
+              <p className="text-xs text-slate-400 text-center py-5">
+                First clinical consultation.
               </p>
+
             )}
-          </div>
+
+          </section>
+
         </div>
+
       </div>
+
+      <style jsx>{`
+        .label {
+          display: block;
+          font-size: 10px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+
+        .input {
+          width: 100%;
+          padding: 10px;
+          font-size: 12px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          outline: none;
+          background: white;
+          color: #0f172a;
+        }
+
+        .input:focus {
+          border-color: #2563eb;
+        }
+      `}</style>
+
     </div>
   );
 }

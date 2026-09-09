@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getAuthHeaders } from '../../../utils/session';
+
+const API = 'https://drbloomedi-backend.onrender.com';
 
 interface LabTest {
   id: string;
@@ -9,13 +11,15 @@ interface LabTest {
   price: number;
   normalRange?: string;
   unit?: string;
+  description?: string;
 }
 
 interface LabOrder {
   id: string;
+  orderNumber?: string;
   status: string;
   resultValue?: string;
-  remarks?: string;
+  technicianRemarks?: string;
   reportFileUrl?: string;
   createdAt: string;
   patient?: {
@@ -26,258 +30,348 @@ interface LabOrder {
     gender?: string;
   };
   labTest?: LabTest;
-  testName?: string;
-  price?: number;
 }
 
+const STATUSES = [
+  'ALL',
+  'Ordered',
+  'Sample Collected',
+  'In Progress',
+  'Completed',
+  'Cancelled',
+];
+
 export default function LaboratoryManagementPage() {
-  const [activeTab, setActiveTab] = useState<'worklist' | 'catalog' | 'booking'>('worklist');
+  const [tab, setTab] = useState<'worklist' | 'catalog' | 'booking'>('worklist');
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [tests, setTests] = useState<LabTest[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [status, setStatus] = useState('ALL');
 
-  const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [selectedTestId, setSelectedTestId] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [testId, setTestId] = useState('');
 
-  const [newTestName, setNewTestName] = useState('');
-  const [newTestPrice, setNewTestPrice] = useState('');
-  const [newTestRange, setNewTestRange] = useState('');
-  const [newTestUnit, setNewTestUnit] = useState('');
+  // Add / Edit test
+  const [editTest, setEditTest] = useState<LabTest | null>(null);
+  const [testName, setTestName] = useState('');
+  const [testPrice, setTestPrice] = useState('');
+  const [testRange, setTestRange] = useState('');
+  const [testUnit, setTestUnit] = useState('');
+  const [testDescription, setTestDescription] = useState('');
+  const [savingTest, setSavingTest] = useState(false);
 
-  const [reportingOrder, setReportingOrder] = useState<LabOrder | null>(null);
+  // Report
+  const [reportOrder, setReportOrder] = useState<LabOrder | null>(null);
   const [observedValue, setObservedValue] = useState('');
   const [remarks, setRemarks] = useState('');
-  const [submittingReport, setSubmittingReport] = useState(false);
-
-  const [viewingReport, setViewingReport] = useState<LabOrder | null>(null);
+  const [savingReport, setSavingReport] = useState(false);
+  const [viewReport, setViewReport] = useState<LabOrder | null>(null);
 
   useEffect(() => {
-    fetchLabData();
-    const poll = setInterval(() => fetchLabData(true), 5000);
-    return () => clearInterval(poll);
+    loadData();
+    const timer = setInterval(() => loadData(true), 5000);
+    return () => clearInterval(timer);
   }, []);
 
-  const fetchLabData = async (isBg = false) => {
+  const loadData = async (background = false) => {
     try {
-      if (!isBg) setLoading(true);
-      
+      if (!background) setLoading(true);
+
       const headers = getAuthHeaders();
-      
+
       const [ordersRes, testsRes, patientsRes] = await Promise.all([
-        fetch('https://drbloomedi-backend.onrender.com/lab/orders', { headers, credentials: 'include' }).catch(() => null),
-        fetch('https://drbloomedi-backend.onrender.com/lab/tests', { headers, credentials: 'include' }).catch(() => null),
-        fetch('https://drbloomedi-backend.onrender.com/patients', { headers, credentials: 'include' }).catch(() => null),
+        fetch(`${API}/lab/orders`, { headers, credentials: 'include' }),
+        fetch(`${API}/lab/tests`, { headers, credentials: 'include' }),
+        fetch(`${API}/patients`, { headers, credentials: 'include' }),
       ]);
 
-      if (ordersRes && ordersRes.ok) {
-        const orderData = await ordersRes.json();
-        setOrders(Array.isArray(orderData) ? orderData : []);
+      if (ordersRes.ok) {
+        const data = await ordersRes.json();
+        setOrders(Array.isArray(data) ? data : []);
       }
 
-      if (testsRes && testsRes.ok) {
-        const testData = await testsRes.json();
-        setTests(Array.isArray(testData) ? testData : []);
+      if (testsRes.ok) {
+        const data = await testsRes.json();
+        setTests(Array.isArray(data) ? data : []);
       }
 
-      if (patientsRes && patientsRes.ok) {
-        const patientData = await patientsRes.json();
-        setPatients(Array.isArray(patientData) ? patientData : []);
+      if (patientsRes.ok) {
+        const data = await patientsRes.json();
+        setPatients(Array.isArray(data) ? data : []);
       }
-    } catch (err) {
-      console.error('Failed to load laboratory module data', err);
+    } catch (error) {
+      console.error('Laboratory data error:', error);
     } finally {
-      if (!isBg) setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
-  const handleStatusUpdate = async (orderId: string, nextStatus: string) => {
+  // ---------------- STATUS ----------------
+
+  const updateStatus = async (id: string, nextStatus: string) => {
     try {
-      const headers = getAuthHeaders();
-      const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${orderId}/sample-status`, {
+      const res = await fetch(`${API}/lab/orders/${id}/sample-status`, {
         method: 'PATCH',
-        headers,
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({ status: nextStatus }),
       });
-      if (!res.ok) throw new Error('Status update failed');
-      fetchLabData(true);
-    } catch (err: any) {
-      alert(`Error updating sample status: ${err.message}`);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Status update failed');
+      }
+
+      await loadData(true);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
-  const handleSubmitReport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reportingOrder) return;
-    try {
-      setSubmittingReport(true);
-      const headers = getAuthHeaders();
-      const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${reportingOrder.id}/report`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({
-          observedValue,
-          remarks,
-        }),
-      });
+  // ---------------- REPORT ----------------
 
-      if (!res.ok) throw new Error('Failed to save test result');
+  const submitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportOrder) return;
+
+    try {
+      setSavingReport(true);
+
+      const res = await fetch(
+        `${API}/lab/orders/${reportOrder.id}/report`,
+        {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({
+            observedValue,
+            remarks,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to save result');
+      }
+
       alert('Diagnostic Lab Report Generated & Verified!');
-      setReportingOrder(null);
+
+      setReportOrder(null);
       setObservedValue('');
       setRemarks('');
-      fetchLabData(true);
-    } catch (err: any) {
-      alert(`Report Submission Error: ${err.message}`);
+      await loadData(true);
+    } catch (error: any) {
+      alert(`Report Error: ${error.message}`);
     } finally {
-      setSubmittingReport(false);
+      setSavingReport(false);
     }
   };
 
-  const handleBookTest = async (e: React.FormEvent) => {
+  // ---------------- BOOK TEST ----------------
+
+  const bookTest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatientId || !selectedTestId) {
+
+    if (!patientId || !testId) {
       alert('Please select both patient and lab test');
       return;
     }
+
     try {
-      const headers = getAuthHeaders();
-      const res = await fetch('https://drbloomedi-backend.onrender.com/lab/orders', {
+      const res = await fetch(`${API}/lab/orders`, {
         method: 'POST',
-        headers,
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify({
-          patientId: selectedPatientId,
-          labTestId: selectedTestId,
+          patientId,
+          labTestId: testId,
         }),
       });
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'Failed to book test');
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to book test');
       }
+
       alert('Lab Test Booked Successfully in Worklist!');
-      setSelectedPatientId('');
-      setSelectedTestId('');
-      setActiveTab('worklist');
-      fetchLabData(true);
-    } catch (err: any) {
-      alert(`Booking Error: ${err.message}`);
+
+      setPatientId('');
+      setTestId('');
+      setTab('worklist');
+      await loadData(true);
+    } catch (error: any) {
+      alert(`Booking Error: ${error.message}`);
     }
   };
 
-  const handleAddCatalogTest = async (e: React.FormEvent) => {
+  // ---------------- ADD / EDIT TEST ----------------
+
+  const resetTestForm = () => {
+    setEditTest(null);
+    setTestName('');
+    setTestPrice('');
+    setTestRange('');
+    setTestUnit('');
+    setTestDescription('');
+  };
+
+  const startEdit = (test: LabTest) => {
+    setEditTest(test);
+    setTestName(test.testName);
+    setTestPrice(String(test.price ?? ''));
+    setTestRange(test.normalRange || '');
+    setTestUnit(test.unit || '');
+    setTestDescription(test.description || '');
+    setTab('catalog');
+  };
+
+  const saveTest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTestName || !newTestPrice) return;
+
+    if (!testName.trim() || !testPrice) {
+      alert('Test name and price are required');
+      return;
+    }
+
     try {
-      const headers = getAuthHeaders();
-      const res = await fetch('https://drbloomedi-backend.onrender.com/lab/tests', {
-        method: 'POST',
-        headers,
+      setSavingTest(true);
+
+      const payload = {
+        testName: testName.trim(),
+        price: Number(testPrice),
+        normalRange: testRange.trim(),
+        unit: testUnit.trim(),
+        description: testDescription.trim(),
+      };
+
+      const url = editTest
+        ? `${API}/lab/tests/${editTest.id}`
+        : `${API}/lab/tests`;
+
+      const res = await fetch(url, {
+        method: editTest ? 'PATCH' : 'POST',
+        headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({
-          testName: newTestName,
-          price: Number(newTestPrice),
-          normalRange: newTestRange,
-          unit: newTestUnit,
-        }),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Failed to create test in catalog');
-      alert('Master Lab Test Added to Catalog!');
-      setNewTestName('');
-      setNewTestPrice('');
-      setNewTestRange('');
-      setNewTestUnit('');
-      fetchLabData(true);
-    } catch (err: any) {
-      alert(`Catalog Error: ${err.message}`);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(
+          data.message ||
+            (editTest
+              ? 'Failed to update lab test'
+              : 'Failed to create lab test')
+        );
+      }
+
+      alert(editTest
+        ? 'Lab Test Updated Successfully!'
+        : 'Master Lab Test Added to Catalog!'
+      );
+
+      resetTestForm();
+      await loadData(true);
+    } catch (error: any) {
+      alert(`Catalog Error: ${error.message}`);
+    } finally {
+      setSavingTest(false);
     }
   };
 
-  const filteredOrders = orders.filter((ord) => {
+  // ---------------- FILTER ----------------
+
+  const filteredOrders = orders.filter((order) => {
     const q = search.toLowerCase();
-    const patientName = ord.patient?.fullName || '';
-    const patientPhone = ord.patient?.phone || '';
-    const testName = ord.labTest?.testName || ord.testName || '';
+
+    const name = order.patient?.fullName?.toLowerCase() || '';
+    const phone = order.patient?.phone || '';
+    const test = order.labTest?.testName?.toLowerCase() || '';
 
     const matchesSearch =
-      patientName.toLowerCase().includes(q) ||
-      patientPhone.includes(q) ||
-      testName.toLowerCase().includes(q);
+      name.includes(q) ||
+      phone.includes(q) ||
+      test.includes(q);
 
-    const matchesStatus = statusFilter === 'ALL' || ord.status === statusFilter;
+    const matchesStatus =
+      status === 'ALL' || order.status === status;
+
     return matchesSearch && matchesStatus;
   });
 
+  const field =
+    'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none';
+
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10 max-w-7xl mx-auto space-y-6">
+
+      {/* HEADER */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-bold px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full uppercase">
             Module 8 • Diagnostics
           </span>
-          <h1 className="text-2xl font-black text-slate-900 mt-1">
+
+          <h1 className="text-2xl font-black text-slate-900 mt-2">
             Laboratory & Pathology Portal
           </h1>
+
           <p className="text-xs text-slate-500">
             Sample Collection, Worklist Lifecycle, Clinical Reporting & PDF Dispatch
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('worklist')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'worklist' ? 'bg-purple-600 text-white shadow-md' : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            📋 Worklist Orders
-          </button>
-          <button
-            onClick={() => setActiveTab('booking')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'booking' ? 'bg-purple-600 text-white shadow-md' : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            + Book Test
-          </button>
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === 'catalog' ? 'bg-purple-600 text-white shadow-md' : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            🧪 Test Catalog
-          </button>
+
+        <div className="flex gap-2 flex-wrap">
+          {[
+            ['worklist', '📋 Worklist Orders'],
+            ['booking', '+ Book Test'],
+            ['catalog', '🧪 Test Catalog'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key as any)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold ${
+                tab === key
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {activeTab === 'worklist' && (
+      {/* WORKLIST */}
+      {tab === 'worklist' && (
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <input
-              type="text"
-              placeholder="Search by Patient Name, Phone or Test..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="max-w-md w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold outline-none"
+              placeholder="Search Patient, Phone or Test..."
+              className="max-w-md w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
             />
-            <div className="flex items-center gap-2 text-xs font-bold flex-wrap">
+
+            <div className="flex gap-2 flex-wrap items-center text-xs font-bold">
               <span className="text-slate-400">Filter:</span>
-              {['ALL', 'PENDING', 'COLLECTED', 'IN_PROCESS', 'COMPLETED'].map((st) => (
+
+              {STATUSES.map((s) => (
                 <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-3 py-1 rounded-xl transition ${
-                    statusFilter === st
+                  key={s}
+                  onClick={() => setStatus(s)}
+                  className={`px-3 py-1 rounded-xl ${
+                    status === s
                       ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-600'
                   }`}
                 >
-                  {st}
+                  {s}
                 </button>
               ))}
             </div>
@@ -290,11 +384,12 @@ export default function LaboratoryManagementPage() {
                   <th className="py-3 px-4">Patient</th>
                   <th className="py-3 px-4">Requested Test</th>
                   <th className="py-3 px-4">Price</th>
-                  <th className="py-3 px-4">Sample Status</th>
-                  <th className="py-3 px-4">Result / Values</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Result</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
@@ -309,79 +404,91 @@ export default function LaboratoryManagementPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-slate-50/70 transition">
+                  filteredOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-slate-50 transition">
+
                       <td className="py-3 px-4">
-                        <p className="font-bold text-slate-900">{ord.patient?.fullName || 'Walk-in Patient'}</p>
-                        <p className="text-[10px] text-slate-400">{ord.patient?.phone || 'No Phone'}</p>
+                        <p className="font-bold text-slate-900">
+                          {order.patient?.fullName || 'Walk-in Patient'}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {order.patient?.phone || 'No Phone'}
+                        </p>
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-800">
-                        {ord.labTest?.testName || ord.testName || 'Pathology Test'}
+
+                      <td className="py-3 px-4 font-bold">
+                        {order.labTest?.testName || 'Pathology Test'}
                       </td>
-                      <td className="py-3 px-4 font-black text-slate-700">
-                        ₹{ord.labTest?.price || ord.price || 350}
+
+                      <td className="py-3 px-4 font-black">
+                        ₹{order.labTest?.price ?? 0}
                       </td>
+
                       <td className="py-3 px-4">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                            ord.status === 'COMPLETED'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : ord.status === 'COLLECTED'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : ord.status === 'IN_PROCESS'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          {ord.status || 'PENDING'}
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                          {order.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-700">
-                        {ord.status === 'COMPLETED' ? (
-                          <div className="font-mono font-bold text-purple-700">
-                            {ord.resultValue} {ord.labTest?.unit}
-                          </div>
+
+                      <td className="py-3 px-4">
+                        {order.status === 'Completed' ? (
+                          <span className="font-mono font-bold text-purple-700">
+                            {order.resultValue || '-'} {order.labTest?.unit || ''}
+                          </span>
                         ) : (
-                          <span className="text-slate-400 italic">Pending Results</span>
+                          <span className="text-slate-400 italic">
+                            Pending Results
+                          </span>
                         )}
                       </td>
+
                       <td className="py-3 px-4 text-right space-x-2">
-                        {(!ord.status || ord.status === 'PENDING') && (
+
+                        {order.status === 'Ordered' && (
                           <button
-                            onClick={() => handleStatusUpdate(ord.id, 'COLLECTED')}
-                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold shadow-sm"
+                            onClick={() =>
+                              updateStatus(order.id, 'Sample Collected')
+                            }
+                            className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold"
                           >
                             Collect Sample
                           </button>
                         )}
-                        {ord.status === 'COLLECTED' && (
+
+                        {order.status === 'Sample Collected' && (
                           <button
-                            onClick={() => handleStatusUpdate(ord.id, 'IN_PROCESS')}
-                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold shadow-sm"
+                            onClick={() =>
+                              updateStatus(order.id, 'In Progress')
+                            }
+                            className="px-2.5 py-1 bg-amber-600 text-white rounded-lg text-[11px] font-bold"
                           >
                             Send to Analyzer
                           </button>
                         )}
-                        {(ord.status === 'COLLECTED' || ord.status === 'IN_PROCESS') && (
+
+                        {(order.status === 'Sample Collected' ||
+                          order.status === 'In Progress') && (
                           <button
                             onClick={() => {
-                              setReportingOrder(ord);
-                              setObservedValue(ord.resultValue || '');
-                              setRemarks(ord.remarks || '');
+                              setReportOrder(order);
+                              setObservedValue(order.resultValue || '');
+                              setRemarks(order.technicianRemarks || '');
                             }}
-                            className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[11px] font-bold shadow-sm"
+                            className="px-2.5 py-1 bg-purple-600 text-white rounded-lg text-[11px] font-bold"
                           >
                             Enter Results
                           </button>
                         )}
-                        {ord.status === 'COMPLETED' && (
+
+                        {order.status === 'Completed' && (
                           <button
-                            onClick={() => setViewingReport(ord)}
-                            className="px-2.5 py-1 bg-slate-900 hover:bg-black text-white rounded-lg text-[11px] font-bold shadow-sm inline-flex items-center gap-1"
+                            onClick={() => setViewReport(order)}
+                            className="px-2.5 py-1 bg-slate-900 text-white rounded-lg text-[11px] font-bold"
                           >
-                            <span>🖨️</span> Report PDF
+                            🖨️ Report
                           </button>
                         )}
+
                       </td>
                     </tr>
                   ))
@@ -392,19 +499,23 @@ export default function LaboratoryManagementPage() {
         </div>
       )}
 
-      {activeTab === 'booking' && (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-4">
-          <h2 className="text-sm font-black text-slate-900 uppercase">Book Laboratory Test</h2>
-          <form onSubmit={handleBookTest} className="space-y-4 text-xs">
+      {/* BOOKING */}
+      {tab === 'booking' && (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto">
+
+          <h2 className="text-sm font-black uppercase mb-5">
+            Book Laboratory Test
+          </h2>
+
+          <form onSubmit={bookTest} className="space-y-4 text-xs">
+
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                Select Registered Patient *
-              </label>
+              <label className="label">Select Registered Patient *</label>
               <select
                 required
-                value={selectedPatientId}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                value={patientId}
+                onChange={(e) => setPatientId(e.target.value)}
+                className={field}
               >
                 <option value="">-- Choose Patient --</option>
                 {patients.map((p) => (
@@ -416,253 +527,377 @@ export default function LaboratoryManagementPage() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                Select Pathology Test *
-              </label>
+              <label className="label">Select Pathology Test *</label>
               <select
                 required
-                value={selectedTestId}
-                onChange={(e) => setSelectedTestId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                value={testId}
+                onChange={(e) => setTestId(e.target.value)}
+                className={field}
               >
                 <option value="">-- Choose Lab Test --</option>
                 {tests.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.testName} - ₹{t.price} ({t.normalRange || 'Standard'})
+                    {t.testName} - ₹{t.price}
                   </option>
                 ))}
               </select>
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md transition"
-            >
+            <button className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold">
               Confirm Test Booking
             </button>
+
           </form>
         </div>
       )}
 
-      {activeTab === 'catalog' && (
+      {/* CATALOG */}
+      {tab === 'catalog' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <h2 className="text-sm font-black text-slate-900 uppercase">Add Test to Catalog</h2>
-            <form onSubmit={handleAddCatalogTest} className="space-y-3 text-xs">
+
+          {/* ADD / EDIT FORM */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-sm font-black uppercase">
+                {editTest ? 'Edit Lab Test' : 'Add Test to Catalog'}
+              </h2>
+
+              {editTest && (
+                <button
+                  onClick={resetTestForm}
+                  className="text-xs font-bold text-slate-500"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+
+            <form onSubmit={saveTest} className="space-y-3 text-xs">
+
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Test Name *</label>
+                <label className="label">Test Name *</label>
                 <input
-                  type="text"
                   required
-                  placeholder="e.g. Complete Blood Count (CBC)"
-                  value={newTestName}
-                  onChange={(e) => setNewTestName(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  value={testName}
+                  onChange={(e) => setTestName(e.target.value)}
+                  placeholder="Complete Blood Count"
+                  className={field}
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Price (₹) *</label>
+                <label className="label">Price (₹) *</label>
                 <input
+                  required
                   type="number"
-                  required
-                  placeholder="450"
-                  value={newTestPrice}
-                  onChange={(e) => setNewTestPrice(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  min="0"
+                  value={testPrice}
+                  onChange={(e) => setTestPrice(e.target.value)}
+                  className={field}
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Reference Normal Range</label>
+                <label className="label">Reference Normal Range</label>
                 <input
-                  type="text"
+                  value={testRange}
+                  onChange={(e) => setTestRange(e.target.value)}
                   placeholder="13.5 - 17.5"
-                  value={newTestRange}
-                  onChange={(e) => setNewTestRange(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  className={field}
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Measurement Unit</label>
+                <label className="label">Measurement Unit</label>
                 <input
-                  type="text"
-                  placeholder="g/dL or mg/dL"
-                  value={newTestUnit}
-                  onChange={(e) => setNewTestUnit(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  value={testUnit}
+                  onChange={(e) => setTestUnit(e.target.value)}
+                  placeholder="g/dL"
+                  className={field}
                 />
               </div>
+
+              <div>
+                <label className="label">Description</label>
+                <textarea
+                  rows={2}
+                  value={testDescription}
+                  onChange={(e) => setTestDescription(e.target.value)}
+                  className={field}
+                />
+              </div>
+
               <button
-                type="submit"
-                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md transition"
+                disabled={savingTest}
+                className="w-full py-2.5 bg-purple-600 text-white rounded-xl font-bold"
               >
-                + Save to Master Catalog
+                {savingTest
+                  ? 'Saving...'
+                  : editTest
+                  ? '✓ Update Lab Test'
+                  : '+ Save to Master Catalog'}
               </button>
+
             </form>
           </div>
 
-          <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <h2 className="text-sm font-black text-slate-900 uppercase">Available Test Menu</h2>
-            <div className="divide-y divide-slate-100 text-xs">
-              {tests.map((t) => (
-                <div key={t.id} className="py-3 flex justify-between items-center">
-                  <div>
-                    <p className="font-bold text-slate-900">{t.testName}</p>
-                    <p className="text-[10px] text-slate-400">
-                      Normal Range: {t.normalRange || 'Standard'} {t.unit}
-                    </p>
+          {/* TEST LIST */}
+          <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+
+            <h2 className="text-sm font-black uppercase mb-4">
+              Available Test Menu
+            </h2>
+
+            <div className="divide-y divide-slate-100">
+
+              {tests.length === 0 ? (
+                <p className="py-8 text-center text-slate-400 text-xs">
+                  No laboratory tests found.
+                </p>
+              ) : (
+                tests.map((test) => (
+                  <div
+                    key={test.id}
+                    className="py-4 flex items-center justify-between gap-4"
+                  >
+                    <div>
+                      <p className="font-bold text-slate-900">
+                        {test.testName}
+                      </p>
+
+                      <p className="text-[10px] text-slate-400">
+                        Normal Range: {test.normalRange || 'Standard'}
+                        {test.unit ? ` • ${test.unit}` : ''}
+                      </p>
+
+                      {test.description && (
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          {test.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-purple-700">
+                        ₹{test.price}
+                      </span>
+
+                      {/* EDIT */}
+                      <button
+                        onClick={() => startEdit(test)}
+                        className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold hover:bg-blue-100"
+                      >
+                        ✏️ Edit
+                      </button>
+                    </div>
                   </div>
-                  <span className="font-black text-purple-700">₹{t.price}</span>
-                </div>
-              ))}
+                ))
+              )}
+
             </div>
           </div>
         </div>
       )}
 
-      {reportingOrder && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+      {/* REPORT ENTRY MODAL */}
+      {reportOrder && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl">
+
+            <div className="flex justify-between border-b pb-3 mb-4">
               <div>
-                <h3 className="font-black text-slate-900">Enter Pathology Result</h3>
+                <h3 className="font-black">
+                  Enter Pathology Result
+                </h3>
+
                 <p className="text-[11px] text-slate-500">
-                  {reportingOrder.labTest?.testName || reportingOrder.testName} • {reportingOrder.patient?.fullName}
+                  {reportOrder.labTest?.testName} •{' '}
+                  {reportOrder.patient?.fullName}
                 </p>
               </div>
+
               <button
-                onClick={() => setReportingOrder(null)}
-                className="w-7 h-7 bg-slate-100 rounded-full font-bold text-slate-500"
+                onClick={() => setReportOrder(null)}
+                className="w-7 h-7 bg-slate-100 rounded-full font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmitReport} className="space-y-3 text-xs">
+            <form onSubmit={submitReport} className="space-y-3 text-xs">
+
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                  Observed Clinical Value ({reportingOrder.labTest?.unit || 'Units'}) *
+                <label className="label">
+                  Observed Value ({reportOrder.labTest?.unit || 'Units'}) *
                 </label>
+
                 <input
-                  type="text"
                   required
-                  placeholder={`Ref Range: ${reportingOrder.labTest?.normalRange || 'Standard'}`}
                   value={observedValue}
                   onChange={(e) => setObservedValue(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
+                  placeholder={`Ref: ${
+                    reportOrder.labTest?.normalRange || 'Standard'
+                  }`}
+                  className={field}
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                  Technician Remarks / Observations
+                <label className="label">
+                  Technician Remarks
                 </label>
+
                 <textarea
                   rows={3}
-                  placeholder="Parameters observed within expected limits..."
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+                  className={field}
                 />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
+
                 <button
                   type="button"
-                  onClick={() => setReportingOrder(null)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold"
+                  onClick={() => setReportOrder(null)}
+                  className="px-4 py-2 bg-slate-100 rounded-xl font-bold"
                 >
                   Cancel
                 </button>
+
                 <button
-                  type="submit"
-                  disabled={submittingReport}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md"
+                  disabled={savingReport}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold"
                 >
-                  {submittingReport ? 'Saving...' : '✓ Authorize & Complete'}
+                  {savingReport ? 'Saving...' : '✓ Authorize & Complete'}
                 </button>
+
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {viewingReport && (
+      {/* REPORT VIEW */}
+      {viewReport && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-100 space-y-6">
-            <div className="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
+
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl">
+
+            <div className="border-b-2 border-slate-900 pb-4 flex justify-between">
               <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                <h2 className="text-xl font-black">
                   DRBLOOMEDI DIAGNOSTIC LABORATORY
                 </h2>
                 <p className="text-[11px] text-slate-500">
                   Accredited Clinical Pathology & Medical Diagnostics
                 </p>
               </div>
+
               <button
-                onClick={() => setViewingReport(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-600"
+                onClick={() => setViewReport(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 font-bold"
               >
                 ✕
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl my-5">
               <div>
-                <span className="text-[10px] uppercase text-slate-400 font-bold block">Patient Details</span>
-                <p className="font-bold text-slate-900">{viewingReport.patient?.fullName || 'N/A'}</p>
-                <p className="text-slate-500">Phone: {viewingReport.patient?.phone || 'N/A'}</p>
+                <span className="small-label">Patient</span>
+                <p className="font-bold">
+                  {viewReport.patient?.fullName || 'N/A'}
+                </p>
+                <p className="text-slate-500">
+                  {viewReport.patient?.phone || 'N/A'}
+                </p>
               </div>
+
               <div className="text-right">
-                <span className="text-[10px] uppercase text-slate-400 font-bold block">Order Details</span>
-                <p className="font-mono font-bold text-slate-900">LAB-ORD-{viewingReport.id.slice(0, 8)}</p>
-                <p className="text-slate-500">{new Date(viewingReport.createdAt).toLocaleDateString()}</p>
+                <span className="small-label">Order</span>
+                <p className="font-mono font-bold">
+                  {viewReport.orderNumber || viewReport.id.slice(0, 8)}
+                </p>
+                <p className="text-slate-500">
+                  {new Date(viewReport.createdAt).toLocaleDateString()}
+                </p>
               </div>
             </div>
 
-            <table className="w-full text-left text-xs border border-slate-100 rounded-xl overflow-hidden">
-              <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-[10px]">
+            <table className="w-full text-xs border border-slate-100">
+              <thead className="bg-slate-100">
                 <tr>
-                  <th className="py-2.5 px-4">Investigation</th>
-                  <th className="py-2.5 px-4">Observed Value</th>
-                  <th className="py-2.5 px-4">Reference Normal</th>
+                  <th className="p-3 text-left">Investigation</th>
+                  <th className="p-3 text-left">Observed Value</th>
+                  <th className="p-3 text-left">Reference</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+
+              <tbody>
                 <tr>
-                  <td className="py-3 px-4 font-bold text-slate-800">
-                    {viewingReport.labTest?.testName || viewingReport.testName}
+                  <td className="p-3 font-bold">
+                    {viewReport.labTest?.testName}
                   </td>
-                  <td className="py-3 px-4 font-mono font-black text-purple-700 text-sm">
-                    {viewingReport.resultValue} {viewingReport.labTest?.unit}
+
+                  <td className="p-3 font-mono font-black text-purple-700">
+                    {viewReport.resultValue || '-'}{' '}
+                    {viewReport.labTest?.unit || ''}
                   </td>
-                  <td className="py-3 px-4 text-slate-500">
-                    {viewingReport.labTest?.normalRange || 'Standard'} {viewingReport?.labTest?.unit}
+
+                  <td className="p-3 text-slate-500">
+                    {viewReport.labTest?.normalRange || 'Standard'}
                   </td>
                 </tr>
               </tbody>
             </table>
 
-            <div className="text-xs bg-purple-50/60 p-3 rounded-xl border border-purple-100">
-              <span className="text-[10px] font-bold text-purple-900 uppercase block">Remarks</span>
-              <p className="text-slate-700 italic">{viewingReport.remarks || 'Clinical parameters verified.'}</p>
+            <div className="text-xs bg-purple-50 p-3 rounded-xl mt-4">
+              <span className="small-label">
+                Technician Remarks
+              </span>
+
+              <p className="text-slate-700 italic">
+                {viewReport.technicianRemarks ||
+                  'Clinical parameters verified.'}
+              </p>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-              <span className="text-[10px] text-slate-400">
-                Verified by Certified Pathologist / Technologist
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-md inline-flex items-center gap-1"
-                >
-                  <span>🖨️</span> Print / Save PDF
-                </button>
-              </div>
+            <div className="flex justify-end pt-5 mt-5 border-t">
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
+              >
+                🖨️ Print / Save PDF
+              </button>
             </div>
+
           </div>
         </div>
       )}
+
+      {/* SMALL LOCAL STYLES */}
+      <style jsx>{`
+        .label {
+          display: block;
+          font-size: 10px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+
+        .small-label {
+          display: block;
+          font-size: 10px;
+          color: #94a3b8;
+          font-weight: 700;
+          text-transform: uppercase;
+          margin-bottom: 2px;
+        }
+      `}</style>
+
     </div>
   );
 }

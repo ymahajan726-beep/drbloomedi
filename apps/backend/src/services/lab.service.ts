@@ -70,6 +70,43 @@ export class LabService {
     return this.labTestRepo.save(newTest);
   }
 
+   async updateTest(
+  id: string,
+  data: {
+    testName: string;
+    price: number;
+    normalRange?: string;
+    unit?: string;
+    description?: string;
+  },
+) {
+  const test = await this.labTestRepo.findOne({
+    where: { id },
+  });
+
+  if (!test) {
+    throw new NotFoundException('Lab test not found');
+  }
+
+  const duplicateTest = await this.labTestRepo.findOne({
+    where: { testName: data.testName },
+  });
+
+  if (duplicateTest && duplicateTest.id !== id) {
+    throw new BadRequestException(
+      'Another lab test with this name already exists',
+    );
+  }
+
+  test.testName = data.testName;
+  test.price = Number(data.price) || 0;
+  test.normalRange =
+    data.normalRange || 'Standard reference range';
+  test.unit = data.unit || '';
+  test.description = data.description || '';
+
+  return this.labTestRepo.save(test);
+}
   // ============================================================
   // 3. GET ALL LAB ORDERS
   // ============================================================

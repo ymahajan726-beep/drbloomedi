@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+} from '@nestjs/common';
+
 import { LabService } from '../services/lab.service';
 
 @Controller('lab')
@@ -24,6 +32,22 @@ export class LabController {
     return this.labService.createTest(data);
   }
 
+  // UPDATE EXISTING LAB TEST
+  @Patch('tests/:id')
+  async updateTest(
+    @Param('id') id: string,
+    @Body()
+    data: {
+      testName: string;
+      price: number;
+      normalRange?: string;
+      unit?: string;
+      description?: string;
+    },
+  ) {
+    return this.labService.updateTest(id, data);
+  }
+
   @Get('orders')
   async getAllOrders() {
     return this.labService.getAllOrders();
@@ -31,7 +55,11 @@ export class LabController {
 
   @Post('orders')
   async bookTest(
-    @Body() body: { patientId: string; labTestId: string; notes?: string },
+    @Body() body: {
+      patientId: string;
+      labTestId: string;
+      notes?: string;
+    },
   ) {
     return this.labService.bookTest(body);
   }
