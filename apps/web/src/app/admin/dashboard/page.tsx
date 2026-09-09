@@ -38,7 +38,8 @@ export default function DashboardPage() {
         setLoading(true);
         setError("");
 
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        // Multi-login safe: Admin-specific token retrieval
+        const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") || localStorage.getItem("token") : null;
         const headers = {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -126,7 +127,7 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") || localStorage.getItem("token") : null;
       await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         headers: {
@@ -138,11 +139,10 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      localStorage.clear();
-      document.cookie = "token=; path=/; max-age=0;";
-      document.cookie = "userRole=; path=/; max-age=0;";
-      document.cookie = "access_token=; path=/; max-age=0;";
-      document.cookie = "user_role=; path=/; max-age=0;";
+      // Clear only admin session keys to protect other parallel tabs
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_role");
+      localStorage.removeItem("admin_email");
       router.replace("/login");
     }
   };
@@ -150,7 +150,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-100/70 font-sans text-slate-900 pb-16 selection:bg-blue-600 selection:text-white">
       <style jsx global>{`
-        /* Hide scrollbars globally while keeping scroll functionality */
         ::-webkit-scrollbar {
           display: none;
         }
@@ -265,8 +264,6 @@ export default function DashboardPage() {
 
         {/* Lower Grid Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Column (2 Cols) */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -298,89 +295,8 @@ export default function DashboardPage() {
                   <span className="text-[10px] text-slate-500 font-semibold">Patients</span>
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Link href="/reception/dashboard" className="flex-1 py-3 text-center rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition shadow-xs">
-                  Open Live Reception & Discharge Desk →
-                </Link>
-              </div>
-            </div>
-
-            {/* Department Wings */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                Active Hospital Infrastructure
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50">
-                  <div className="flex justify-between items-center font-bold">
-                    <span className="text-slate-800">Cardiology & Internal Medicine</span>
-                    <span className="text-emerald-600 text-[10px] font-black">Active</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Cabin 101 • OPD Duty</p>
-                </div>
-                <div className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50">
-                  <div className="flex justify-between items-center font-bold">
-                    <span className="text-slate-800">Orthopedics & Joint Surgery</span>
-                    <span className="text-emerald-600 text-[10px] font-black">Active</span>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Cabin 104 • OPD Duty</p>
-                </div>
-              </div>
             </div>
           </div>
-
-          {/* Right Column (1 Col) */}
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-              <div>
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                  Administrative Launchpad
-                </h2>
-                <p className="text-[11px] text-slate-400">Fast-track operational links</p>
-              </div>
-
-              <div className="space-y-2">
-                <Link href="/admin/users" className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 hover:border-blue-500 hover:bg-blue-50/30 transition group">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">👥</span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Staff Directory</p>
-                      <p className="text-[10px] text-slate-400">Onboard doctors & staff</p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-400 group-hover:text-blue-600">→</span>
-                </Link>
-
-                <Link href="/reception/dashboard" className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 hover:border-emerald-500 hover:bg-emerald-50/30 transition group">
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">💳</span>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Cashier Counter</p>
-                      <p className="text-[10px] text-slate-400">Invoices & bill clearance</p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-400 group-hover:text-emerald-600">→</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* IPD Bed Occupancy Card */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-3xl text-white shadow-md space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-300">IPD & Ward Occupancy</span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold">
-                  Normal Flow
-                </span>
-              </div>
-              <p className="text-2xl font-black">12 / 20 Beds</p>
-              <p className="text-[11px] text-slate-400">General Ward: 60% • ICU: 2 Available</p>
-              <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full w-[60%] rounded-full"></div>
-              </div>
-            </div>
-          </div>
-
         </div>
       </main>
     </div>

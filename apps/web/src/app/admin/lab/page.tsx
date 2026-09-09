@@ -36,43 +36,45 @@ export default function LaboratoryManagementPage() {
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filter & Search
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // Booking Form State
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedTestId, setSelectedTestId] = useState('');
 
-  // Catalog Form State
   const [newTestName, setNewTestName] = useState('');
   const [newTestPrice, setNewTestPrice] = useState('');
   const [newTestRange, setNewTestRange] = useState('');
   const [newTestUnit, setNewTestUnit] = useState('');
 
-  // Report Modal State
   const [reportingOrder, setReportingOrder] = useState<LabOrder | null>(null);
   const [observedValue, setObservedValue] = useState('');
   const [remarks, setRemarks] = useState('');
   const [submittingReport, setSubmittingReport] = useState(false);
 
-  // Print Report View State
   const [viewingReport, setViewingReport] = useState<LabOrder | null>(null);
 
   useEffect(() => {
     fetchLabData();
-    const poll = setInterval(() => fetchLabData(true), 5000); // Live polling for instant sync with doctor cabin
+    const poll = setInterval(() => fetchLabData(true), 5000);
     return () => clearInterval(poll);
   }, []);
 
+  // Fixed fetch with Authorization headers to resolve 401 errors & queue failures
   const fetchLabData = async (isBg = false) => {
     try {
       if (!isBg) setLoading(true);
       
+      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      
       const [ordersRes, testsRes, patientsRes] = await Promise.all([
-        fetch('https://drbloomedi-backend.onrender.com/lab/orders').catch(() => null),
-        fetch('https://drbloomedi-backend.onrender.com/lab/tests').catch(() => null),
-        fetch('https://drbloomedi-backend.onrender.com/patients').catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/lab/orders', { headers, credentials: 'include' }).catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/lab/tests', { headers, credentials: 'include' }).catch(() => null),
+        fetch('https://drbloomedi-backend.onrender.com/patients', { headers, credentials: 'include' }).catch(() => null),
       ]);
 
       if (ordersRes && ordersRes.ok) {
@@ -96,12 +98,16 @@ export default function LaboratoryManagementPage() {
     }
   };
 
-  // 1. Update Sample Collection Status
   const handleStatusUpdate = async (orderId: string, nextStatus: string) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
       const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${orderId}/sample-status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ status: nextStatus }),
       });
       if (!res.ok) throw new Error('Status update failed');
@@ -111,15 +117,19 @@ export default function LaboratoryManagementPage() {
     }
   };
 
-  // 2. Submit Lab Results & Generate Report
   const handleSubmitReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reportingOrder) return;
     try {
       setSubmittingReport(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
       const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${reportingOrder.id}/report`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           observedValue,
           remarks,
@@ -139,7 +149,7 @@ export default function LaboratoryManagementPage() {
     }
   };
 
-  // 3. Book New Lab Test
+  // Fixed test booking with Authorization header so backend accepts the POST request
   const handleBookTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatientId || !selectedTestId) {
@@ -147,15 +157,23 @@ export default function LaboratoryManagementPage() {
       return;
     }
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
       const res = await fetch('https://drbloomedi-backend.onrender.com/lab/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           patientId: selectedPatientId,
           labTestId: selectedTestId,
         }),
       });
-      if (!res.ok) throw new Error('Failed to book test');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to book test');
+      }
       alert('Lab Test Booked Successfully in Worklist!');
       setSelectedPatientId('');
       setSelectedTestId('');
@@ -166,14 +184,18 @@ export default function LaboratoryManagementPage() {
     }
   };
 
-  // 4. Create Master Test in Catalog
   const handleAddCatalogTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTestName || !newTestPrice) return;
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
       const res = await fetch('https://drbloomedi-backend.onrender.com/lab/tests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({
           testName: newTestName,
           price: Number(newTestPrice),
