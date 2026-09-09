@@ -46,12 +46,17 @@ export default function LoginPage() {
         throw new Error("No authorization token returned by backend.");
       }
 
-      localStorage.clear();
-      sessionStorage.clear();
+      // ROLE-SPECIFIC INDEPENDENT STORAGE (Prevents multi-login overwrites)
+      const roleKey = userRole === "RECEPTIONIST" ? "RECEPTION" : userRole;
 
+      // Save generic keys for backward compatibility + role-specific keys for parallel tabs
       localStorage.setItem("token", token);
       localStorage.setItem("userRole", userRole);
       localStorage.setItem("userEmail", data.user?.email || cleanEmail);
+      
+      localStorage.setItem(`${roleKey.toLowerCase()}_token`, token);
+      localStorage.setItem(`${roleKey.toLowerCase()}_role`, userRole);
+      localStorage.setItem(`${roleKey.toLowerCase()}_email`, data.user?.email || cleanEmail);
       localStorage.setItem("session_started_at", Date.now().toString());
 
       const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
@@ -59,6 +64,7 @@ export default function LoginPage() {
 
       document.cookie = `token=${token}${cookieConfig}`;
       document.cookie = `userRole=${userRole}${cookieConfig}`;
+      document.cookie = `${roleKey.toLowerCase()}_token=${token}${cookieConfig}`;
 
       if (userRole === "DOCTOR") {
         window.location.href = "/doctor/dashboard";

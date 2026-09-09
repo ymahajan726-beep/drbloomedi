@@ -54,17 +54,26 @@ export class LabService {
     });
   }
 
-  // 4. Book New Lab Test Order
+  // 4. Book New Lab Test Order (Fixed to handle ID or Test Name)
   async bookTest(body: { patientId: string; labTestId: string; notes?: string }) {
     const patient = await this.patientRepo.findOne({
       where: { id: body.patientId },
     });
     if (!patient) throw new NotFoundException('Patient not found');
 
-    const labTest = await this.labTestRepo.findOne({
-      where: { id: body.labTestId },
+    let labTest = await this.labTestRepo.findOne({
+      where: [{ id: body.labTestId }, { testName: body.labTestId }] as any,
     });
-    if (!labTest) throw new NotFoundException('Lab test not found');
+
+    if (!labTest) {
+      const newLabTest = this.labTestRepo.create({
+        testName: body.labTestId,
+        price: 350,
+        normalRange: 'Standard',
+        unit: '',
+      });
+      labTest = await this.labTestRepo.save(newLabTest as any) as LabTest;
+    }
 
     const newOrder = this.labOrderRepo.create({
       patient,
@@ -135,12 +144,10 @@ export class LabService {
     let additionalAmount = 0;
 
     for (const item of data.labTestIds) {
-      // ID ya Test Name dono se search karega taaki mismatch na ho
       let labTest = await this.labTestRepo.findOne({
         where: [{ id: item }, { testName: item }] as any,
       });
 
-      // Agar catalog mein nahi mila, toh safety ke liye auto-create kar lega
       if (!labTest) {
         const newLabTest = this.labTestRepo.create({
           testName: item,
@@ -165,7 +172,6 @@ export class LabService {
       }
     }
 
-    // Auto-update Billing Desk total amount if bill exists for this appointment
     try {
       const billRepo = this.dataSource.getRepository(Billing);
       const bill = await billRepo.findOne({ where: { appointment: { id: data.appointmentId } } as any });
