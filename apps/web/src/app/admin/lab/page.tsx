@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getAuthHeaders } from '../../../utils/session';
 
 interface LabTest {
   id: string;
@@ -60,16 +61,11 @@ export default function LaboratoryManagementPage() {
     return () => clearInterval(poll);
   }, []);
 
-  // Fixed fetch with Authorization headers to resolve 401 errors & queue failures
   const fetchLabData = async (isBg = false) => {
     try {
       if (!isBg) setLoading(true);
       
-      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = getAuthHeaders();
       
       const [ordersRes, testsRes, patientsRes] = await Promise.all([
         fetch('https://drbloomedi-backend.onrender.com/lab/orders', { headers, credentials: 'include' }).catch(() => null),
@@ -100,13 +96,10 @@ export default function LaboratoryManagementPage() {
 
   const handleStatusUpdate = async (orderId: string, nextStatus: string) => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
+      const headers = getAuthHeaders();
       const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${orderId}/sample-status`, {
         method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ status: nextStatus }),
       });
@@ -122,13 +115,10 @@ export default function LaboratoryManagementPage() {
     if (!reportingOrder) return;
     try {
       setSubmittingReport(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
+      const headers = getAuthHeaders();
       const res = await fetch(`https://drbloomedi-backend.onrender.com/lab/orders/${reportingOrder.id}/report`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           observedValue,
@@ -149,7 +139,6 @@ export default function LaboratoryManagementPage() {
     }
   };
 
-  // Fixed test booking with Authorization header so backend accepts the POST request
   const handleBookTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatientId || !selectedTestId) {
@@ -157,13 +146,10 @@ export default function LaboratoryManagementPage() {
       return;
     }
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
+      const headers = getAuthHeaders();
       const res = await fetch('https://drbloomedi-backend.onrender.com/lab/orders', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           patientId: selectedPatientId,
@@ -188,13 +174,10 @@ export default function LaboratoryManagementPage() {
     e.preventDefault();
     if (!newTestName || !newTestPrice) return;
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('token') : null;
+      const headers = getAuthHeaders();
       const res = await fetch('https://drbloomedi-backend.onrender.com/lab/tests', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({
           testName: newTestName,
@@ -659,7 +642,7 @@ export default function LaboratoryManagementPage() {
                     {viewingReport.resultValue} {viewingReport.labTest?.unit}
                   </td>
                   <td className="py-3 px-4 text-slate-500">
-                    {viewingReport.labTest?.normalRange || 'Standard'} {viewingReport.labTest?.unit}
+                    {viewingReport.labTest?.normalRange || 'Standard'} {viewingReport?.labTest?.unit}
                   </td>
                 </tr>
               </tbody>

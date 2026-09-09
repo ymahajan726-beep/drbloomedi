@@ -46,26 +46,27 @@ export default function LoginPage() {
         throw new Error("No authorization token returned by backend.");
       }
 
-      // ROLE-SPECIFIC INDEPENDENT STORAGE (Prevents multi-login overwrites)
+      // Scratch-level Isolated Multi-Login Key Mapping
       const roleKey = userRole === "RECEPTIONIST" ? "RECEPTION" : userRole;
+      const lowerKey = roleKey.toLowerCase();
 
-      // Save generic keys for backward compatibility + role-specific keys for parallel tabs
-      localStorage.setItem("token", token);
-      localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userEmail", data.user?.email || cleanEmail);
-      
-      localStorage.setItem(`${roleKey.toLowerCase()}_token`, token);
-      localStorage.setItem(`${roleKey.toLowerCase()}_role`, userRole);
-      localStorage.setItem(`${roleKey.toLowerCase()}_email`, data.user?.email || cleanEmail);
+      // 1. Clear any conflicting generic legacy keys to prevent cross-tab bleeding
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+
+      // 2. Save exclusively to role-specific independent slots
+      localStorage.setItem(`${lowerKey}_token`, token);
+      localStorage.setItem(`${lowerKey}_role`, userRole);
+      localStorage.setItem(`${lowerKey}_email`, data.user?.email || cleanEmail);
       localStorage.setItem("session_started_at", Date.now().toString());
 
+      // 3. Set secure role-specific cookie without overwriting global namespace
       const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
       const cookieConfig = `; path=/; max-age=86400; SameSite=Lax${isHttps ? "; Secure" : ""}`;
+      document.cookie = `${lowerKey}_token=${token}${cookieConfig}`;
+      document.cookie = `active_role=${userRole}${cookieConfig}`;
 
-      document.cookie = `token=${token}${cookieConfig}`;
-      document.cookie = `userRole=${userRole}${cookieConfig}`;
-      document.cookie = `${roleKey.toLowerCase()}_token=${token}${cookieConfig}`;
-
+      // 4. Precise Workspace Routing
       if (userRole === "DOCTOR") {
         window.location.href = "/doctor/dashboard";
       } else if (userRole === "RECEPTION" || userRole === "RECEPTIONIST") {
