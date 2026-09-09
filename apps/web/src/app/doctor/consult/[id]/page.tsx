@@ -32,15 +32,17 @@ export default function DoctorConsultPage() {
     },
   ]);
 
-  // Lab Tests Suggested with Fallback Default Catalog to prevent empty dropdown
+  // Restored Comprehensive Default Lab Catalog Options
   const defaultLabCatalog = [
-    { id: 'test_1', testName: 'Complete Blood Count (CBC)', price: 350 },
-    { id: 'test_2', testName: 'Dengue Serology NS1/IgM', price: 600 },
-    { id: 'test_3', testName: 'Liver Function Test (LFT)', price: 750 },
-    { id: 'test_4', testName: 'Widal Slide Agglutination', price: 250 },
-    { id: 'test_5', testName: 'Random Blood Sugar (RBS)', price: 100 },
-    { id: 'test_6', testName: 'Serum Electrolytes', price: 450 },
-    { id: 'test_7', testName: 'Urine Routine & Microscopic', price: 200 },
+    { id: 'test_cbc', testName: 'Complete Blood Count (CBC)', price: 350 },
+    { id: 'test_dengue', testName: 'Dengue Serology NS1/IgM', price: 600 },
+    { id: 'test_lft', testName: 'Liver Function Test (LFT)', price: 750 },
+    { id: 'test_widal', testName: 'Widal Slide Agglutination', price: 250 },
+    { id: 'test_rbs', testName: 'Random Blood Sugar (RBS)', price: 100 },
+    { id: 'test_electrolytes', testName: 'Serum Electrolytes', price: 450 },
+    { id: 'test_urine', testName: 'Urine Routine & Microscopic', price: 200 },
+    { id: 'test_lipid', testName: 'Lipid Profile', price: 600 },
+    { id: 'test_kft', testName: 'Kidney Function Test (KFT)', price: 700 },
   ];
 
   const [labTests, setLabTests] = useState<{ id?: string; testName: string; testPrice: number }[]>([]);
@@ -60,24 +62,23 @@ export default function DoctorConsultPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          // Map backend format to UI format
           const formatted = data.map((t: any) => ({
             id: t.id,
             testName: t.testName || t.name,
             price: Number(t.price || 350),
           }));
-          setAvailableTestsCatalog(formatted);
+          // Merge fetched catalog with defaults ensuring no blanks
+          setAvailableTestsCatalog([...formatted, ...defaultLabCatalog]);
         }
       }
     } catch (e) {
-      console.warn('Using default lab catalog fallback due to network/server response:', e);
+      console.warn('Using default catalog fallback:', e);
     }
   };
 
   const fetchPatientConsultData = async () => {
     try {
       setLoading(true);
-
       let aptData: any = null;
       const directAptRes = await fetch(`https://drbloomedi-backend.onrender.com/appointments/${appointmentId}`).catch(() => null);
       
@@ -175,7 +176,6 @@ export default function DoctorConsultPage() {
     setLabTests(labTests.filter((_, idx) => idx !== index));
   };
 
-  // Save Consultation & Transmit Lab Tests via Backend Endpoint & Billing
   const handleSaveAndPrint = async () => {
     if (!diagnosis.trim()) {
       alert('Please enter a clinical diagnosis');
@@ -204,7 +204,6 @@ export default function DoctorConsultPage() {
           instructions: m.instructions || 'After meals',
         }));
 
-      // Prescription Payload
       const payload = {
         patientId: targetPatientId,
         doctorId: Number(doctorId),
@@ -216,7 +215,7 @@ export default function DoctorConsultPage() {
         labTests: labTests.map((t) => t.testName),
       };
 
-      // 1. Save Prescription to Backend
+      // 1. Save Prescription
       await fetch('https://drbloomedi-backend.onrender.com/prescriptions', {
         method: 'POST',
         headers: {
@@ -226,10 +225,9 @@ export default function DoctorConsultPage() {
         body: JSON.stringify(payload),
       });
 
-      // 2. Save Pathology Lab Orders using the Unified /lab/consultation-orders Endpoint
+      // 2. Transmit Lab Orders to Pathology Queue
       if (labTests.length > 0 && appointmentId) {
         try {
-          // Filter real backend IDs if available, else send names/fallback
           const testIds = labTests.map((t) => t.id).filter(id => id && !String(id).startsWith('test_'));
           
           await fetch('https://drbloomedi-backend.onrender.com/lab/consultation-orders', {
@@ -247,17 +245,9 @@ export default function DoctorConsultPage() {
         } catch (e) {
           console.error('Failed to sync consultation lab orders:', e);
         }
-
-        // Live Counter Storage Fallback for instant Reception Desk Billing
-        try {
-          localStorage.setItem(
-            `drbloomedi_lab_orders_${appointmentId}`,
-            JSON.stringify(labTests)
-          );
-        } catch (_) {}
       }
 
-      // 3. Mark Appointment Status as COMPLETED
+      // 3. Complete Appointment Status
       if (appointmentId) {
         try {
           await fetch(`https://drbloomedi-backend.onrender.com/appointments/${appointmentId}/status`, {
@@ -271,7 +261,7 @@ export default function DoctorConsultPage() {
         } catch (_) {}
       }
 
-      alert('Prescription and Lab Tests saved successfully! Transmitting to Lab Portal & Billing Desk.');
+      alert('Prescription and Lab Tests saved successfully! Transmitted to Pathology Worklist.');
       window.print();
       router.push('/reception/dashboard');
     } catch (err: any) {
@@ -509,7 +499,7 @@ export default function DoctorConsultPage() {
 
         {/* Right Column */}
         <div className="space-y-6">
-          {/* Lab Tests Catalog Selection with Fallback Support */}
+          {/* Lab Tests Catalog Selection */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
               Suggest Pathology Tests
