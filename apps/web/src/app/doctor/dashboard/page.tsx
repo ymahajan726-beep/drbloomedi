@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getActiveToken, getAuthHeaders } from '@/utils/session';
 import { performLogout } from '@/utils/logout';
 
 const BACKEND_URL = 'https://drbloomedi-backend.onrender.com';
@@ -32,22 +33,17 @@ export default function DoctorDashboard() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
 
-  // 1. SECURITY & SESSION GUARD
+  // 1. SECURITY & SCRATCH-LEVEL MULTI-LOGIN SESSION GUARD
   useEffect(() => {
-    const getCookie = (name: string) => {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      return match ? match[2] : null;
-    };
+    const token = getActiveToken();
+    const role = (localStorage.getItem('doctor_role') || localStorage.getItem('userRole') || '').toUpperCase();
 
-    const token = getCookie('token') || localStorage.getItem('token');
-    const role = (getCookie('userRole') || localStorage.getItem('userRole'))?.toUpperCase();
-
-    if (!token || role !== 'DOCTOR') {
+    if (!token) {
       window.location.replace('/login');
       return;
     }
 
-    const email = localStorage.getItem('userEmail') || 'Doctor';
+    const email = localStorage.getItem('doctor_email') || localStorage.getItem('userEmail') || 'Doctor';
     setDoctorEmail(email);
     setIsAuthorized(true);
     loadAppointments();
@@ -59,12 +55,9 @@ export default function DoctorDashboard() {
 
   const loadAppointments = async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers = getAuthHeaders();
       const res = await fetch(`${BACKEND_URL}/appointments`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         credentials: 'include',
       });
 
@@ -77,7 +70,7 @@ export default function DoctorDashboard() {
           const aIsDone = a.status === 'Completed' || a.status === 'COMPLETED';
           const bIsDone = b.status === 'Completed' || b.status === 'COMPLETED';
           if (aIsDone === bIsDone) return 0;
-          return aIsDone ? 1 : -1; // If 'a' is completed, push it down (+1)
+          return aIsDone ? 1 : -1;
         });
 
         setAppointments(list);
@@ -94,13 +87,10 @@ export default function DoctorDashboard() {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const headers = getAuthHeaders();
       await fetch(`${BACKEND_URL}/appointments/${id}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
@@ -170,7 +160,12 @@ export default function DoctorDashboard() {
             ● Cabin Active
           </span>
           <button
-            onClick={() => { if (typeof performLogout === 'function') performLogout(); else { localStorage.clear(); window.location.href = '/login'; } }}
+            onClick={() => {
+              localStorage.removeItem('doctor_token');
+              localStorage.removeItem('doctor_role');
+              localStorage.removeItem('doctor_email');
+              window.location.href = '/login';
+            }}
             className="px-3.5 py-2 text-xs text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl font-bold transition"
           >
             Logout
