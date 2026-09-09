@@ -1,9 +1,17 @@
+
 @import "tailwindcss";
+
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
+
+:root[data-theme="dark"] {
+  --background: #070b19;
+  --foreground: #f8fafc;
+}
+
 
 @theme inline {
   --color-background: var(--background);
@@ -12,15 +20,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #070b19;
-    --foreground: #f8fafc;
-  }
-}
+/* ========================================================
+   🌞 DEFAULT LIGHT THEME
+   ======================================================== */
 
-/* Global scrollbar hiding for html, body, and all elements */
-html, body {
+html,
+body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
@@ -28,33 +33,46 @@ html, body {
   scroll-behavior: smooth;
   max-width: 100vw;
   overflow-x: hidden;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+
+/* ========================================================
+   🚫 GLOBAL SCROLLBAR HIDING
+   ======================================================== */
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 *::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
-/* Global High Contrast Enhancements for Dark Mode */
+/* ========================================================
+   📝 GLOBAL LIGHT FORM CONTROLS
+   ======================================================== */
+
 @layer base {
-  input, select, textarea {
-    color-scheme: dark;
+  input,
+  select,
+  textarea {
+    color-scheme: light;
   }
-  
-  /* Ensure input and placeholder texts are always clearly readable */
-  input::placeholder, textarea::placeholder {
-    color: #94a3b8 !important;
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #64748b !important;
   }
 }
 
-/* Custom Utilities for Mobile View & Clean UI */
+/* ========================================================
+   📱 CUSTOM UTILITIES
+   ======================================================== */
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -62,39 +80,62 @@ body::-webkit-scrollbar,
 }
 
 /* ========================================================
-   🚀 GLOBAL RESPONSIVE SHORTCUT RULES (Added for Mobile Fix)
+   🚀 GLOBAL RESPONSIVE SHORTCUT RULES
    ======================================================== */
 
 /* 1. Automatically make all tables horizontally scrollable on mobile */
+
 table {
   width: 100%;
 }
 
-.overflow-x-auto, div:has(> table) {
+.overflow-x-auto,
+div:has(> table) {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* 2. Prevent flexbox elements from overflowing on small screens */
+/* ========================================================
+   2. Prevent flexbox elements from overflowing
+   ======================================================== */
+
 .flex:not(.no-wrap) {
   flex-wrap: wrap;
 }
 
-/* 3. Make large grids responsive by default */
-.grid-cols-3, .grid-cols-4, .grid-cols-5 {
+/* ========================================================
+   3. Make large grids responsive by default
+   ======================================================== */
+
+.grid-cols-3,
+.grid-cols-4,
+.grid-cols-5 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
 @media (min-width: 768px) {
-  .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 1024px) {
-  .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 /* ========================================================
@@ -102,13 +143,22 @@ table {
    ======================================================== */
 
 @media (max-width: 768px) {
-  div[class*="w-["], aside[class*="w-["] {
+  div[class*="w-["],
+  aside[class*="w-["] {
     max-width: 100% !important;
     width: 100% !important;
   }
 }
 
-img, video, canvas, svg {
+/* ========================================================
+   🖼️ RESPONSIVE MEDIA
+   ======================================================== */
+
+img,
+video,
+canvas,
+svg {
   max-width: 100%;
   height: auto;
 }
+
