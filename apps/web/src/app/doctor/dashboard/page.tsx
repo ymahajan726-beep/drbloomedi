@@ -70,7 +70,16 @@ export default function DoctorDashboard() {
 
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : [];
+        let list = Array.isArray(data) ? data : [];
+        
+        // SORTING: Scheduled / Pending patients on top, Completed at the bottom
+        list.sort((a, b) => {
+          const aIsDone = a.status === 'Completed' || a.status === 'COMPLETED';
+          const bIsDone = b.status === 'Completed' || b.status === 'COMPLETED';
+          if (aIsDone === bIsDone) return 0;
+          return aIsDone ? 1 : -1; // If 'a' is completed, push it down (+1)
+        });
+
         setAppointments(list);
         if (!selectedPatient && list.length > 0) {
           setSelectedPatient(list[0]);

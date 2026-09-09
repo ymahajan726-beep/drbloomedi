@@ -134,10 +134,25 @@ export class LabService {
     const createdOrders: any[] = [];
     let additionalAmount = 0;
 
-    for (const testId of data.labTestIds) {
-      const labTest = await this.labTestRepo.findOne({ where: { id: testId } });
+    for (const item of data.labTestIds) {
+      // ID ya Test Name dono se search karega taaki mismatch na ho
+      let labTest = await this.labTestRepo.findOne({
+        where: [{ id: item }, { testName: item }] as any,
+      });
+
+      // Agar catalog mein nahi mila, toh safety ke liye auto-create kar lega
+      if (!labTest) {
+        const newLabTest = this.labTestRepo.create({
+          testName: item,
+          price: 350,
+          normalRange: 'Standard',
+          unit: '',
+        });
+        labTest = await this.labTestRepo.save(newLabTest as any) as LabTest;
+      }
+
       if (labTest) {
-        additionalAmount += Number(labTest.price || 0);
+        additionalAmount += Number(labTest.price || 350);
 
         const newOrder = this.labOrderRepo.create({
           patient,
