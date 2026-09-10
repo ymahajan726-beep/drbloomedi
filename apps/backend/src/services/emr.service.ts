@@ -205,51 +205,8 @@ export class EmrService {
       .filter(Boolean)
       .join('\n');
 
-    // --------------------------------------------------
-    // 5. Find existing prescription
-    // --------------------------------------------------
-    let prescription: Prescription | null = null;
-
-    if (cleanApptId) {
-      prescription = await this.prescriptionRepo.findOne({
-        where: {
-          appointmentId: cleanApptId,
-        },
-      });
-    }
-
-    // --------------------------------------------------
-    // 6. UPDATE existing prescription
-    // --------------------------------------------------
-    if (prescription) {
-      prescription.patientId = data.patientId;
-
-      if (doctor) {
-        prescription.doctor = doctor;
-        prescription.doctorId = String(doctor.id);
-      }
-
-      prescription.diagnosis = data.diagnosis;
-
-      prescription.symptoms =
-        data.symptoms ||
-        prescription.symptoms ||
-        '';
-
-      prescription.advice = adviceText;
-
-      prescription.medicines = medsList;
-
-      if (cleanApptId) {
-        prescription.appointmentId = cleanApptId;
-      }
-
-      return await this.prescriptionRepo.save(prescription);
-    }
-
-    // --------------------------------------------------
-    // 7. CREATE new prescription
-    // --------------------------------------------------
+    // Every consultation is a historical record, even when the same
+    // appointment is referenced again for a returning patient.
     const newPrescription = this.prescriptionRepo.create({
       patientId: data.patientId,
 

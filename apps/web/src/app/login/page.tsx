@@ -257,21 +257,35 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <Link
-              href="/patient-portal"
-              className="flex items-center justify-between p-3 bg-blue-950/40 hover:bg-blue-900/40 border border-blue-800/40 rounded-xl transition group"
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="text-base">🧑‍⚕️</span>
-                <div>
-                  <p className="text-xs font-bold text-blue-200 leading-tight">Patient Self-Portal</p>
-                  <p className="text-[10px] text-blue-400 font-medium">Walk-in booking & live OPD tokens</p>
+            {/* Modern Patient Self-Portal Card */}
+            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-[1px] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01]">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-teal-400 opacity-30 group-hover:opacity-75 transition-opacity" />
+              
+              <div className="relative flex items-center justify-between rounded-2xl bg-slate-900/90 px-4 py-3.5 backdrop-blur-md">
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 shadow-inner">
+                    <span className="text-lg">🏥</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-semibold text-white tracking-wide">Patient Self-Portal</span>
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">Live</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Walk-in booking & live OPD tokens</p>
+                  </div>
                 </div>
+                
+                <Link 
+                  href="/patient-portal" 
+                  className="inline-flex items-center space-x-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-medium text-white shadow-md shadow-blue-600/30 transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/40 active:scale-95"
+                >
+                  <span>Open</span>
+                  <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
               </div>
-              <span className="text-xs text-blue-300 font-bold group-hover:translate-x-0.5 transition">
-                Open →
-              </span>
-            </Link>
+            </div>
           </div>
         </div>
       </div>
