@@ -88,6 +88,27 @@ export class PrescriptionsService {
       appointment = await this.appointmentRepo.save(fallbackApt);
     }
 
+    // A patient can have multiple prescriptions over time. If the resolved
+    // appointment already has one, create a fresh consultation for this visit.
+    if (appointment) {
+      const existingPrescription = await this.prescriptionRepo.findOne({
+        where: { appointmentId: appointment.id },
+      });
+
+      if (existingPrescription && doctor) {
+        appointment = await this.appointmentRepo.save(
+          this.appointmentRepo.create({
+            appointmentNumber: `OPD-${Date.now().toString().slice(-6)}`,
+            patient,
+            doctor,
+            appointmentDate: new Date().toISOString().split('T')[0],
+            timeSlot: appointment.timeSlot || '10:00 AM',
+            status: AppointmentStatus.SCHEDULED,
+          }),
+        );
+      }
+    }
+
     // Mark appointment as COMPLETED
     if (appointment) {
       try {

@@ -105,148 +105,152 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden">
-      <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <main className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-0 sm:p-6 font-sans">
 
-      <div className="bg-white backdrop-blur-2xl rounded-[2.5rem] max-w-4xl w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-200/80 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px] relative z-10">
+      <div className="w-full max-w-6xl min-h-screen sm:min-h-0 md:min-h-[680px] bg-white border border-slate-200 shadow-xl sm:rounded-[2rem] overflow-hidden grid grid-cols-1 md:grid-cols-2">
         
-        <div className="md:col-span-5 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-800 p-8 text-white flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)] pointer-events-none"></div>
+        <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-sky-50 p-10 lg:p-14 text-slate-900">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border-[38px] border-white/80"></div>
+          <div className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-emerald-100/70"></div>
           
-          <div className="space-y-6 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-[11px] font-bold tracking-wider border border-white/10">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Secure Enterprise Cloud
+          <div className="relative z-10 space-y-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-black text-white shadow-lg shadow-blue-600/20">+</div>
+              <div>
+                <p className="text-lg font-black tracking-tight">DrBlooMedi</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700">Healthcare intelligence</p>
+              </div>
             </div>
-            <h2 className="text-3xl font-black tracking-tight leading-tight">
-              DrBlooMedi <br />
-              <span className="text-blue-200">Intelligence.</span>
+            <div className="max-w-md space-y-4">
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Connected care, one workspace
+            </span>
+            <h2 className="text-4xl font-black leading-tight tracking-tight lg:text-5xl">
+              Better care starts with a clearer view.
             </h2>
-            <p className="text-xs text-blue-100/90 leading-relaxed font-medium">
-              Next-generation clinical automation, real-time patient queue telemetry, and automated financial settlements.
+            <p className="max-w-sm text-sm leading-6 text-slate-600">
+              Coordinate clinical teams, patient journeys, and hospital operations from one calm, secure portal.
             </p>
+            </div>
           </div>
 
-          <div className="space-y-4 relative z-10 pt-8">
-            <div className="p-4 bg-slate-100 backdrop-blur-md rounded-2xl border border-white/10 space-y-2">
-              <div className="flex justify-between text-[11px] font-bold">
-                <span className="text-slate-600">Active Node Status</span>
-                <span className="text-emerald-400 font-mono">ONLINE</span>
-              </div>
-              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-400 to-emerald-400 h-full w-[99.9%] animate-pulse"></div>
-              </div>
+          <div className="relative z-10 grid max-w-md grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+              <p className="text-2xl font-black text-slate-900">24/7</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Care visibility</p>
             </div>
-            <p className="text-[10px] text-slate-400 text-center font-medium">
-              ⚡ Powered by Neon DB & Live WebSockets
-            </p>
+            <div className="rounded-2xl border border-white bg-white/80 p-4 shadow-sm">
+              <p className="text-2xl font-black text-emerald-600">Live</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Queue sync</p>
+            </div>
           </div>
         </div>
 
-        <div className="md:col-span-7 p-8 sm:p-10 flex flex-col justify-between bg-white text-slate-900">
+        <div className="flex flex-col justify-between bg-white p-6 text-slate-900 sm:p-10 lg:p-14">
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-black text-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="mb-8 flex items-center gap-3 md:hidden">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-xl font-black text-white">
                 +
               </div>
               <div>
-                <h1 className="text-xl font-black text-slate-900 tracking-tight">
-                  Staff <span className="text-blue-400">Portal</span>
-                </h1>
-                <p className="text-[11px] text-slate-400 font-medium">
-                  Sign in with your authorized credentials
-                </p>
+                <p className="font-black tracking-tight text-slate-900">DrBlooMedi</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-blue-700">Staff portal</p>
               </div>
             </div>
 
+            <div className="mb-8">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600">Secure staff access</p>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Welcome Back</h1>
+              <p className="mt-2 text-sm text-slate-500">Let&apos;s get you logged in.</p>
+            </div>
+
             {error && (
-              <div className="p-3.5 mb-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 font-semibold flex items-center gap-2">
+              <div className="mb-5 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-semibold text-rose-700">
                 <span>⚠️</span> {error}
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-4 text-xs">
+            <form onSubmit={handleLogin} className="space-y-5 text-xs">
               <div>
-                <label className="font-bold uppercase tracking-wider text-[10px] text-slate-400 block mb-1.5">
-                  Email Address
-                </label>
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-600">Email or username</label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-3 text-slate-500">✉️</span>
+                  <span className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400">✉</span>
                   <input
                     type="email"
                     required
-                    placeholder="Enter your mail"
+                    placeholder="name@drbloomedi.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-3 outline-none focus:border-blue-500 text-slate-900 font-medium transition shadow-inner"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-10 pr-4 font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="font-bold uppercase tracking-wider text-[10px] text-slate-400">
-                    Password
-                  </label>
-                  <Link href="/forgot-password" className="text-[11px] font-bold text-blue-400 hover:text-blue-300 transition">
-                    Forgot Password?
-                  </Link>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Password</label>
+                  <Link href="/forgot-password" className="text-[11px] font-bold text-blue-600 transition hover:text-blue-800">Need Help?</Link>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-3 text-slate-500">🔑</span>
+                  <span className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400">▣</span>
                   <input
                     type={showPassword ? "text" : "password"}
                     required
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-14 py-3 outline-none focus:border-blue-500 text-slate-900 font-medium transition shadow-inner"
+                    className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-10 pr-16 font-medium text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3 text-[11px] text-slate-400 hover:text-slate-900 font-bold transition"
+                    className="absolute right-3.5 top-3.5 text-[11px] font-bold text-slate-500 transition hover:text-slate-900"
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
               </div>
 
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                Remember me on this device
+              </label>
+
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-3 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition-all active:scale-[0.99] disabled:opacity-50"
+                className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "Authenticating..." : "Sign In to Workspace →"}
               </button>
             </form>
           </div>
 
-          <div className="pt-6 border-t border-slate-200/80 mt-6 space-y-3">
+          <div className="mt-8 space-y-4 border-t border-slate-200 pt-6">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Quick Test Autofill:
+                Quick test access
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => handleAutofill("ADMIN")}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-100 border border-slate-300/60 rounded-lg text-[11px] font-bold text-slate-600 transition"
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50"
                 >
                   👑 Admin
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAutofill("DOCTOR")}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-100 border border-slate-300/60 rounded-lg text-[11px] font-bold text-slate-600 transition"
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50"
                 >
                   🩺 Doctor
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAutofill("RECEPTION")}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-100 border border-slate-300/60 rounded-lg text-[11px] font-bold text-slate-600 transition"
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50"
                 >
                   🧑‍💼 Reception
                 </button>

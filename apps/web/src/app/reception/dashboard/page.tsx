@@ -538,7 +538,7 @@ export default function ReceptionDashboardPage() {
 
       {/* SLIDE-OVER BILLING SIDEBAR */}
       {selectedApt && (
-        <div className="fixed inset-0 bg-slate-50 backdrop-blur-sm z-50 flex justify-end transition-all">
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-50 flex justify-end transition-all">
           <div className="bg-white border-l border-slate-200 w-full max-w-md h-full p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300">
             
             <div className="space-y-6">
@@ -548,46 +548,61 @@ export default function ReceptionDashboardPage() {
                     Discharge & Billing Sidebar
                   </span>
                   <h3 className="text-lg font-black text-slate-900 mt-2">{selectedApt.patient?.fullName}</h3>
-                  <p className="text-xs text-slate-400 font-mono">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
+                  <p className="text-xs text-slate-500 font-medium">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
                 </div>
-                <button onClick={() => setSelectedApt(null)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-900 flex items-center justify-center font-bold">✕</button>
+                <button onClick={() => setSelectedApt(null)} aria-label="Close billing drawer" className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center font-bold transition-colors">✕</button>
               </div>
 
               {/* Bill Item Breakdown */}
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                  <span className="text-slate-600">Consultation Fee</span>
-                  <input type="number" value={bill.consult} onChange={e => updateBill('consult', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-slate-900 placeholder-slate-400 outline-none" />
+                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                  <span className="text-slate-700 font-medium">Consultation Fee</span>
+                  <div className="relative w-24 shrink-0">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
+                    <input type="number" value={bill.consult} onChange={e => updateBill('consult', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                  </div>
                 </div>
                 
-                <div className="flex justify-between items-center p-3 bg-purple-950/20 border border-purple-900/30 rounded-xl">
+                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
                   <div>
-                    <span className="text-purple-300 block font-bold">Pathology / Lab Tests</span>
-                    {bill.testNames.length > 0 && <span className="text-[10px] text-purple-400/80">{bill.testNames.join(', ')}</span>}
+                    <span className="text-slate-700 block font-medium">Pathology / Lab Tests</span>
+                    {bill.testNames.length > 0 && <span className="text-[10px] text-slate-500">{bill.testNames.join(', ')}</span>}
                   </div>
-                  <input type="number" value={bill.lab} onChange={e => updateBill('lab', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-purple-400 placeholder-slate-400 outline-none" />
+                  <div className="relative w-24 shrink-0">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
+                    <input type="number" value={bill.lab} onChange={e => updateBill('lab', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                  <span className="text-slate-600">Procedures & Treatment</span>
-                  <input type="number" value={bill.treatment || ''} placeholder="0" onChange={e => updateBill('treatment', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-slate-900 placeholder-slate-400 outline-none" />
+                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                  <span className="text-slate-700 font-medium">Procedures & Treatment</span>
+                  <div className="relative w-24 shrink-0">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
+                    <input type="number" value={bill.treatment || ''} placeholder="0" onChange={e => updateBill('treatment', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                  <span className="text-slate-600">Pharmacy Medicines</span>
-                  <input type="number" value={bill.pharma || ''} placeholder="0" onChange={e => updateBill('pharma', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-slate-900 placeholder-slate-400 outline-none" />
+                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                  <span className="text-slate-700 font-medium">Pharmacy Medicines</span>
+                  <div className="relative w-24 shrink-0">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
+                    <input type="number" value={bill.pharma || ''} placeholder="0" onChange={e => updateBill('pharma', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl">
-                  <span className="text-rose-300">Discount / Concession</span>
-                  <input type="number" value={bill.discount || ''} placeholder="0" onChange={e => updateBill('discount', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-rose-400 placeholder-slate-400 outline-none" />
+                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                  <span className="text-slate-700 font-medium">Discount / Concession</span>
+                  <div className="relative w-24 shrink-0">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
+                    <input type="number" value={bill.discount || ''} placeholder="0" onChange={e => updateBill('discount', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                  </div>
                 </div>
               </div>
 
               {/* Net Payable Banner */}
-              <div className="p-4 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-700/40 rounded-2xl flex justify-between items-center">
-                <span className="text-xs font-bold text-blue-200 uppercase tracking-wider">Net Payable Amount</span>
-                <span className="text-2xl font-black text-emerald-400 font-mono">₹{bill.net}.00</span>
+              <div className="p-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-sm flex justify-between items-center">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">Net Payable Amount</span>
+                <span className="text-emerald-400 font-bold text-2xl font-mono">₹{bill.net}.00</span>
               </div>
             </div>
 
@@ -599,14 +614,14 @@ export default function ReceptionDashboardPage() {
                 <button 
                   disabled={paying} 
                   onClick={() => setShowRazorpay(true)} 
-                  className="py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition disabled:opacity-50"
+                  className="py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs shadow-sm transition disabled:opacity-50"
                 >
                   ⚡ Razorpay Online
                 </button>
                 <button 
                   disabled={paying} 
                   onClick={() => finalizePayment('Cash Counter')} 
-                  className="py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs border border-slate-300 transition disabled:opacity-50"
+                  className="py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-xl text-xs transition disabled:opacity-50"
                 >
                   💵 Cash Counter
                 </button>

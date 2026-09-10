@@ -5,7 +5,6 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
-  OneToOne,
   JoinColumn,
 } from 'typeorm';
 import { Appointment } from './appointment.entity';
@@ -64,7 +63,7 @@ export class Prescription {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToOne(() => Appointment)
+  @ManyToOne(() => Appointment, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'appointmentId' })
   appointment: Appointment;
 
