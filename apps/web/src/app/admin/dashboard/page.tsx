@@ -100,11 +100,11 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-row overflow-x-hidden">
       
       {/* Desktop Fixed Sidebar */}
-      <aside className="w-full md:w-72 bg-white border-r border-slate-200 flex flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0 shadow-sm">
-        <div className="p-6 space-y-6">
+      <aside className="w-72 bg-white border-r border-slate-200 hidden md:flex flex-col justify-between sticky top-0 h-screen shrink-0 shadow-sm z-20">
+        <div className="p-6 space-y-6 overflow-y-auto">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
             <div className="bg-cyan-600 text-white p-2.5 rounded-2xl shadow-lg shadow-cyan-600/20">
               <Stethoscope className="w-5 h-5" />
@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
           </nav>
         </div>
 
-        <div className="p-6 border-t border-slate-100">
+        <div className="p-6 border-t border-slate-100 bg-white">
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
@@ -142,8 +142,8 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
-      {/* Main Content Area (No Redundant Boxes) */}
-      <main className="flex-1 p-4 md:p-10 space-y-8 min-w-0">
+      {/* Main Scrollable Content Area */}
+      <main className="flex-1 p-4 md:p-10 space-y-8 min-w-0 overflow-y-auto h-screen">
         
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -235,7 +235,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xl space-y-6 mb-12">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-emerald-600" />
