@@ -85,7 +85,7 @@ export default function ReportsPage() {
         </div>
         <button
           onClick={loadReport}
-          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-2"
+          className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-2"
         >
           <span>🔄</span>
           <span>Refresh Analytics</span>

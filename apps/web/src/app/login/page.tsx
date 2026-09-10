@@ -105,11 +105,11 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-[#070b19] flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden">
+    <main className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden">
       <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <div className="bg-slate-900/80 backdrop-blur-2xl rounded-[2.5rem] max-w-4xl w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800/80 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px] relative z-10">
+      <div className="bg-white backdrop-blur-2xl rounded-[2.5rem] max-w-4xl w-full shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-200/80 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px] relative z-10">
         
         <div className="md:col-span-5 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-800 p-8 text-white flex flex-col justify-between relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)] pointer-events-none"></div>
@@ -129,12 +129,12 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-4 relative z-10 pt-8">
-            <div className="p-4 bg-black/20 backdrop-blur-md rounded-2xl border border-white/10 space-y-2">
+            <div className="p-4 bg-slate-100 backdrop-blur-md rounded-2xl border border-white/10 space-y-2">
               <div className="flex justify-between text-[11px] font-bold">
-                <span className="text-slate-300">Active Node Status</span>
+                <span className="text-slate-600">Active Node Status</span>
                 <span className="text-emerald-400 font-mono">ONLINE</span>
               </div>
-              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-400 to-emerald-400 h-full w-[99.9%] animate-pulse"></div>
               </div>
             </div>
@@ -144,14 +144,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="md:col-span-7 p-8 sm:p-10 flex flex-col justify-between bg-slate-900/40 text-slate-100">
+        <div className="md:col-span-7 p-8 sm:p-10 flex flex-col justify-between bg-white text-slate-900">
           <div>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-black text-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                 +
               </div>
               <div>
-                <h1 className="text-xl font-black text-white tracking-tight">
+                <h1 className="text-xl font-black text-slate-900 tracking-tight">
                   Staff <span className="text-blue-400">Portal</span>
                 </h1>
                 <p className="text-[11px] text-slate-400 font-medium">
@@ -179,7 +179,7 @@ export default function LoginPage() {
                     placeholder="Enter your mail"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-10 pr-3.5 py-3 outline-none focus:border-blue-500 text-white font-medium transition shadow-inner"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3.5 py-3 outline-none focus:border-blue-500 text-slate-900 font-medium transition shadow-inner"
                   />
                 </div>
               </div>
@@ -201,12 +201,12 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-10 pr-14 py-3 outline-none focus:border-blue-500 text-white font-medium transition shadow-inner"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-14 py-3 outline-none focus:border-blue-500 text-slate-900 font-medium transition shadow-inner"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3 text-[11px] text-slate-400 hover:text-white font-bold transition"
+                    className="absolute right-3.5 top-3 text-[11px] text-slate-400 hover:text-slate-900 font-bold transition"
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
@@ -223,7 +223,7 @@ export default function LoginPage() {
             </form>
           </div>
 
-          <div className="pt-6 border-t border-slate-800/80 mt-6 space-y-3">
+          <div className="pt-6 border-t border-slate-200/80 mt-6 space-y-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                 Quick Test Autofill:
@@ -232,21 +232,21 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => handleAutofill("ADMIN")}
-                  className="px-3 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-lg text-[11px] font-bold text-slate-300 transition"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-100 border border-slate-300/60 rounded-lg text-[11px] font-bold text-slate-600 transition"
                 >
                   👑 Admin
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAutofill("DOCTOR")}
-                  className="px-3 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-lg text-[11px] font-bold text-slate-300 transition"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-100 border border-slate-300/60 rounded-lg text-[11px] font-bold text-slate-600 transition"
                 >
                   🩺 Doctor
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAutofill("RECEPTION")}
-                  className="px-3 py-1.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-lg text-[11px] font-bold text-slate-300 transition"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-100 border border-slate-300/60 rounded-lg text-[11px] font-bold text-slate-600 transition"
                 >
                   🧑‍💼 Reception
                 </button>

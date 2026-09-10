@@ -220,7 +220,7 @@ export default function IpdManagementPage() {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
+      <div className="min-h-screen bg-white flex items-center justify-center text-slate-900 font-mono text-xs">
         🔒 Verifying IPD & Ward Access...
       </div>
     );
@@ -410,7 +410,7 @@ export default function IpdManagementPage() {
 
       {/* 1. ADD BED MODAL */}
       {isBedModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="text-sm font-black text-slate-900">Add New Hospital Bed</h3>
             <form onSubmit={handleCreateBed} className="mt-4 space-y-4">
@@ -475,7 +475,7 @@ export default function IpdManagementPage() {
 
       {/* 2. ADMIT PATIENT MODAL */}
       {isAdmitModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="text-sm font-black text-slate-900">In-Patient Admission</h3>
 
@@ -566,7 +566,7 @@ export default function IpdManagementPage() {
 
       {/* 3. DISCHARGE MODAL */}
       {dischargeTarget && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="text-sm font-black text-slate-900">Discharge Patient & Release Bed</h3>
             <p className="text-xs text-slate-500 mt-1">

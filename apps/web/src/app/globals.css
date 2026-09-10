@@ -44,24 +44,6 @@ body {
 }
 
 /* ========================================================
-   🛡️ OVERRIDE HARDCODED DARK CLASSES TO LIGHT
-   ======================================================== */
-
-.bg-slate-900,
-.bg-slate-950,
-.bg-zinc-900,
-.bg-zinc-950,
-.bg-gray-900,
-.bg-gray-95{-900} {
-  background-color: #ffffff !important;
-}
-
-.bg-slate-800,
-.bg-zinc-800 {
-  background-color: #f8fafc !important;
-}
-
-/* ========================================================
    🚫 GLOBAL SCROLLBAR HIDING & SCROLL FIX
    ======================================================== */
 
@@ -71,11 +53,9 @@ body::-webkit-scrollbar,
   display: none;
 }
 
-/* Fix scrolling: Allow main content container to scroll independently */
-.overflow-y-auto,
+/* Keep viewport shells bounded while allowing their explicit scroll regions to work. */
 main {
-  overflow-y: auto;
-  max-height: 100vh;
+  min-height: 0;
 }
 
 /* ========================================================

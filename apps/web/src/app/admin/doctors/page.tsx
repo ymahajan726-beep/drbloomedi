@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
@@ -262,7 +262,7 @@ export default function DoctorPortalPage() {
                     onClick={() => handleSelectPatient(apt)}
                     className={`p-3.5 rounded-2xl cursor-pointer transition text-xs my-1.5 ${
                       isSelected
-                        ? 'bg-slate-900 text-white shadow-md'
+                        ? 'bg-white text-slate-900 shadow-md'
                         : 'hover:bg-slate-50 text-slate-800 border border-transparent'
                     }`}
                   >
@@ -270,13 +270,13 @@ export default function DoctorPortalPage() {
                       <p className="font-bold text-sm">{apt.patient?.fullName || 'Walk-in Patient'}</p>
                       <span
                         className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                          isSelected ? 'bg-white/20 text-slate-900' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         {apt.appointmentNumber || 'OPD'}
                       </span>
                     </div>
-                    <p className={`text-[10px] mt-1 ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
+                    <p className={`text-[10px] mt-1 ${isSelected ? 'text-slate-600' : 'text-slate-400'}`}>
                       Slot: {apt.timeSlot || '10:00 AM'} • Phone: {apt.patient?.phone}
                     </p>
                   </div>
@@ -481,7 +481,7 @@ export default function DoctorPortalPage() {
             <button
               type="submit"
               disabled={submittingRx}
-              className="w-full py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs shadow-md transition"
+              className="w-full py-3.5 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold text-xs shadow-md transition"
             >
               {submittingRx ? 'Finalizing Prescription...' : '✓ Finalize & Issue Digital Prescription'}
             </button>
@@ -491,7 +491,7 @@ export default function DoctorPortalPage() {
 
       {/* MODAL: OFFICIAL PRINTABLE PRESCRIPTION */}
       {printedRx && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 font-sans">
             <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
               <div>
@@ -558,7 +558,7 @@ export default function DoctorPortalPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-md"
+                className="px-4 py-2 bg-white text-slate-900 rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-md"
               >
                 <span>🖨️</span> Print Prescription
               </button>

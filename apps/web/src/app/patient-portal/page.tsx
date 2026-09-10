@@ -248,7 +248,7 @@ export default function PatientPortalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 font-sans text-slate-100 relative overflow-hidden py-8 px-4 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 font-sans text-slate-900 relative overflow-hidden py-8 px-4 sm:px-6">
       
       {/* Background Animated Glows */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[140px] pointer-events-none animate-pulse"></div>
@@ -264,12 +264,12 @@ export default function PatientPortalPage() {
       {/* 1. PHONE VERIFY SCREEN */}
       {portalMode === 'verify' && (
         <div className="min-h-[80vh] flex items-center justify-center">
-          <div className="bg-slate-900/80 backdrop-blur-2xl max-w-md w-full p-8 rounded-[2.5rem] border border-slate-800 shadow-2xl space-y-6 transition-all duration-500 hover:border-slate-700">
+          <div className="bg-white backdrop-blur-2xl max-w-md w-full p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl space-y-6 transition-all duration-500 hover:border-slate-300">
             <div className="text-center space-y-3">
               <span className="inline-block text-[10px] font-black px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full uppercase tracking-widest">
                 Patient Self-Service Portal
               </span>
-              <h1 className="text-2xl font-black text-white tracking-tight">
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
                 Welcome to DrBlooMedi
               </h1>
               <p className="text-xs text-slate-400 leading-relaxed">
@@ -299,7 +299,7 @@ export default function PatientPortalPage() {
                     placeholder="e.g. 9876543210"
                     value={phoneInput}
                     onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ''))}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-950/60 border border-slate-800 rounded-2xl font-bold text-white text-sm outline-none focus:border-blue-500 transition shadow-inner"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 text-sm outline-none focus:border-blue-500 transition shadow-inner"
                   />
                 </div>
               </div>
@@ -323,20 +323,20 @@ export default function PatientPortalPage() {
       {/* 2. NEW PATIENT REGISTRATION FORM */}
       {portalMode === 'new_patient_register' && (
         <div className="min-h-[85vh] flex items-center justify-center py-6">
-          <div className="bg-slate-900/90 backdrop-blur-2xl max-w-lg w-full p-8 rounded-[2.5rem] border border-slate-800 shadow-2xl space-y-5 animate-in fade-in duration-300">
-            <div className="flex justify-between items-start border-b border-slate-800/80 pb-4">
+          <div className="bg-white backdrop-blur-2xl max-w-lg w-full p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl space-y-5 animate-in fade-in duration-300">
+            <div className="flex justify-between items-start border-b border-slate-200/80 pb-4">
               <div>
                 <span className="text-[10px] font-bold px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full uppercase tracking-wider">
                   New Patient Profile
                 </span>
-                <h1 className="text-xl font-black text-white mt-1.5">Quick Registration & Booking</h1>
+                <h1 className="text-xl font-black text-slate-900 mt-1.5">Quick Registration & Booking</h1>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Verified Mobile: <span className="font-bold text-blue-400">{phoneInput}</span>
                 </p>
               </div>
               <button
                 onClick={() => setPortalMode('verify')}
-                className="text-xs font-bold text-slate-400 hover:text-white transition"
+                className="text-xs font-bold text-slate-400 hover:text-slate-900 transition"
               >
                 Cancel
               </button>
@@ -358,7 +358,7 @@ export default function PatientPortalPage() {
                     placeholder="e.g. Rahul Sharma"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                   />
                 </div>
                 <div>
@@ -368,7 +368,7 @@ export default function PatientPortalPage() {
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                   />
                 </div>
               </div>
@@ -381,7 +381,7 @@ export default function PatientPortalPage() {
                     placeholder="28"
                     value={age}
                     onChange={(e) => setAge(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                   />
                 </div>
                 <div>
@@ -389,11 +389,11 @@ export default function PatientPortalPage() {
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                   >
-                    <option value="Male" className="bg-slate-900">Male</option>
-                    <option value="Female" className="bg-slate-900">Female</option>
-                    <option value="Other" className="bg-slate-900">Other</option>
+                    <option value="Male" className="bg-white">Male</option>
+                    <option value="Female" className="bg-white">Female</option>
+                    <option value="Other" className="bg-white">Other</option>
                   </select>
                 </div>
                 <div>
@@ -401,18 +401,18 @@ export default function PatientPortalPage() {
                   <select
                     value={bloodGroup}
                     onChange={(e) => setBloodGroup(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                   >
-                    <option value="O+" className="bg-slate-900">O+</option>
-                    <option value="A+" className="bg-slate-900">A+</option>
-                    <option value="B+" className="bg-slate-900">B+</option>
-                    <option value="AB+" className="bg-slate-900">AB+</option>
-                    <option value="O-" className="bg-slate-900">O-</option>
+                    <option value="O+" className="bg-white">O+</option>
+                    <option value="A+" className="bg-white">A+</option>
+                    <option value="B+" className="bg-white">B+</option>
+                    <option value="AB+" className="bg-white">AB+</option>
+                    <option value="O-" className="bg-white">O-</option>
                   </select>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-800/80 space-y-3">
+              <div className="pt-3 border-t border-slate-200/80 space-y-3">
                 <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
                   Select Specialist & Slot
                 </span>
@@ -423,11 +423,11 @@ export default function PatientPortalPage() {
                     required
                     value={newRegDoctorId}
                     onChange={(e) => setNewRegDoctorId(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                   >
-                    <option value="" className="bg-slate-900">-- Choose Specialist --</option>
+                    <option value="" className="bg-white">-- Choose Specialist --</option>
                     {doctors.map((d) => (
-                      <option key={d.id} value={d.id} className="bg-slate-900">
+                      <option key={d.id} value={d.id} className="bg-white">
                         Dr. {d.user?.fullName || d.specialization} (Fee: ₹{d.consultationFee || 500})
                       </option>
                     ))}
@@ -442,7 +442,7 @@ export default function PatientPortalPage() {
                       required
                       value={newRegDate}
                       onChange={(e) => setNewRegDate(e.target.value)}
-                      className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                     />
                   </div>
                   <div>
@@ -450,12 +450,12 @@ export default function PatientPortalPage() {
                     <select
                       value={newRegSlot}
                       onChange={(e) => setNewRegSlot(e.target.value)}
-                      className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                     >
-                      <option value="10:00 AM" className="bg-slate-900">10:00 AM</option>
-                      <option value="11:30 AM" className="bg-slate-900">11:30 AM</option>
-                      <option value="02:00 PM" className="bg-slate-900">02:00 PM</option>
-                      <option value="04:30 PM" className="bg-slate-900">04:30 PM</option>
+                      <option value="10:00 AM" className="bg-white">10:00 AM</option>
+                      <option value="11:30 AM" className="bg-white">11:30 AM</option>
+                      <option value="02:00 PM" className="bg-white">02:00 PM</option>
+                      <option value="04:30 PM" className="bg-white">04:30 PM</option>
                     </select>
                   </div>
                 </div>
@@ -479,28 +479,28 @@ export default function PatientPortalPage() {
           {bookingSuccessAlert && (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs rounded-2xl font-bold flex justify-between items-center shadow-lg">
               <span>✓ {bookingSuccessAlert}</span>
-              <button onClick={() => setBookingSuccessAlert(null)} className="text-emerald-400 font-black hover:text-white">✕</button>
+              <button onClick={() => setBookingSuccessAlert(null)} className="text-emerald-400 font-black hover:text-slate-900">✕</button>
             </div>
           )}
 
           {/* Header Card */}
-          <div className="bg-slate-900/80 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white backdrop-blur-xl p-6 md:p-8 rounded-[2rem] border border-slate-200 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <span className="text-[10px] font-bold px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full uppercase tracking-wider">
                 Verified Patient Dossier
               </span>
-              <h1 className="text-2xl font-black text-white mt-2">
+              <h1 className="text-2xl font-black text-slate-900 mt-2">
                 {history?.profile?.fullName || patient?.fullName}
               </h1>
               <p className="text-xs text-slate-400 mt-1">
-                Phone: <span className="font-bold text-slate-200">{history?.profile?.phone || patient?.phone}</span> • Email: {history?.profile?.email || 'N/A'} • Age: {history?.profile?.age || 'N/A'} • Blood Group: {history?.profile?.bloodGroup || 'O+'}
+                Phone: <span className="font-bold text-slate-700">{history?.profile?.phone || patient?.phone}</span> • Email: {history?.profile?.email || 'N/A'} • Age: {history?.profile?.age || 'N/A'} • Blood Group: {history?.profile?.bloodGroup || 'O+'}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={() => loadDossier(patient.id)}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700/60 transition shadow-sm"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300/60 transition shadow-sm"
               >
                 🔄 Refresh
               </button>
@@ -515,26 +515,26 @@ export default function PatientPortalPage() {
 
           {/* Metric KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800/80 shadow-sm">
+            <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Consultations</span>
-              <p className="text-2xl font-black text-white mt-1">{history?.summary?.totalVisits || 0}</p>
+              <p className="text-2xl font-black text-slate-900 mt-1">{history?.summary?.totalVisits || 0}</p>
             </div>
-            <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800/80 shadow-sm">
+            <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Prescriptions</span>
               <p className="text-2xl font-black text-blue-400 mt-1">{history?.summary?.totalPrescriptions || 0}</p>
             </div>
-            <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800/80 shadow-sm">
+            <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Lab Diagnostics</span>
               <p className="text-2xl font-black text-purple-400 mt-1">{history?.summary?.totalLabTests || 0}</p>
             </div>
-            <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800/80 shadow-sm">
+            <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Invoices</span>
               <p className="text-2xl font-black text-emerald-400 mt-1">{history?.summary?.totalBills || 0}</p>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex gap-2 border-b border-slate-800 pb-2 overflow-x-auto text-xs font-bold">
+          <div className="flex gap-2 border-b border-slate-200 pb-2 overflow-x-auto text-xs font-bold">
             {[
               { id: 'overview', label: '📊 Timeline' },
               { id: 'appointments', label: `📅 Previous Appointments (${history?.appointments?.length || 0})` },
@@ -549,7 +549,7 @@ export default function PatientPortalPage() {
                 className={`px-4 py-2.5 rounded-xl transition whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/20'
-                    : 'text-slate-400 hover:bg-slate-900 hover:text-white'
+                    : 'text-slate-400 hover:bg-white hover:text-slate-900'
                 }`}
               >
                 {tab.label}
@@ -559,12 +559,12 @@ export default function PatientPortalPage() {
 
           {/* Tab Content Containers */}
           {activeTab === 'overview' && (
-            <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-3">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Latest Consultation & Prescription</h2>
+            <div className="bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-3">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Latest Consultation & Prescription</h2>
               {history?.prescriptions?.length > 0 ? (
-                <div className="p-4 bg-slate-950/60 rounded-2xl border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
                   <div>
-                    <p className="font-bold text-white">Diagnosis: {history.prescriptions[0].diagnosis}</p>
+                    <p className="font-bold text-slate-900">Diagnosis: {history.prescriptions[0].diagnosis}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">
                       Prescribed on {new Date(history.prescriptions[0].createdAt).toLocaleDateString()}
                     </p>
@@ -583,8 +583,8 @@ export default function PatientPortalPage() {
           )}
 
           {activeTab === 'appointments' && (
-            <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Previous & Scheduled Consultations</h2>
+            <div className="bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Previous & Scheduled Consultations</h2>
               <div className="divide-y divide-slate-800/80 text-xs">
                 {history?.appointments?.length === 0 ? (
                   <p className="py-6 text-center text-slate-500">No appointments recorded.</p>
@@ -592,7 +592,7 @@ export default function PatientPortalPage() {
                   history?.appointments?.map((apt: any) => (
                     <div key={apt.id} className="py-3.5 flex justify-between items-center">
                       <div>
-                        <p className="font-bold text-white">Dr. {apt.doctor?.user?.fullName || apt.doctor?.specialization || 'Doctor'}</p>
+                        <p className="font-bold text-slate-900">Dr. {apt.doctor?.user?.fullName || apt.doctor?.specialization || 'Doctor'}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Date: {new Date(apt.appointmentDate).toLocaleDateString()} • Slot: {apt.timeSlot}</p>
                       </div>
                       <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20">
@@ -606,8 +606,8 @@ export default function PatientPortalPage() {
           )}
 
           {activeTab === 'rx' && (
-            <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Prescriptions History</h2>
+            <div className="bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Prescriptions History</h2>
               <div className="divide-y divide-slate-800/80 text-xs">
                 {history?.prescriptions?.length === 0 ? (
                   <p className="py-6 text-center text-slate-500">No prescriptions found.</p>
@@ -615,7 +615,7 @@ export default function PatientPortalPage() {
                   history?.prescriptions?.map((rx: any) => (
                     <div key={rx.id} className="py-4 flex justify-between items-center">
                       <div>
-                        <p className="font-bold text-white">Diagnosis: {rx.diagnosis || 'Routine Evaluation'}</p>
+                        <p className="font-bold text-slate-900">Diagnosis: {rx.diagnosis || 'Routine Evaluation'}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Date: {new Date(rx.createdAt).toLocaleDateString()}</p>
                       </div>
                       <button onClick={() => setViewRx(rx)} className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold rounded-xl shadow-md transition">
@@ -629,8 +629,8 @@ export default function PatientPortalPage() {
           )}
 
           {activeTab === 'lab' && (
-            <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Diagnostic & Lab Reports</h2>
+            <div className="bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Diagnostic & Lab Reports</h2>
               <div className="divide-y divide-slate-800/80 text-xs">
                 {history?.labOrders?.length === 0 ? (
                   <p className="py-6 text-center text-slate-500">No lab investigations recorded.</p>
@@ -638,7 +638,7 @@ export default function PatientPortalPage() {
                   history?.labOrders?.map((lab: any) => (
                     <div key={lab.id} className="py-3.5 flex justify-between items-center">
                       <div>
-                        <p className="font-bold text-white">{lab.labTest?.testName || 'Investigation'}</p>
+                        <p className="font-bold text-slate-900">{lab.labTest?.testName || 'Investigation'}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Requested: {new Date(lab.createdAt).toLocaleDateString()}</p>
                       </div>
                       {lab.status === 'COMPLETED' && (
@@ -654,8 +654,8 @@ export default function PatientPortalPage() {
           )}
 
           {activeTab === 'bills' && (
-            <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Billing & Invoices</h2>
+            <div className="bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Billing & Invoices</h2>
               <div className="divide-y divide-slate-800/80 text-xs">
                 {history?.bills?.length === 0 ? (
                   <p className="py-6 text-center text-slate-500">No invoices found.</p>
@@ -663,7 +663,7 @@ export default function PatientPortalPage() {
                   history?.bills?.map((bill: any) => (
                     <div key={bill.id} className="py-3.5 flex justify-between items-center">
                       <div>
-                        <p className="font-mono font-bold text-white">{bill.invoiceNumber}</p>
+                        <p className="font-mono font-bold text-slate-900">{bill.invoiceNumber}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Date: {new Date(bill.createdAt).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
@@ -677,8 +677,8 @@ export default function PatientPortalPage() {
           )}
 
           {activeTab === 'book' && (
-            <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl max-w-xl mx-auto space-y-4">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">Book Follow-up Consultation</h2>
+            <div className="bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl max-w-xl mx-auto space-y-4">
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Book Follow-up Consultation</h2>
               <form onSubmit={handleExistingBook} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Select Specialist *</label>
@@ -686,11 +686,11 @@ export default function PatientPortalPage() {
                     required
                     value={existingDoctorId}
                     onChange={(e) => setExistingDoctorId(e.target.value)}
-                    className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                   >
-                    <option value="" className="bg-slate-900">-- Choose Doctor --</option>
+                    <option value="" className="bg-white">-- Choose Doctor --</option>
                     {doctors.map((d) => (
-                      <option key={d.id} value={d.id} className="bg-slate-900">
+                      <option key={d.id} value={d.id} className="bg-white">
                         Dr. {d.user?.fullName || d.specialization} (Fee: ₹{d.consultationFee || 500})
                       </option>
                     ))}
@@ -704,7 +704,7 @@ export default function PatientPortalPage() {
                       required
                       value={existingDate}
                       onChange={(e) => setExistingDate(e.target.value)}
-                      className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                     />
                   </div>
                   <div>
@@ -712,12 +712,12 @@ export default function PatientPortalPage() {
                     <select
                       value={existingSlot}
                       onChange={(e) => setExistingSlot(e.target.value)}
-                      className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl font-bold text-white outline-none focus:border-blue-500 transition"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-blue-500 transition"
                     >
-                      <option value="10:00 AM" className="bg-slate-900">10:00 AM</option>
-                      <option value="11:30 AM" className="bg-slate-900">11:30 AM</option>
-                      <option value="02:00 PM" className="bg-slate-900">02:00 PM</option>
-                      <option value="04:30 PM" className="bg-slate-900">04:30 PM</option>
+                      <option value="10:00 AM" className="bg-white">10:00 AM</option>
+                      <option value="11:30 AM" className="bg-white">11:30 AM</option>
+                      <option value="02:00 PM" className="bg-white">02:00 PM</option>
+                      <option value="04:30 PM" className="bg-white">04:30 PM</option>
                     </select>
                   </div>
                 </div>
@@ -732,7 +732,7 @@ export default function PatientPortalPage() {
 
       {/* PRINT MODALS */}
       {viewRx && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-50 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95">
             <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
               <div>
@@ -759,7 +759,7 @@ export default function PatientPortalPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition"
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold transition"
               >
                 Print Rx
               </button>
@@ -776,7 +776,7 @@ export default function PatientPortalPage() {
       )}
 
       {viewLabReport && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-50 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95">
             <div className="border-b-2 border-purple-900 pb-3 flex justify-between items-start">
               <div>

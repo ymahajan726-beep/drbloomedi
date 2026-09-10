@@ -108,10 +108,10 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans text-slate-100">
-      <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-800 p-8 space-y-6">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans text-slate-900">
+      <div className="w-full max-w-md bg-white backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 p-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-black text-white">Password Recovery</h1>
+          <h1 className="text-xl font-black text-slate-900">Password Recovery</h1>
           <p className="text-xs text-slate-400">
             {step === 1
               ? 'Enter your registered email address to receive recovery verification'
@@ -143,7 +143,7 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your mail"
-                className="w-full px-3.5 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-blue-500 transition"
+                className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-blue-500 transition"
               />
             </div>
 
@@ -189,12 +189,12 @@ export default function ForgotPasswordPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full pl-3.5 pr-14 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-blue-500 transition"
+                  className="w-full pl-3.5 pr-14 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-blue-500 transition"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute inset-y-0 right-0 px-3.5 flex items-center text-[11px] font-bold text-slate-400 hover:text-white"
+                  className="absolute inset-y-0 right-0 px-3.5 flex items-center text-[11px] font-bold text-slate-400 hover:text-slate-900"
                 >
                   {showNewPassword ? 'Hide' : 'Show'}
                 </button>
@@ -213,12 +213,12 @@ export default function ForgotPasswordPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter password"
-                  className="w-full pl-3.5 pr-14 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-blue-500 transition"
+                  className="w-full pl-3.5 pr-14 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-blue-500 transition"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 px-3.5 flex items-center text-[11px] font-bold text-slate-400 hover:text-white"
+                  className="absolute inset-y-0 right-0 px-3.5 flex items-center text-[11px] font-bold text-slate-400 hover:text-slate-900"
                 >
                   {showConfirmPassword ? 'Hide' : 'Show'}
                 </button>
@@ -229,7 +229,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-1/3 py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl transition border border-slate-700"
+                className="w-1/3 py-3 bg-slate-100 hover:bg-slate-750 text-slate-600 font-bold rounded-xl transition border border-slate-300"
               >
                 Back
               </button>

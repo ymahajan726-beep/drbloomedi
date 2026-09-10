@@ -314,7 +314,7 @@ export default function ReceptionDashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 font-sans text-slate-100 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 font-sans text-slate-900 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden">
       
       {/* Background Glow Accents */}
       <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none"></div>
@@ -328,35 +328,35 @@ export default function ReceptionDashboardPage() {
       )}
 
       {/* Header */}
-      <div className="bg-slate-900/80 backdrop-blur-xl p-6 rounded-[2rem] border border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
             <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Reception & Discharge Terminal</span>
           </div>
-          <h1 className="text-2xl font-black text-white mt-1">Live Counter & Billing Queue</h1>
+          <h1 className="text-2xl font-black text-slate-900 mt-1">Live Counter & Billing Queue</h1>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => fetchAppointments()} className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition">🔄 Refresh</button>
+          <button onClick={() => fetchAppointments()} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 transition">🔄 Refresh</button>
           <button onClick={() => { if (typeof performLogout === 'function') performLogout('Logged out successfully.'); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-bold border border-rose-500/20 transition">Logout</button>
         </div>
       </div>
 
       {/* Analytics KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-sm">
+        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Patients</p>
-          <p className="text-2xl font-black text-white mt-1">{analytics.total}</p>
+          <p className="text-2xl font-black text-slate-900 mt-1">{analytics.total}</p>
         </div>
-        <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-sm">
+        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
           <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Total Revenue</p>
           <p className="text-2xl font-black text-emerald-400 mt-1">₹{analytics.rev}</p>
         </div>
-        <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-sm">
+        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
           <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Discharged</p>
           <p className="text-2xl font-black text-blue-400 mt-1">{analytics.discharged}</p>
         </div>
-        <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800 shadow-sm">
+        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
           <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Pending Settlement</p>
           <p className="text-2xl font-black text-amber-400 mt-1">{analytics.pending}</p>
         </div>
@@ -366,15 +366,15 @@ export default function ReceptionDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left: Walk-in Patient Token Issue Form */}
-        <div className="lg:col-span-4 bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h2 className="text-sm font-black text-white uppercase tracking-wider">Walk-in Patient Token Issue</h2>
+        <div className="lg:col-span-4 bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Walk-in Patient Token Issue</h2>
             <p className="text-[11px] text-slate-400 mt-0.5">Instant counter registration & queue assignment</p>
           </div>
 
           <form onSubmit={handleWalkinSubmit} className="space-y-3.5 text-xs">
             <div>
-              <label className="block text-slate-300 font-bold mb-1">Mobile Number *</label>
+              <label className="block text-slate-600 font-bold mb-1">Mobile Number *</label>
               <input
                 type="text"
                 placeholder="10-digit phone (auto-detects patient)"
@@ -386,7 +386,7 @@ export default function ReceptionDashboardPage() {
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold mb-1">Patient Name *</label>
+              <label className="block text-slate-600 font-bold mb-1">Patient Name *</label>
               <input
                 type="text"
                 placeholder="e.g. Ramesh Kulkarni"
@@ -399,7 +399,7 @@ export default function ReceptionDashboardPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Age</label>
+                <label className="block text-slate-600 font-bold mb-1">Age</label>
                 <input
                   type="number"
                   placeholder="35"
@@ -409,7 +409,7 @@ export default function ReceptionDashboardPage() {
                 />
               </div>
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Gender</label>
+                <label className="block text-slate-600 font-bold mb-1">Gender</label>
                 <select
                   value={walkinForm.gender}
                   onChange={e => setWalkinForm({ ...walkinForm, gender: e.target.value })}
@@ -423,7 +423,7 @@ export default function ReceptionDashboardPage() {
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold mb-1">Assign Specialist</label>
+              <label className="block text-slate-600 font-bold mb-1">Assign Specialist</label>
               <select
                 value={walkinForm.specialist}
                 onChange={e => setWalkinForm({ ...walkinForm, specialist: e.target.value })}
@@ -438,7 +438,7 @@ export default function ReceptionDashboardPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Time Slot</label>
+                <label className="block text-slate-600 font-bold mb-1">Time Slot</label>
                 <input
                   type="text"
                   value={walkinForm.slot}
@@ -447,7 +447,7 @@ export default function ReceptionDashboardPage() {
                 />
               </div>
               <div>
-                <label className="block text-slate-300 font-bold mb-1">Consult Reason</label>
+                <label className="block text-slate-600 font-bold mb-1">Consult Reason</label>
                 <input
                   type="text"
                   value={walkinForm.reason}
@@ -468,9 +468,9 @@ export default function ReceptionDashboardPage() {
         </div>
 
         {/* Right: Live Queue Table Container */}
-        <div className="lg:col-span-8 bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-800 shadow-xl space-y-4">
+        <div className="lg:col-span-8 bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-            <h2 className="text-sm font-black text-white uppercase tracking-wider">OPD & Consultation Queue</h2>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">OPD & Consultation Queue</h2>
             <input 
               type="text" 
               placeholder="Search patient name, phone, token..." 
@@ -483,7 +483,7 @@ export default function ReceptionDashboardPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[600px]">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase text-[10px]">
+                <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
                   <th className="py-3">Token</th>
                   <th className="py-3">Patient Name</th>
                   <th className="py-3">Mobile No</th>
@@ -501,11 +501,11 @@ export default function ReceptionDashboardPage() {
                   list.map(a => {
                     const paid = paidMap[a.id]?.isPaid || a.isPaid || a.paymentStatus === 'PAID';
                     return (
-                      <tr key={a.id} className="hover:bg-slate-800/40 transition">
+                      <tr key={a.id} className="hover:bg-slate-100 transition">
                         <td className="py-3.5 font-mono font-bold text-blue-400">{a.appointmentNumber || 'APT'}</td>
-                        <td className="py-3.5 font-bold text-white">{a.patient?.fullName || 'Walk-in'}</td>
+                        <td className="py-3.5 font-bold text-slate-900">{a.patient?.fullName || 'Walk-in'}</td>
                         <td className="py-3.5 text-slate-400 font-mono">{a.patient?.phone || 'N/A'}</td>
-                        <td className="py-3.5 text-slate-300">{a.timeSlot || '10:00 AM'}</td>
+                        <td className="py-3.5 text-slate-600">{a.timeSlot || '10:00 AM'}</td>
                         <td className="py-3.5 text-center">
                           <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                             {a.status || 'Scheduled'}
@@ -538,26 +538,26 @@ export default function ReceptionDashboardPage() {
 
       {/* SLIDE-OVER BILLING SIDEBAR */}
       {selectedApt && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end transition-all">
-          <div className="bg-slate-900 border-l border-slate-800 w-full max-w-md h-full p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300">
+        <div className="fixed inset-0 bg-slate-50 backdrop-blur-sm z-50 flex justify-end transition-all">
+          <div className="bg-white border-l border-slate-200 w-full max-w-md h-full p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300">
             
             <div className="space-y-6">
-              <div className="flex justify-between items-start border-b border-slate-800 pb-4">
+              <div className="flex justify-between items-start border-b border-slate-200 pb-4">
                 <div>
                   <span className="text-[10px] font-black px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full uppercase">
                     Discharge & Billing Sidebar
                   </span>
-                  <h3 className="text-lg font-black text-white mt-2">{selectedApt.patient?.fullName}</h3>
+                  <h3 className="text-lg font-black text-slate-900 mt-2">{selectedApt.patient?.fullName}</h3>
                   <p className="text-xs text-slate-400 font-mono">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
                 </div>
-                <button onClick={() => setSelectedApt(null)} className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-bold">✕</button>
+                <button onClick={() => setSelectedApt(null)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-900 flex items-center justify-center font-bold">✕</button>
               </div>
 
               {/* Bill Item Breakdown */}
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
-                  <span className="text-slate-300">Consultation Fee</span>
-                  <input type="number" value={bill.consult} onChange={e => updateBill('consult', Number(e.target.value))} className="w-24 p-2 bg-slate-900 border border-slate-700 rounded-lg font-bold text-right text-white placeholder-slate-400 outline-none" />
+                <div className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-600">Consultation Fee</span>
+                  <input type="number" value={bill.consult} onChange={e => updateBill('consult', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-slate-900 placeholder-slate-400 outline-none" />
                 </div>
                 
                 <div className="flex justify-between items-center p-3 bg-purple-950/20 border border-purple-900/30 rounded-xl">
@@ -565,22 +565,22 @@ export default function ReceptionDashboardPage() {
                     <span className="text-purple-300 block font-bold">Pathology / Lab Tests</span>
                     {bill.testNames.length > 0 && <span className="text-[10px] text-purple-400/80">{bill.testNames.join(', ')}</span>}
                   </div>
-                  <input type="number" value={bill.lab} onChange={e => updateBill('lab', Number(e.target.value))} className="w-24 p-2 bg-slate-900 border border-slate-700 rounded-lg font-bold text-right text-purple-400 placeholder-slate-400 outline-none" />
+                  <input type="number" value={bill.lab} onChange={e => updateBill('lab', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-purple-400 placeholder-slate-400 outline-none" />
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
-                  <span className="text-slate-300">Procedures & Treatment</span>
-                  <input type="number" value={bill.treatment || ''} placeholder="0" onChange={e => updateBill('treatment', Number(e.target.value))} className="w-24 p-2 bg-slate-900 border border-slate-700 rounded-lg font-bold text-right text-white placeholder-slate-400 outline-none" />
+                <div className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-600">Procedures & Treatment</span>
+                  <input type="number" value={bill.treatment || ''} placeholder="0" onChange={e => updateBill('treatment', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-slate-900 placeholder-slate-400 outline-none" />
                 </div>
 
-                <div className="flex justify-between items-center p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
-                  <span className="text-slate-300">Pharmacy Medicines</span>
-                  <input type="number" value={bill.pharma || ''} placeholder="0" onChange={e => updateBill('pharma', Number(e.target.value))} className="w-24 p-2 bg-slate-900 border border-slate-700 rounded-lg font-bold text-right text-white placeholder-slate-400 outline-none" />
+                <div className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-600">Pharmacy Medicines</span>
+                  <input type="number" value={bill.pharma || ''} placeholder="0" onChange={e => updateBill('pharma', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-slate-900 placeholder-slate-400 outline-none" />
                 </div>
 
                 <div className="flex justify-between items-center p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl">
                   <span className="text-rose-300">Discount / Concession</span>
-                  <input type="number" value={bill.discount || ''} placeholder="0" onChange={e => updateBill('discount', Number(e.target.value))} className="w-24 p-2 bg-slate-900 border border-slate-700 rounded-lg font-bold text-right text-rose-400 placeholder-slate-400 outline-none" />
+                  <input type="number" value={bill.discount || ''} placeholder="0" onChange={e => updateBill('discount', Number(e.target.value))} className="w-24 p-2 bg-white border border-slate-300 rounded-lg font-bold text-right text-rose-400 placeholder-slate-400 outline-none" />
                 </div>
               </div>
 
@@ -592,7 +592,7 @@ export default function ReceptionDashboardPage() {
             </div>
 
             {/* Payment Settlement Buttons */}
-            <div className="space-y-3 pt-6 border-t border-slate-800">
+            <div className="space-y-3 pt-6 border-t border-slate-200">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Select Payment Settlement Mode</p>
               
               <div className="grid grid-cols-2 gap-3">
@@ -606,7 +606,7 @@ export default function ReceptionDashboardPage() {
                 <button 
                   disabled={paying} 
                   onClick={() => finalizePayment('Cash Counter')} 
-                  className="py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs border border-slate-700 transition disabled:opacity-50"
+                  className="py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs border border-slate-300 transition disabled:opacity-50"
                 >
                   💵 Cash Counter
                 </button>
@@ -619,38 +619,38 @@ export default function ReceptionDashboardPage() {
 
       {/* CENTRALIZED SECURE GATEWAY POPUP MODAL (CENTER OF SCREEN) */}
       {showRazorpay && selectedApt && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-blue-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
+        <div className="fixed inset-0 bg-slate-50 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-blue-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
             
             {/* Modal Header */}
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
               <div>
                 <span className="text-[10px] font-black px-2.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full uppercase">
                   Razorpay Secure Gateway
                 </span>
-                <h3 className="text-base font-black text-white mt-1.5">{selectedApt.patient?.fullName}</h3>
+                <h3 className="text-base font-black text-slate-900 mt-1.5">{selectedApt.patient?.fullName}</h3>
                 <p className="text-[11px] text-slate-400 font-mono">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
               </div>
-              <button onClick={() => setShowRazorpay(false)} className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-bold">✕</button>
+              <button onClick={() => setShowRazorpay(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-900 flex items-center justify-center font-bold">✕</button>
             </div>
 
             {/* Clear Bill Summary */}
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs">
-              <div className="flex justify-between text-slate-300">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-600">
                 <span>Consultation & Services:</span>
                 <span className="font-mono font-bold">₹{bill.net}.00</span>
               </div>
-              <div className="border-t border-slate-800/80 pt-2 flex justify-between items-center">
+              <div className="border-t border-slate-200/80 pt-2 flex justify-between items-center">
                 <span className="text-slate-400 font-bold uppercase text-[10px]">Total Payable</span>
                 <span className="text-xl font-black text-emerald-400 font-mono">₹{bill.net}.00</span>
               </div>
             </div>
 
             {/* Payment Modes Tabs */}
-            <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1.5 rounded-2xl text-xs font-bold border border-slate-800">
-              <button onClick={() => setTab('upi')} className={`py-2 rounded-xl transition ${tab === 'upi' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>📱 UPI QR</button>
-              <button onClick={() => setTab('card')} className={`py-2 rounded-xl transition ${tab === 'card' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>💳 Card</button>
-              <button onClick={() => setTab('netbanking')} className={`py-2 rounded-xl transition ${tab === 'netbanking' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>🏦 NetBank</button>
+            <div className="grid grid-cols-3 gap-1.5 bg-slate-50 p-1.5 rounded-2xl text-xs font-bold border border-slate-200">
+              <button onClick={() => setTab('upi')} className={`py-2 rounded-xl transition ${tab === 'upi' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'}`}>📱 UPI QR</button>
+              <button onClick={() => setTab('card')} className={`py-2 rounded-xl transition ${tab === 'card' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'}`}>💳 Card</button>
+              <button onClick={() => setTab('netbanking')} className={`py-2 rounded-xl transition ${tab === 'netbanking' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'}`}>🏦 NetBank</button>
             </div>
 
             {/* Tab 1: UPI QR */}
@@ -681,7 +681,7 @@ export default function ReceptionDashboardPage() {
                   placeholder="Or enter UPI ID (e.g. user@oksbi)" 
                   value={customUpiId}
                   onChange={(e) => setCustomUpiId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-center text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-center text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500"
                 />
               </div>
             )}
@@ -691,16 +691,16 @@ export default function ReceptionDashboardPage() {
               <div className="space-y-3 py-1 text-xs">
                 <div>
                   <label className="text-slate-400 block font-bold mb-1">Card Number</label>
-                  <input type="text" defaultValue="4111 2222 3333 4444" className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 font-mono" />
+                  <input type="text" defaultValue="4111 2222 3333 4444" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 font-mono" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-slate-400 block font-bold mb-1">Expiry</label>
-                    <input type="text" defaultValue="12/28" className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none font-mono" />
+                    <input type="text" defaultValue="12/28" className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none font-mono" />
                   </div>
                   <div>
                     <label className="text-slate-400 block font-bold mb-1">CVV</label>
-                    <input type="password" defaultValue="388" className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none font-mono" />
+                    <input type="password" defaultValue="388" className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none font-mono" />
                   </div>
                 </div>
               </div>
@@ -710,7 +710,7 @@ export default function ReceptionDashboardPage() {
             {tab === 'netbanking' && (
               <div className="py-2 space-y-2 text-xs">
                 <label className="text-slate-400 block font-bold">Select Preferred Bank</label>
-                <select className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500">
+                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500">
                   <option>HDFC Bank</option>
                   <option>ICICI Bank</option>
                   <option>State Bank of India (SBI)</option>
@@ -720,7 +720,7 @@ export default function ReceptionDashboardPage() {
             )}
 
             {/* Final Action Buttons */}
-            <div className="flex gap-2 pt-2 border-t border-slate-800">
+            <div className="flex gap-2 pt-2 border-t border-slate-200">
               <button 
                 disabled={paying} 
                 onClick={() => finalizePayment('Razorpay Secure Online Gateway')} 
@@ -735,7 +735,7 @@ export default function ReceptionDashboardPage() {
                   `Pay ₹${bill.net} Securely`
                 )}
               </button>
-              <button disabled={paying} onClick={() => setShowRazorpay(false)} className="px-4 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xs transition">Cancel</button>
+              <button disabled={paying} onClick={() => setShowRazorpay(false)} className="px-4 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-xs transition">Cancel</button>
             </div>
 
           </div>
@@ -744,7 +744,7 @@ export default function ReceptionDashboardPage() {
 
       {/* Official Printed Receipt Modal */}
       {receipt && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-50 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white text-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="text-center space-y-1 border-b pb-3">
               <span className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center font-bold text-sm">✓</span>
@@ -764,7 +764,7 @@ export default function ReceptionDashboardPage() {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="flex-1 py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs transition">🖨️ Print Receipt</button>
+              <button onClick={() => window.print()} className="flex-1 py-3 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold text-xs transition">🖨️ Print Receipt</button>
               <button onClick={() => setReceipt(null)} className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition">Close</button>
             </div>
           </div>

@@ -71,7 +71,7 @@ export default function AdminLayout({
 
   if (!isAuthorized) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-slate-900 text-white font-sans">
+      <div className="h-screen w-screen flex items-center justify-center bg-white text-slate-900 font-sans">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase">
@@ -128,9 +128,9 @@ export default function AdminLayout({
   const sidebarContent = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Brand Header */}
-      <div className="p-2 md:p-4 border-b border-slate-800 shrink-0 flex items-center justify-between">
+      <div className="p-2 md:p-4 border-b border-slate-200 shrink-0 flex items-center justify-between">
         <div className="w-full md:w-auto">
-          <div className="flex items-center justify-center md:justify-start gap-2 text-white font-black text-xl tracking-tight">
+          <div className="flex items-center justify-center md:justify-start gap-2 text-slate-900 font-black text-xl tracking-tight">
             <span className="md:hidden text-blue-500">D</span>
             <span className="hidden md:inline">
             <span className="text-blue-500">DrBloo</span>Medi
@@ -143,7 +143,7 @@ export default function AdminLayout({
         {/* Mobile Close Button */}
         <button
           onClick={() => setMobileMenuOpen(false)}
-          className="md:hidden text-slate-400 hover:text-white p-1 text-lg font-bold"
+          className="md:hidden text-slate-400 hover:text-slate-900 p-1 text-lg font-bold"
         >
           ✕
         </button>
@@ -191,7 +191,7 @@ export default function AdminLayout({
                       className={`flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2 rounded-xl text-xs font-semibold transition ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-sm font-bold'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
                       }`}
                     >
                       <span className="text-sm">{item.icon}</span>
@@ -206,14 +206,14 @@ export default function AdminLayout({
       </nav>
 
       {/* Clean User Card */}
-      <div className="p-2 md:p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
+      <div className="p-2 md:p-3 border-t border-slate-200 bg-slate-50 shrink-0">
         <div className="flex items-center justify-center md:justify-start gap-2.5 px-1">
           <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs shrink-0">
             {email ? email.charAt(0).toUpperCase() : 'A'}
           </div>
           <div className="hidden md:block overflow-hidden">
             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Logged In</p>
-            <p className="text-xs text-slate-300 font-semibold truncate">{email || 'admin@drbloomedi.com'}</p>
+            <p className="text-xs text-slate-600 font-semibold truncate">{email || 'admin@drbloomedi.com'}</p>
           </div>
         </div>
       </div>
@@ -223,7 +223,7 @@ export default function AdminLayout({
   return (
     <div className="h-screen min-h-0 flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 lg:w-72 bg-slate-900 text-slate-300 flex-col justify-between shrink-0 z-20 border-r border-slate-800 h-screen sticky top-0">
+      <aside className="hidden md:flex w-64 lg:w-72 bg-white text-slate-600 flex-col justify-between shrink-0 z-20 border-r border-slate-200 h-screen sticky top-0">
         {sidebarContent}
       </aside>
 
@@ -231,10 +231,10 @@ export default function AdminLayout({
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-50 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           ></div>
-          <aside className="relative w-20 max-w-full bg-slate-900 text-slate-300 flex flex-col justify-between z-10 h-full border-r border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200">
+          <aside className="relative w-20 max-w-full bg-white text-slate-600 flex flex-col justify-between z-10 h-full border-r border-slate-200 shadow-2xl animate-in slide-in-from-left duration-200">
             {sidebarContent}
           </aside>
         </div>

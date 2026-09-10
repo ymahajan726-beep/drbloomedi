@@ -100,7 +100,7 @@ export default function PatientEMRPage() {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
+      <div className="min-h-screen bg-white flex items-center justify-center text-slate-900 font-mono text-xs">
         🔒 Verifying Clinical EMR Authorization...
       </div>
     );
@@ -182,7 +182,7 @@ export default function PatientEMRPage() {
 
           <button
             onClick={() => window.print()}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
+            className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
           >
             <span>🖨️</span>
             <span>Print Full Case Dossier</span>

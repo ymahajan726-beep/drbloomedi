@@ -179,7 +179,7 @@ export default function RolesManagementPage() {
             className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3"
           >
             <div className="flex items-center justify-between">
-              <span className="font-black text-xs px-2.5 py-1 bg-slate-900 text-white rounded-lg">
+              <span className="font-black text-xs px-2.5 py-1 bg-white text-slate-900 rounded-lg">
                 {r.role}
               </span>
               <span className="text-xs font-bold text-slate-400">
@@ -308,7 +308,7 @@ export default function RolesManagementPage() {
 
       {/* Staff Registration Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start">
               <div>

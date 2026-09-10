@@ -315,7 +315,7 @@ export default function PharmacyPage() {
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="w-full py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-xs transition"
+                className="w-full py-2.5 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold text-xs transition"
               >
                 + Add To Patient Bill Cart
               </button>
@@ -544,7 +544,7 @@ export default function PharmacyPage() {
 
       {/* PRINTABLE OFFICIAL PHARMACY GST INVOICE MODAL */}
       {invoiceModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-5">
             <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
               <div>
@@ -614,7 +614,7 @@ export default function PharmacyPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-md"
+                className="px-4 py-2 bg-white text-slate-900 rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-md"
               >
                 <span>🖨️</span> Print Tax Receipt
               </button>

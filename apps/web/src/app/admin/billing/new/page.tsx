@@ -148,7 +148,7 @@ export default function NewBillingPage() {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
+      <div className="min-h-screen bg-white flex items-center justify-center text-slate-900 font-mono text-xs">
         🔒 Verifying Cashier Clearance...
       </div>
     );
@@ -269,10 +269,10 @@ export default function NewBillingPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-900 text-white rounded-xl flex items-center justify-between">
+            <div className="p-4 bg-white text-slate-900 rounded-xl flex items-center justify-between">
               <div>
                 <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Net Amount Payable</p>
-                <p className="text-xs text-slate-300">Subtotal: ₹{subTotal} | Discount: ₹{discount}</p>
+                <p className="text-xs text-slate-600">Subtotal: ₹{subTotal} | Discount: ₹{discount}</p>
               </div>
               <div className="text-2xl font-black font-mono text-emerald-400">₹{grandTotal.toFixed(2)}</div>
             </div>

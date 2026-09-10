@@ -233,7 +233,7 @@ export default function UsersPage() {
             onClick={() => setFilterRole(r)}
             className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
               filterRole === r
-                ? "bg-slate-900 text-white shadow-sm"
+                ? "bg-white text-slate-900 shadow-sm"
                 : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
             }`}
           >
@@ -347,7 +347,7 @@ export default function UsersPage() {
 
       {/* Onboard Staff Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-100 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-200">
             <div className="mb-4 flex items-center justify-between border-b pb-3">
               <h2 className="text-lg font-bold text-gray-900">

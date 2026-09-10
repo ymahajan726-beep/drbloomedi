@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
@@ -135,7 +135,7 @@ export default function ReceptionPortalPage() {
           </div>
           <button
             onClick={() => setLiveAlert(null)}
-            className="font-black text-white hover:text-emerald-200 bg-white/20 px-2 py-1 rounded-lg"
+            className="font-black text-slate-900 hover:text-emerald-200 bg-white/20 px-2 py-1 rounded-lg"
           >
             DISMISS ✕
           </button>
@@ -290,7 +290,7 @@ export default function ReceptionPortalPage() {
             <button
               type="submit"
               disabled={booking}
-              className="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold shadow-md transition mt-2"
+              className="w-full py-3 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold shadow-md transition mt-2"
             >
               {booking ? 'Generating Token...' : 'Generate Token & Push Live →'}
             </button>

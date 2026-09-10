@@ -178,7 +178,7 @@ export default function DashboardPage() {
             </span>
             <button
               onClick={handleLogout}
-              className="rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white px-4 py-2 text-xs font-bold transition border border-rose-200 shadow-xs"
+              className="rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-slate-900 px-4 py-2 text-xs font-bold transition border border-rose-200 shadow-xs"
             >
               Logout
             </button>

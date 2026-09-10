@@ -116,7 +116,7 @@ export default function BillingDirectoryPage() {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-mono text-xs">
+      <div className="min-h-screen bg-white flex items-center justify-center text-slate-900 font-mono text-xs">
         🔒 Checking Financial Clearance...
       </div>
     );
@@ -278,7 +278,7 @@ export default function BillingDirectoryPage() {
 
       {/* A4 Printable Receipt Modal */}
       {activeReceipt && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 shadow-2xl border border-slate-200 relative print:m-0 print:p-0 print:border-none print:shadow-none">
             <div className="flex justify-between items-center mb-6 print:hidden">
               <button
