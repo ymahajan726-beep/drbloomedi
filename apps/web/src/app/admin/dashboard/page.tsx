@@ -102,42 +102,43 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-row overflow-x-hidden">
       
-      {/* Desktop Fixed Sidebar */}
-      <aside className="w-72 bg-white border-r border-slate-200 hidden md:flex flex-col justify-between sticky top-0 h-screen shrink-0 shadow-sm z-20">
-        <div className="p-6 space-y-6 overflow-y-auto">
+      {/* Sidebar: Responsive (Icons only on mobile, Full on desktop) & Sticky */}
+      <aside className="w-20 md:w-72 bg-white border-r border-slate-200 flex flex-col justify-between sticky top-0 h-screen shrink-0 shadow-sm z-30">
+        <div className="p-4 md:p-6 space-y-6 overflow-y-auto">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
-            <div className="bg-cyan-600 text-white p-2.5 rounded-2xl shadow-lg shadow-cyan-600/20">
+            <div className="bg-cyan-600 text-white p-2.5 rounded-2xl shadow-lg shadow-cyan-600/20 shrink-0">
               <Stethoscope className="w-5 h-5" />
             </div>
-            <div>
+            <div className="hidden md:block">
               <h2 className="font-black text-sm tracking-tight text-slate-900">DrBlooMedi</h2>
               <span className="text-[10px] font-bold text-cyan-600 uppercase tracking-widest">Hospital Admin</span>
             </div>
           </div>
 
           <nav className="space-y-1.5 text-xs font-semibold">
-            <a href="/admin/dashboard" className="flex items-center gap-3 px-4 py-3 bg-cyan-50 text-cyan-700 rounded-2xl">
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Command Center</span>
+            <a href="/admin/dashboard" title="Command Center" className="flex items-center gap-3 px-3 md:px-4 py-3 bg-cyan-50 text-cyan-700 rounded-2xl">
+              <LayoutDashboard className="w-4 h-4 shrink-0" />
+              <span className="hidden md:inline">Command Center</span>
             </a>
-            <a href="/doctor/management" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-2xl transition-colors">
-              <Users className="w-4 h-4" />
-              <span>Staff & Doctors</span>
+            <a href="/doctor/management" title="Staff & Doctors" className="flex items-center gap-3 px-3 md:px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-2xl transition-colors">
+              <Users className="w-4 h-4 shrink-0" />
+              <span className="hidden md:inline">Staff & Doctors</span>
             </a>
-            <a href="/reception/dashboard" className="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-2xl transition-colors">
-              <Activity className="w-4 h-4" />
-              <span>OPD Queues</span>
+            <a href="/reception/dashboard" title="OPD Queues" className="flex items-center gap-3 px-3 md:px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-2xl transition-colors">
+              <Activity className="w-4 h-4 shrink-0" />
+              <span className="hidden md:inline">OPD Queues</span>
             </a>
           </nav>
         </div>
 
-        <div className="p-6 border-t border-slate-100 bg-white">
+        <div className="p-3 md:p-6 border-t border-slate-100 bg-white">
           <button
             onClick={handleLogout}
+            title="Secure Logout"
             className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Secure Logout</span>
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className="hidden md:inline">Secure Logout</span>
           </button>
         </div>
       </aside>
