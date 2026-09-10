@@ -26,6 +26,8 @@ export default function PatientPortalPage() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('Male');
   const [bloodGroup, setBloodGroup] = useState('O+');
+  const [address, setAddress] = useState('');
+  const [newRegDoctorId, setNewRegDoctorId] = useState('');
   const [newRegDate, setNewRegDate] = useState('');
   const [newRegSlot, setNewRegSlot] = useState('10:00 AM');
   const [registering, setRegistering] = useState(false);
@@ -33,6 +35,7 @@ export default function PatientPortalPage() {
   // Existing Patient Booking Form State
   const [existingDoctorId, setExistingDoctorId] = useState('');
   const [existingDate, setExistingDate] = useState('');
+  const [existingSlot, setExistingSlot] = useState('10:00 AM');
   const [bookingExisting, setBookingExisting] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'rx' | 'lab' | 'bills' | 'book'>('overview');
@@ -45,6 +48,7 @@ export default function PatientPortalPage() {
     const saved = localStorage.getItem('drbloo_active_patient');
     if (saved) {
       try {
+        const parsed = JSON.parse(saved);
         setPatient(parsed);
         setPortalMode('dossier');
         loadDossier(parsed.id);

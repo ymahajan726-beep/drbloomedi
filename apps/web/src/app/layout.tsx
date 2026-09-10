@@ -26,14 +26,16 @@ export default function RootLayout({
     <html lang="en" className="h-full" data-theme="light">
       <body className="antialiased min-h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden">
         <ThemeProvider>
-          <div className="flex-1 flex flex-col w-full max-w-full overflow-x-hidden">
-            {children}
-          </div>
+          <ToastProvider>
+            <div className="flex-1 flex flex-col w-full max-w-full overflow-x-hidden">
+              {children}
+            </div>
 
-          {/* Global Theme Button */}
-          <div className="fixed right-5 bottom-5 z-[9999]">
-            <ThemeToggle />
-          </div>
+            {/* Global Theme Button */}
+            <div className="fixed right-5 bottom-5 z-[9999]">
+              <ThemeToggle />
+            </div>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>
