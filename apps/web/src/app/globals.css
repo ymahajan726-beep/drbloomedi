@@ -1,17 +1,15 @@
-
 @import "tailwindcss";
 
-
 :root {
-  --background: #f8fafc;
+  --background: #ffffff;
   --foreground: #0f172a;
 }
 
+/* Force light theme globally, ignoring dark selectors */
 :root[data-theme="dark"] {
-  --background: #070b19;
-  --foreground: #f8fafc;
+  --background: #ffffff;
+  --foreground: #0f172a;
 }
-
 
 @theme inline {
   --color-background: var(--background);
@@ -21,13 +19,13 @@
 }
 
 /* ========================================================
-   🌞 DEFAULT LIGHT THEME
+   🌞 STRICT LIGHT THEME ENFORCEMENT
    ======================================================== */
 
 html,
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff !important;
+  color: #0f172a !important;
   font-family: Arial, Helvetica, sans-serif;
   -webkit-tap-highlight-color: transparent;
   scroll-behavior: smooth;
@@ -46,7 +44,25 @@ body {
 }
 
 /* ========================================================
-   🚫 GLOBAL SCROLLBAR HIDING
+   🛡️ OVERRIDE HARDCODED DARK CLASSES TO LIGHT
+   ======================================================== */
+
+.bg-slate-900,
+.bg-slate-950,
+.bg-zinc-900,
+.bg-zinc-950,
+.bg-gray-900,
+.bg-gray-95{-900} {
+  background-color: #ffffff !important;
+}
+
+.bg-slate-800,
+.bg-zinc-800 {
+  background-color: #f8fafc !important;
+}
+
+/* ========================================================
+   🚫 GLOBAL SCROLLBAR HIDING & SCROLL FIX
    ======================================================== */
 
 html::-webkit-scrollbar,
@@ -55,16 +71,25 @@ body::-webkit-scrollbar,
   display: none;
 }
 
+/* Fix scrolling: Allow main content container to scroll independently */
+.overflow-y-auto,
+main {
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
 /* ========================================================
    📝 GLOBAL LIGHT FORM CONTROLS
    ======================================================== */
-
 
 @layer base {
   input,
   select,
   textarea {
     color-scheme: light;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
   }
 
   input::placeholder,
@@ -72,22 +97,6 @@ body::-webkit-scrollbar,
     color: #64748b !important;
   }
 }
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-}
-
-:root[data-theme="dark"] input,
-:root[data-theme="dark"] select,
-:root[data-theme="dark"] textarea {
-  color-scheme: dark;
-}
-
-:root[data-theme="dark"] input::placeholder,
-:root[data-theme="dark"] textarea::placeholder {
-  color: #94a3b8 !important;
-}
-
 
 /* ========================================================
    📱 CUSTOM UTILITIES
@@ -108,8 +117,6 @@ body::-webkit-scrollbar,
    🚀 GLOBAL RESPONSIVE SHORTCUT RULES
    ======================================================== */
 
-/* 1. Automatically make all tables horizontally scrollable on mobile */
-
 table {
   width: 100%;
 }
@@ -121,17 +128,9 @@ div:has(> table) {
   -webkit-overflow-scrolling: touch;
 }
 
-/* ========================================================
-   2. Prevent flexbox elements from overflowing
-   ======================================================== */
-
 .flex:not(.no-wrap) {
   flex-wrap: wrap;
 }
-
-/* ========================================================
-   3. Make large grids responsive by default
-   ======================================================== */
 
 .grid-cols-3,
 .grid-cols-4,
@@ -163,10 +162,6 @@ div:has(> table) {
   }
 }
 
-/* ========================================================
-   🛡️ ULTRA MOBILE OVERFLOW PROTECTION
-   ======================================================== */
-
 @media (max-width: 768px) {
   div[class*="w-["],
   aside[class*="w-["] {
@@ -175,10 +170,6 @@ div:has(> table) {
   }
 }
 
-/* ========================================================
-   🖼️ RESPONSIVE MEDIA
-   ======================================================== */
-
 img,
 video,
 canvas,
@@ -186,4 +177,3 @@ svg {
   max-width: 100%;
   height: auto;
 }
-
