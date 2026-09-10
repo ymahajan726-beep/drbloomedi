@@ -34,11 +34,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => {
+  useEffect(() => {
+    if (!toast) return;
+
+    const dismissTimer = setTimeout(() => {
       setToast(null);
     }, 3500);
+
+    return () => clearTimeout(dismissTimer);
+  }, [toast]);
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ message, type });
   };
 
   return (
