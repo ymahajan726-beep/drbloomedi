@@ -18,7 +18,7 @@ export class PaymentController {
     body: {
       razorpay_order_id: string;
       razorpay_payment_id: string;
-      razorpay_signature?: string;
+      razorpay_signature: string;
       billId?: string;
       appointmentId?: string;
       amount?: number;
@@ -31,6 +31,7 @@ export class PaymentController {
   @HttpCode(HttpStatus.OK)
   async razorpayWebhook(@Body() event: any, @Req() req: any) {
     const signature = req.headers['x-razorpay-signature'];
-    return this.paymentService.handleWebhook(event, signature);
+    const rawBody = req.rawBody?.toString('utf8');
+    return this.paymentService.handleWebhook(event, signature, rawBody);
   }
 }

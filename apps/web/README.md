@@ -34,3 +34,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Razorpay Test Payments
+
+Configure the backend with Razorpay Test Mode credentials:
+
+```env
+RAZORPAY_KEY_ID=rzp_test_your_key_id
+RAZORPAY_KEY_SECRET=your_test_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_test_webhook_secret
+```
+
+Keep `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` on the backend only. The frontend requests an order from the backend, opens Razorpay Checkout, and sends the returned order ID, payment ID, and signature back for server-side verification.
+
+To test without real funds, use Razorpay Dashboard Test Mode. Razorpay's documented examples include UPI ID `success@razorpay` and test card `4111 1111 1111 1111` with any future expiry and CVV; use the current values from Razorpay's official test credentials documentation if they change. Razorpay Checkout simulates the result; never enter a real card or UPI account. Confirm that a successful test payment reaches `/payments/verify` and updates the appointment or bill to paid/completed.
