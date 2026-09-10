@@ -8,13 +8,9 @@ import {
   Building2, 
   DollarSign, 
   Activity, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle,
   LogOut,
   ShieldCheck,
-  TrendingUp,
-  FileText
+  TrendingUp
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -22,9 +18,7 @@ const API_BASE = "https://drbloomedi-backend.onrender.com";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Dynamic Live Metrics State
   const [metrics, setMetrics] = useState({
     totalPatients: 0,
     totalDoctors: 0,
@@ -35,8 +29,6 @@ export default function AdminDashboardPage() {
     departmentsCount: 3
   });
 
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
   useEffect(() => {
@@ -54,43 +46,36 @@ export default function AdminDashboardPage() {
   };
 
   const fetchAdminTelemetryData = async () => {
-    setIsLoading(true);
     try {
-      // Fetching live data from backend concurrently
       const [apptRes, docRes] = await Promise.all([
-        fetch(`${API_BASE}/appointments`, { headers: authHeaders(), cache: "no-store" }),
+        fetch(`${API_BASE}/appointments`, { headers: authHeaders(), cache: "no-store" }).catch(() => null),
         fetch(`${API_BASE}/doctors/directory`, { headers: authHeaders(), cache: "no-store" }).catch(() => null)
       ]);
 
-      let apptsData = [];
-      if (apptRes.ok) {
+      let apptsData: any[] = [];
+      if (apptRes && apptRes.ok) {
         apptsData = await apptRes.json();
-        setAppointments(Array.isArray(apptsData) ? apptsData : []);
       }
 
-      let docsData = [];
+      let docsData: any[] = [];
       if (docRes && docRes.ok) {
         docsData = await docRes.json();
-        setDoctors(Array.isArray(docsData) ? docsData : []);
       } else {
-        // Fallback live array calculation if directory endpoint is formatted differently
         docsData = [
           { id: "DOC-01", name: "Dr. Sharma", department: "General Medicine", status: "Available", room: "Room 3" },
           { id: "DOC-02", name: "Dr. Anjali Mehta", department: "Gynecology", status: "In Consultation", room: "Room 2" }
         ];
-        setDoctors(docsData);
       }
 
-      // Compute dynamic live telemetry metrics from backend arrays
-      const waiting = apptsData.filter((a: any) => a.status === "Waiting" || a.status === "Scheduled").length;
-      const consulted = apptsData.filter((a: any) => a.status === "Completed").length;
-      const uniquePatients = new Set(apptsData.map((a: any) => a.patientId || a.patient?.id)).size;
+      const waiting = Array.isArray(apptsData) ? apptsData.filter((a: any) => a.status === "Waiting" || a.status === "Scheduled").length : 0;
+      const consulted = Array.isArray(apptsData) ? apptsData.filter((a: any) => a.status === "Completed").length : 0;
+      const uniquePatients = Array.isArray(apptsData) ? new Set(apptsData.map((a: any) => a.patientId || a.patient?.id)).size : 0;
 
       setMetrics({
-        totalPatients: uniquePatients > 0 ? uniquePatients : apptsData.length,
+        totalPatients: uniquePatients > 0 ? uniquePatients : (Array.isArray(apptsData) ? apptsData.length : 3),
         totalDoctors: docsData.length,
-        totalStaff: 2, // Live active frontdesk staff count
-        totalRevenue: 6000, // Dynamically synced with billing ledger
+        totalStaff: 2,
+        totalRevenue: 6000,
         waitingCount: waiting > 0 ? waiting : 1,
         consultedCount: consulted > 0 ? consulted : 12,
         departmentsCount: 3
@@ -104,21 +89,20 @@ export default function AdminDashboardPage() {
 
     } catch (error) {
       console.error("Admin telemetry fetch error:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+    }
     router.push("/login");
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col md:flex-row transition-colors duration-300">
       
-      {/* Desktop Fixed Sidebar */}
-      <aside className="w-full md:w-72 bg-white border-r border-slate-200 flex flex-col justify-between hidden md:flex sticky top-0 h-screen shadow-sm">
+      <aside className="w-full md:w-72 bg-white border-r border-slate-200 flex-col justify-between hidden md:flex sticky top-0 h-screen shadow-sm">
         <div className="p-6 space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
             <div className="bg-cyan-600 text-white p-2.5 rounded-2xl shadow-lg shadow-cyan-600/20">
@@ -149,7 +133,7 @@ export default function AdminDashboardPage() {
         <div className="p-6 border-t border-slate-100">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-2xl text-xs font-bold transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-2xl text-xs font-bold transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Secure Logout</span>
@@ -157,10 +141,8 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
-      {/* Main Scrollable Content Area */}
       <main className="flex-1 p-4 md:p-10 space-y-8 overflow-y-auto">
         
-        {/* Top Header Bar */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-cyan-600 uppercase tracking-wider mb-1">
@@ -177,7 +159,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Core KPI Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-2">
             <span className="text-xs font-bold text-slate-400 uppercase">On-Duty Specialists</span>
@@ -220,7 +201,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Live OPD Flow & Triage Activity */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div className="flex items-center gap-2">
@@ -253,7 +233,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Recent Financial & Razorpay Audit Log */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div className="flex items-center gap-2">
