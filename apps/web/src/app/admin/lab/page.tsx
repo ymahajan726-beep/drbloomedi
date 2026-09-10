@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getAuthHeaders } from '../../../utils/session';
+import { useToast } from '@/components/Toast';
 
 const API = 'https://drbloomedi-backend.onrender.com';
 
@@ -42,6 +43,7 @@ const STATUSES = [
 ];
 
 export default function LaboratoryManagementPage() {
+  const { showToast } = useToast();
   const [tab, setTab] = useState<'worklist' | 'catalog' | 'booking'>('worklist');
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [tests, setTests] = useState<LabTest[]>([]);
@@ -127,7 +129,7 @@ export default function LaboratoryManagementPage() {
 
       await loadData(true);
     } catch (error: any) {
-      alert(error.message);
+      showToast(error.message, 'error');
     }
   };
 
@@ -158,14 +160,14 @@ export default function LaboratoryManagementPage() {
         throw new Error(data.message || 'Failed to save result');
       }
 
-      alert('Diagnostic Lab Report Generated & Verified!');
+      showToast('Diagnostic lab report generated and verified!', 'success');
 
       setReportOrder(null);
       setObservedValue('');
       setRemarks('');
       await loadData(true);
     } catch (error: any) {
-      alert(`Report Error: ${error.message}`);
+      showToast(`Report Error: ${error.message}`, 'error');
     } finally {
       setSavingReport(false);
     }
@@ -177,7 +179,7 @@ export default function LaboratoryManagementPage() {
     e.preventDefault();
 
     if (!patientId || !testId) {
-      alert('Please select both patient and lab test');
+      showToast('Please select both patient and lab test', 'error');
       return;
     }
 
@@ -197,14 +199,14 @@ export default function LaboratoryManagementPage() {
         throw new Error(data.message || 'Failed to book test');
       }
 
-      alert('Lab Test Booked Successfully in Worklist!');
+      showToast('Lab test booked successfully in the worklist!', 'success');
 
       setPatientId('');
       setTestId('');
       setTab('worklist');
       await loadData(true);
     } catch (error: any) {
-      alert(`Booking Error: ${error.message}`);
+      showToast(`Booking Error: ${error.message}`, 'error');
     }
   };
 
@@ -233,7 +235,7 @@ export default function LaboratoryManagementPage() {
     e.preventDefault();
 
     if (!testName.trim() || !testPrice) {
-      alert('Test name and price are required');
+      showToast('Test name and price are required', 'error');
       return;
     }
 
@@ -269,15 +271,16 @@ export default function LaboratoryManagementPage() {
         );
       }
 
-      alert(editTest
+      showToast(editTest
         ? 'Lab Test Updated Successfully!'
-        : 'Master Lab Test Added to Catalog!'
+        : 'Master Lab Test Added to Catalog!',
+        'success'
       );
 
       resetTestForm();
       await loadData(true);
     } catch (error: any) {
-      alert(`Catalog Error: ${error.message}`);
+      showToast(`Catalog Error: ${error.message}`, 'error');
     } finally {
       setSavingTest(false);
     }

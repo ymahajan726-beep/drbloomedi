@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/components/Toast';
 
 export default function DocumentVaultPage() {
+  const { showToast } = useToast();
   const [documents, setDocuments] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function DocumentVaultPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      alert('Please select a document or scan file to upload');
+      showToast('Please select a document or scan file to upload', 'error');
       return;
     }
 
@@ -66,9 +68,9 @@ export default function DocumentVaultPage() {
       // Reset form
       setSelectedFile(null);
       setRemarks('');
-      alert('Medical Document Uploaded Successfully!');
+      showToast('Medical document uploaded successfully!', 'success');
     } catch (err: any) {
-      alert(`Upload Error: ${err.message}`);
+      showToast(`Upload Error: ${err.message}`, 'error');
     } finally {
       setUploading(false);
     }

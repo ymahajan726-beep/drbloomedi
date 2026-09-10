@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useToast } from '@/components/Toast';
 
 const API_BASE =
   'https://drbloomedi-backend.onrender.com';
@@ -22,6 +23,7 @@ type Medicine = {
 };
 
 export default function DoctorConsultPage() {
+  const { showToast } = useToast();
   const params = useParams();
   const appointmentId = params?.id as string;
 
@@ -190,9 +192,10 @@ export default function DoctorConsultPage() {
     } catch (error: any) {
       console.error(error);
 
-      alert(
+      showToast(
         error?.message ||
-          'Unable to load appointment.'
+          'Unable to load appointment.',
+        'error'
       );
     } finally {
       setLoading(false);
@@ -274,8 +277,9 @@ export default function DoctorConsultPage() {
       );
 
     if (!test) {
-      alert(
+      showToast(
         'Selected laboratory test was not found.'
+        , 'error'
       );
       return;
     }
@@ -287,8 +291,9 @@ export default function DoctorConsultPage() {
           String(test.id)
       )
     ) {
-      alert(
+      showToast(
         'This test is already selected.'
+        , 'error'
       );
       return;
     }
@@ -367,8 +372,9 @@ export default function DoctorConsultPage() {
         .webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert(
+      showToast(
         'Voice dictation is not supported in this browser.'
+        , 'error'
       );
       return;
     }
@@ -413,8 +419,9 @@ export default function DoctorConsultPage() {
 
   const saveConsultation = async () => {
     if (!diagnosis.trim()) {
-      alert(
-        'Please enter a diagnosis.'
+      showToast(
+        'Please enter a diagnosis.',
+        'error'
       );
       return;
     }
@@ -424,8 +431,9 @@ export default function DoctorConsultPage() {
       appointment?.patient?.id;
 
     if (!patientId) {
-      alert(
-        'Patient information is missing.'
+      showToast(
+        'Patient information is missing.',
+        'error'
       );
       return;
     }
@@ -582,10 +590,11 @@ export default function DoctorConsultPage() {
       // SUCCESS
       // --------------------------------------------------------
 
-      alert(
+      showToast(
         selectedTests.length > 0
           ? 'Prescription and Lab Tests saved successfully! Transmitted to Pathology Worklist.'
-          : 'Prescription saved successfully!'
+          : 'Prescription saved successfully!',
+        'success'
       );
 
       window.print();
@@ -595,9 +604,10 @@ export default function DoctorConsultPage() {
         error
       );
 
-      alert(
+      showToast(
         error?.message ||
-          'Unable to complete consultation.'
+          'Unable to complete consultation.',
+        'error'
       );
     } finally {
       setSaving(false);
@@ -761,7 +771,7 @@ export default function DoctorConsultPage() {
 
             <div>
 
-              <label className="label">
+              <label className="block mb-1 text-xs font-bold uppercase text-slate-600">
                 Diagnosis *
               </label>
 
@@ -773,7 +783,7 @@ export default function DoctorConsultPage() {
                   )
                 }
                 placeholder="Enter diagnosis"
-                className="input"
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
               />
 
             </div>
@@ -782,7 +792,7 @@ export default function DoctorConsultPage() {
 
               <div className="flex justify-between mb-1">
 
-                <label className="label">
+                <label className="block text-xs font-bold uppercase text-slate-600">
                   Clinical Advice & Notes
                 </label>
 
@@ -814,14 +824,14 @@ export default function DoctorConsultPage() {
                   )
                 }
                 placeholder="Clinical notes, advice..."
-                className="input"
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
               />
 
             </div>
 
             <div>
 
-              <label className="label">
+              <label className="block mb-1 text-xs font-bold uppercase text-slate-600">
                 Next Follow-up
               </label>
 
@@ -833,7 +843,7 @@ export default function DoctorConsultPage() {
                     e.target.value
                   )
                 }
-                className="input"
+                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
               />
 
             </div>
@@ -879,7 +889,7 @@ export default function DoctorConsultPage() {
                         e.target.value
                       )
                     }
-                    className="input"
+                    className="w-full p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
                   />
 
                   <input
@@ -894,7 +904,7 @@ export default function DoctorConsultPage() {
                         e.target.value
                       )
                     }
-                    className="input"
+                    className="w-full p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
                   />
 
                   <select
@@ -908,7 +918,7 @@ export default function DoctorConsultPage() {
                         e.target.value
                       )
                     }
-                    className="input"
+                    className="w-full p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="1-0-1">
                       1-0-1
@@ -941,7 +951,7 @@ export default function DoctorConsultPage() {
                           e.target.value
                         )
                       }
-                      className="input flex-1"
+                      className="w-full flex-1 p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
                     />
 
                     {medicines.length >
@@ -1000,7 +1010,7 @@ export default function DoctorConsultPage() {
                   )
                 }
                 disabled={loadingTests}
-                className="input flex-1"
+                className="w-full flex-1 p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-500"
               >
 
                 <option value="">

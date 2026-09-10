@@ -66,7 +66,7 @@ export default function AdminLayout({
   }, [pathname]);
 
   const handleLogout = () => {
-    performLogout();
+    performLogout('Logged out successfully.');
   };
 
   if (!isAuthorized) {
@@ -128,12 +128,15 @@ export default function AdminLayout({
   const sidebarContent = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800 shrink-0 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-white font-black text-xl tracking-tight">
+      <div className="p-2 md:p-4 border-b border-slate-800 shrink-0 flex items-center justify-between">
+        <div className="w-full md:w-auto">
+          <div className="flex items-center justify-center md:justify-start gap-2 text-white font-black text-xl tracking-tight">
+            <span className="md:hidden text-blue-500">D</span>
+            <span className="hidden md:inline">
             <span className="text-blue-500">DrBloo</span>Medi
+            </span>
           </div>
-          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
+          <p className="hidden md:block text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
             {role === 'ADMIN' ? 'Hospital Administration' : `${role} Desk`}
           </p>
         </div>
@@ -147,14 +150,17 @@ export default function AdminLayout({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-4 overflow-y-auto pr-2">
+      <nav className="flex-1 p-2 md:p-3 space-y-4 overflow-y-auto pr-2">
         {isReception && (
           <Link
             href="/reception/dashboard"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold hover:bg-blue-600/30 transition"
+            title="Back to Front Desk"
+            aria-label="Back to Front Desk"
+            className="flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold hover:bg-blue-600/30 transition"
           >
-            <span>⬅️</span> Back to Front Desk
+            <span>⬅️</span>
+            <span className="hidden md:inline">Back to Front Desk</span>
           </Link>
         )}
 
@@ -163,7 +169,7 @@ export default function AdminLayout({
 
           return (
             <div key={group.title} className="space-y-1">
-              <p className="px-3 text-[10px] font-black uppercase tracking-wider text-slate-500">
+              <p className="hidden md:block px-3 text-[10px] font-black uppercase tracking-wider text-slate-500">
                 {group.title}
               </p>
 
@@ -180,14 +186,16 @@ export default function AdminLayout({
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                      title={item.name}
+                      aria-label={item.name}
+                      className={`flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2 rounded-xl text-xs font-semibold transition ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-sm font-bold'
                           : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                       }`}
                     >
                       <span className="text-sm">{item.icon}</span>
-                      <span className="truncate">{item.name}</span>
+                      <span className="hidden md:inline truncate">{item.name}</span>
                     </Link>
                   );
                 })}
@@ -198,12 +206,12 @@ export default function AdminLayout({
       </nav>
 
       {/* Clean User Card */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
-        <div className="flex items-center gap-2.5 px-1">
+      <div className="p-2 md:p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
+        <div className="flex items-center justify-center md:justify-start gap-2.5 px-1">
           <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs shrink-0">
             {email ? email.charAt(0).toUpperCase() : 'A'}
           </div>
-          <div className="overflow-hidden">
+          <div className="hidden md:block overflow-hidden">
             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Logged In</p>
             <p className="text-xs text-slate-300 font-semibold truncate">{email || 'admin@drbloomedi.com'}</p>
           </div>
@@ -213,7 +221,7 @@ export default function AdminLayout({
   );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-100 font-sans antialiased overflow-x-hidden">
+    <div className="h-screen min-h-0 flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 lg:w-72 bg-slate-900 text-slate-300 flex-col justify-between shrink-0 z-20 border-r border-slate-800 h-screen sticky top-0">
         {sidebarContent}
@@ -226,14 +234,14 @@ export default function AdminLayout({
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           ></div>
-          <aside className="relative w-72 max-w-full bg-slate-900 text-slate-300 flex flex-col justify-between z-10 h-full border-r border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200">
+          <aside className="relative w-20 max-w-full bg-slate-900 text-slate-300 flex flex-col justify-between z-10 h-full border-r border-slate-800 shadow-2xl animate-in slide-in-from-left duration-200">
             {sidebarContent}
           </aside>
         </div>
       )}
 
       {/* Main Workspace with Fluid Responsive Scaling */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden w-full">
         <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center gap-3">
             {/* Mobile Hamburger Menu Toggle */}
@@ -261,7 +269,7 @@ export default function AdminLayout({
         </header>
 
         {/* Fluid Container matching Mobile, Tablets, Laptops & Desktops */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
           {children}
         </main>
       </div>

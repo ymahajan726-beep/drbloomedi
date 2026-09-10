@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 interface Department {
   id: string;
@@ -11,6 +12,7 @@ interface Department {
 
 export default function EditDoctorPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const params = useParams();
   const doctorId = params?.id as string;
 
@@ -92,7 +94,7 @@ export default function EditDoctorPage() {
         throw new Error(errData.message || 'Failed to update doctor profile');
       }
 
-      alert('Doctor profile updated successfully!');
+      showToast('Doctor profile updated successfully!', 'success');
       router.push('/admin/doctors');
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong while updating');

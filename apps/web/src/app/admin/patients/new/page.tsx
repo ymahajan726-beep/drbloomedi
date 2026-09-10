@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+const INDIAN_MOBILE_REGEX = /^[6-9]\d{9}$/;
+
 export default function NewPatientPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -26,6 +28,13 @@ export default function NewPatientPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    const cleanPhone = form.phone.trim();
+    if (!INDIAN_MOBILE_REGEX.test(cleanPhone)) {
+      setErrorMsg('Please enter a valid 10-digit Indian mobile number starting with 6-9.');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -34,6 +43,7 @@ export default function NewPatientPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          phone: cleanPhone,
           age: Number(form.age),
         }),
       });
@@ -132,10 +142,13 @@ export default function NewPatientPage() {
               <input
                 type="tel"
                 required
+                inputMode="numeric"
+                pattern="[6-9][0-9]{9}"
+                maxLength={10}
                 autoComplete="off"
-                placeholder="+91 9823456789"
+                placeholder="9876543210"
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '') })}
                 className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
               />
             </div>

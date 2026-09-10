@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 const BACKEND_URL = 'https://drbloomedi-backend.onrender.com';
+const INDIAN_MOBILE_REGEX = /^[6-9]\d{9}$/;
 
 export default function PatientPortalPage() {
   const [phoneInput, setPhoneInput] = useState('');
@@ -25,8 +26,6 @@ export default function PatientPortalPage() {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('Male');
   const [bloodGroup, setBloodGroup] = useState('O+');
-  const [address, setAddress] = useState('');
-  const [newRegDoctorId, setNewRegDoctorId] = useState('');
   const [newRegDate, setNewRegDate] = useState('');
   const [newRegSlot, setNewRegSlot] = useState('10:00 AM');
   const [registering, setRegistering] = useState(false);
@@ -34,7 +33,6 @@ export default function PatientPortalPage() {
   // Existing Patient Booking Form State
   const [existingDoctorId, setExistingDoctorId] = useState('');
   const [existingDate, setExistingDate] = useState('');
-  const [existingSlot, setExistingSlot] = useState('10:00 AM');
   const [bookingExisting, setBookingExisting] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'rx' | 'lab' | 'bills' | 'book'>('overview');
@@ -47,7 +45,6 @@ export default function PatientPortalPage() {
     const saved = localStorage.getItem('drbloo_active_patient');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
         setPatient(parsed);
         setPortalMode('dossier');
         loadDossier(parsed.id);
@@ -75,8 +72,7 @@ export default function PatientPortalPage() {
     e.preventDefault();
     const cleanPhone = phoneInput.trim();
 
-    const mobileRegex = /^[6-9]\d{9}$/;
-    if (!mobileRegex.test(cleanPhone)) {
+    if (!INDIAN_MOBILE_REGEX.test(cleanPhone)) {
       setVerifyError('Please enter a valid 10-digit Indian mobile number starting with 6-9.');
       return;
     }
@@ -143,20 +139,27 @@ export default function PatientPortalPage() {
 
   const handleRegisterAndBook = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !phoneInput || !newRegDoctorId || !newRegDate) {
+    const cleanPhone = phoneInput.trim();
+    if (!INDIAN_MOBILE_REGEX.test(cleanPhone)) {
+      setVerifyError('Please enter a valid 10-digit Indian mobile number starting with 6-9.');
+      return;
+    }
+
+    if (!fullName || !newRegDoctorId || !newRegDate) {
       showToast('⚠️ Please fill all required fields');
       return;
     }
 
     try {
       setRegistering(true);
+      setVerifyError('');
       const res = await fetch(`${BACKEND_URL}/patient-portal/auth/register-and-book`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName,
-          email: email.trim() || `${phoneInput.trim()}@patient.drbloomedi.com`,
-          phone: phoneInput.trim(),
+          email: email.trim() || `${cleanPhone}@patient.drbloomedi.com`,
+          phone: cleanPhone,
           age: Number(age) || 25,
           gender,
           bloodGroup,
@@ -286,6 +289,8 @@ export default function PatientPortalPage() {
                   <input
                     type="tel"
                     maxLength={10}
+                    inputMode="numeric"
+                    pattern="[6-9][0-9]{9}"
                     required
                     placeholder="e.g. 9876543210"
                     value={phoneInput}
@@ -332,6 +337,12 @@ export default function PatientPortalPage() {
                 Cancel
               </button>
             </div>
+
+            {verifyError && (
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-2xl font-semibold flex items-center gap-2 animate-shake">
+                <span>⚠️</span> {verifyError}
+              </div>
+            )}
 
             <form onSubmit={handleRegisterAndBook} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">

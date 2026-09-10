@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -8,10 +8,31 @@ interface ToastContextType {
   showToast: (message: string, type?: ToastType) => void;
 }
 
+const PENDING_TOAST_KEY = 'drbloomedi-pending-toast';
+
+export function queueToast(message: string, type: ToastType = 'success') {
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(PENDING_TOAST_KEY, JSON.stringify({ message, type }));
+  }
+}
+
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  useEffect(() => {
+    const pendingToast = sessionStorage.getItem(PENDING_TOAST_KEY);
+    if (!pendingToast) return;
+
+    sessionStorage.removeItem(PENDING_TOAST_KEY);
+    try {
+      const parsed = JSON.parse(pendingToast);
+      if (parsed?.message) setToast(parsed);
+    } catch {
+      sessionStorage.removeItem(PENDING_TOAST_KEY);
+    }
+  }, []);
 
   const showToast = (message: string, type: ToastType = 'success') => {
     setToast({ message, type });

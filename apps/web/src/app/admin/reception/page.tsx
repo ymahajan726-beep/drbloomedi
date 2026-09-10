@@ -1,9 +1,11 @@
 ﻿'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/components/Toast';
 import { io, Socket } from 'socket.io-client';
 
 export default function ReceptionPortalPage() {
+  const { showToast } = useToast();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,7 @@ export default function ReceptionPortalPage() {
   const handleWalkInBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!patientName || !patientPhone || !doctorId) {
-      alert('Please fill all mandatory fields');
+      showToast('Please fill all mandatory fields', 'error');
       return;
     }
 
@@ -116,7 +118,7 @@ export default function ReceptionPortalPage() {
       setPatientAge('');
       setDoctorId('');
     } catch (err: any) {
-      alert(`Booking Error: ${err.message}`);
+      showToast(`Booking Error: ${err.message}`, 'error');
     } finally {
       setBooking(false);
     }

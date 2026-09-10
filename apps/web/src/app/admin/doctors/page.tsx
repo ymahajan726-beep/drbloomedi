@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/components/Toast';
 
 interface MedicineItem {
   name: string;
@@ -10,6 +11,7 @@ interface MedicineItem {
 }
 
 export default function DoctorPortalPage() {
+  const { showToast } = useToast();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [selectedApt, setSelectedApt] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +74,7 @@ export default function DoctorPortalPage() {
   // 1. Trigger AI Prescription Assistant
   const handleAiSuggestPrescription = async () => {
     if (!diagnosis.trim() && !symptoms.trim()) {
-      alert('Please enter clinical diagnosis or patient symptoms first.');
+      showToast('Please enter clinical diagnosis or patient symptoms first.', 'error');
       return;
     }
 
@@ -88,7 +90,7 @@ export default function DoctorPortalPage() {
       const data = await res.json();
       setAiSuggestions(data);
     } catch (err: any) {
-      alert(`AI Assistant Error: ${err.message}`);
+      showToast(`AI Assistant Error: ${err.message}`, 'error');
     } finally {
       setAiLoading(false);
     }
@@ -160,17 +162,17 @@ export default function DoctorPortalPage() {
   const handleSubmitPrescription = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedApt || !selectedApt.patient) {
-      alert('No patient selected');
+      showToast('No patient selected', 'error');
       return;
     }
     if (!diagnosis.trim()) {
-      alert('Please provide a clinical diagnosis');
+      showToast('Please provide a clinical diagnosis', 'error');
       return;
     }
 
     const validMeds = medicines.filter((m) => m.name.trim() !== '');
     if (validMeds.length === 0) {
-      alert('Please add at least one prescribed medicine');
+      showToast('Please add at least one prescribed medicine', 'error');
       return;
     }
 
@@ -202,10 +204,10 @@ export default function DoctorPortalPage() {
         advice,
       });
 
-      alert('Prescription Saved Successfully!');
+      showToast('Prescription saved successfully!', 'success');
       loadAppointments();
     } catch (err: any) {
-      alert(`Submission Error: ${err.message}`);
+      showToast(`Submission Error: ${err.message}`, 'error');
     } finally {
       setSubmittingRx(false);
     }

@@ -24,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" data-theme="light">
-      <body className="antialiased min-h-full flex flex-col overflow-x-hidden">
+      <body className="antialiased min-h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden">
         <ThemeProvider>
           <div className="flex-1 flex flex-col w-full max-w-full overflow-x-hidden">
             {children}

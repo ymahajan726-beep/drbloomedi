@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/components/Toast';
 
 interface Patient {
   id: string;
@@ -36,6 +37,7 @@ interface IpdAdmission {
 }
 
 export default function IpdManagementPage() {
+  const { showToast } = useToast();
   const [beds, setBeds] = useState<Bed[]>([]);
   const [admissions, setAdmissions] = useState<IpdAdmission[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -134,8 +136,9 @@ export default function IpdManagementPage() {
       setNewBedNumber('');
       setNewDailyRate('500');
       loadIpdData();
+      showToast('Bed created successfully!', 'success');
     } catch (err: any) {
-      alert(err.message || 'Error adding bed');
+      showToast(err.message || 'Error adding bed', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -145,7 +148,7 @@ export default function IpdManagementPage() {
   const handleAdmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!admitPatientId || !admitBedId) {
-      alert('Patient and Bed are mandatory');
+      showToast('Patient and Bed are mandatory', 'error');
       return;
     }
 
@@ -173,8 +176,9 @@ export default function IpdManagementPage() {
       setAdmitDoctorId('');
       setAdmitDiagnosis('');
       loadIpdData();
+      showToast('Patient admitted successfully!', 'success');
     } catch (err: any) {
-      alert(err.message || 'Error admitting patient');
+      showToast(err.message || 'Error admitting patient', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -203,8 +207,9 @@ export default function IpdManagementPage() {
       setDischargeTarget(null);
       setDischargeSummaryText('');
       loadIpdData();
+      showToast('Patient discharged successfully!', 'success');
     } catch (err: any) {
-      alert(err.message || 'Discharge failed');
+      showToast(err.message || 'Discharge failed', 'error');
     } finally {
       setActionLoading(false);
     }

@@ -164,7 +164,7 @@ export default function DoctorDashboard() {
               localStorage.removeItem('doctor_token');
               localStorage.removeItem('doctor_role');
               localStorage.removeItem('doctor_email');
-              window.location.href = '/login';
+              performLogout('Logged out successfully.');
             }}
             className="px-3.5 py-2 text-xs text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl font-bold transition"
           >

@@ -2,10 +2,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { queueToast, useToast } from "@/components/Toast";
 
 const BACKEND_URL = "https://drbloomedi-backend.onrender.com";
 
 export default function LoginPage() {
+  const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -71,14 +73,18 @@ export default function LoginPage() {
 
       // 4. Precise Workspace Routing
       if (userRole === "DOCTOR") {
+        queueToast("Login successful. Opening Doctor Panel.", "success");
         window.location.href = "/doctor/dashboard";
       } else if (userRole === "RECEPTION" || userRole === "RECEPTIONIST") {
+        queueToast("Login successful. Opening Reception Desk.", "success");
         window.location.href = "/reception/dashboard";
       } else {
+        queueToast("Login successful. Opening Admin Dashboard.", "success");
         window.location.href = "/admin/dashboard";
       }
     } catch (err: any) {
       setError(err.message || "Unable to authenticate.");
+      showToast(err.message || "Unable to authenticate.", "error");
     } finally {
       setLoading(false);
     }

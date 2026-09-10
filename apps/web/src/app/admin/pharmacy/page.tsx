@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/components/Toast';
 
 interface Medicine {
   id: string;
@@ -20,6 +21,7 @@ interface CartItem {
 }
 
 export default function PharmacyPage() {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'counter' | 'inventory' | 'add'>('counter');
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
@@ -73,7 +75,7 @@ export default function PharmacyPage() {
   // Add Item to Multi-Medicine Cart
   const handleAddToCart = () => {
     if (!selectedMedId) {
-      alert('Please select a medicine');
+      showToast('Please select a medicine', 'error');
       return;
     }
     const med = medicines.find((m) => m.id === selectedMedId);
@@ -81,12 +83,12 @@ export default function PharmacyPage() {
 
     const qty = parseInt(selectedQty, 10) || 1;
     if (qty <= 0) {
-      alert('Quantity must be greater than 0');
+      showToast('Quantity must be greater than 0', 'error');
       return;
     }
 
     if (qty > med.stockQuantity) {
-      alert(`Only ${med.stockQuantity} units available in stock`);
+      showToast(`Only ${med.stockQuantity} units available in stock`, 'error');
       return;
     }
 
@@ -95,7 +97,7 @@ export default function PharmacyPage() {
       const updatedCart = [...cart];
       const newQty = updatedCart[existingIndex].quantity + qty;
       if (newQty > med.stockQuantity) {
-        alert(`Cannot add more. Maximum available stock is ${med.stockQuantity}`);
+        showToast(`Cannot add more. Maximum available stock is ${med.stockQuantity}`, 'error');
         return;
       }
       updatedCart[existingIndex].quantity = newQty;
@@ -116,11 +118,11 @@ export default function PharmacyPage() {
   // Process Dispense & Generate Bill
   const handleProcessSale = async () => {
     if (!selectedPatientId) {
-      alert('Please select a patient for pharmacy billing');
+      showToast('Please select a patient for pharmacy billing', 'error');
       return;
     }
     if (cart.length === 0) {
-      alert('Please add at least one medicine to the cart');
+      showToast('Please add at least one medicine to the cart', 'error');
       return;
     }
 
@@ -152,7 +154,7 @@ export default function PharmacyPage() {
       setSelectedPatientId('');
       await loadPharmacyData();
     } catch (err: any) {
-      alert(`Sales Dispense Error: ${err.message}`);
+      showToast(`Sales Dispense Error: ${err.message}`, 'error');
     } finally {
       setDispensing(false);
     }
@@ -176,7 +178,7 @@ export default function PharmacyPage() {
       });
 
       if (!res.ok) throw new Error('Failed to save medicine');
-      alert('Medicine Stock Added Successfully!');
+      showToast('Medicine stock added successfully!', 'success');
 
       setName('');
       setGenericName('');
@@ -189,7 +191,7 @@ export default function PharmacyPage() {
       await loadPharmacyData();
       setActiveTab('counter');
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      showToast(`Error: ${err.message}`, 'error');
     }
   };
 

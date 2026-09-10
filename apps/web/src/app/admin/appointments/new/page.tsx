@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 interface Patient {
   id: string;
@@ -21,6 +22,7 @@ interface Doctor {
 
 export default function NewAppointmentPage() {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -113,7 +115,7 @@ export default function NewAppointmentPage() {
         throw new Error(errJson.message || 'Failed to schedule appointment');
       }
 
-      alert('Appointment booked successfully!');
+      showToast('Appointment booked successfully!', 'success');
       router.push('/reception/dashboard');
     } catch (err: any) {
       setErrorMsg(err.message || 'Error occurred while scheduling appointment');

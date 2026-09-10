@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/components/Toast';
 
 interface UserAccount {
   id: string;
@@ -28,6 +29,7 @@ const AVAILABLE_PERMISSIONS = [
 ];
 
 export default function RolesManagementPage() {
+  const { showToast } = useToast();
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [matrix, setMatrix] = useState<RoleDefinition[]>([]);
   const [search, setSearch] = useState('');
@@ -112,7 +114,7 @@ export default function RolesManagementPage() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail || !newPassword) {
-      alert('Email and Password are required');
+      showToast('Email and Password are required', 'error');
       return;
     }
 
@@ -134,14 +136,14 @@ export default function RolesManagementPage() {
         throw new Error(err?.message || 'Failed to create user');
       }
 
-      alert('Staff user registered successfully!');
+      showToast('Staff user registered successfully!', 'success');
       setIsModalOpen(false);
       setNewEmail('');
       setNewPassword('');
       setSelectedPermissions(['OPD_MANAGE', 'BILLING_MANAGE']);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Error creating user');
+      showToast(err.message || 'Error creating user', 'error');
     } finally {
       setSubmitting(false);
     }

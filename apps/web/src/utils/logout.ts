@@ -1,4 +1,7 @@
-export const performLogout = () => {
+import { queueToast } from '@/components/Toast';
+
+export const performLogout = (message = 'Logged out successfully.') => {
+  queueToast(message, 'success');
   // 1. सभी पाथ्स के लिए कुकीज़ को 1970 की एक्सपायरी डेट देकर तुरंत नष्ट करें
   const cookiesToClear = ['token', 'userRole', 'userEmail'];
   

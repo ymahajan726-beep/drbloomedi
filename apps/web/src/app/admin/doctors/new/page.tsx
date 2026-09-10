@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 interface Department {
   id: string;
@@ -11,6 +12,7 @@ interface Department {
 
 export default function NewDoctorPage() {
   const router = useRouter();
+  const { showToast } = useToast();
 
   // Form Fields
   const [fullName, setFullName] = useState(''); // <-- Doctor Name State
@@ -61,7 +63,7 @@ export default function NewDoctorPage() {
         throw new Error(errData.message || 'Failed to create doctor profile');
       }
 
-      alert('Doctor added successfully!');
+      showToast('Doctor added successfully!', 'success');
       router.push('/admin/doctors');
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong');

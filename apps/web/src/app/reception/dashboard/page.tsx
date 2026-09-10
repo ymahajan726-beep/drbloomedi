@@ -4,11 +4,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { performLogout } from '@/utils/logout';
+import { useToast } from '@/components/Toast';
 
 const BACKEND_URL = 'https://drbloomedi-backend.onrender.com';
 
 export default function ReceptionDashboardPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -121,7 +123,7 @@ export default function ReceptionDashboardPage() {
   const handleWalkinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walkinForm.fullName || !walkinForm.phone) {
-      alert('Please enter patient name and phone number');
+      showToast('Please enter patient name and phone number', 'error');
       return;
     }
     setRegistering(true);
@@ -194,13 +196,14 @@ export default function ReceptionDashboardPage() {
       if (res.ok) {
         setWalkinForm({ fullName: '', phone: '', age: '', gender: 'Male', specialist: 'General Physician', slot: '10:00 AM', reason: 'General Checkup', patientId: '' });
         fetchAppointments();
+        showToast('Walk-in token issued successfully!', 'success');
       } else {
         const errData = await res.json().catch(() => ({}));
-        alert(errData.message || 'Failed to issue walk-in token.');
+        showToast(errData.message || 'Failed to issue walk-in token.', 'error');
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Network error while issuing token.');
+      showToast(err.message || 'Network error while issuing token.', 'error');
     } finally {
       setRegistering(false);
     }
@@ -335,7 +338,7 @@ export default function ReceptionDashboardPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => fetchAppointments()} className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition">🔄 Refresh</button>
-          <button onClick={() => { if (typeof performLogout === 'function') performLogout(); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-bold border border-rose-500/20 transition">Logout</button>
+          <button onClick={() => { if (typeof performLogout === 'function') performLogout('Logged out successfully.'); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-bold border border-rose-500/20 transition">Logout</button>
         </div>
       </div>
 
@@ -377,7 +380,7 @@ export default function ReceptionDashboardPage() {
                 placeholder="10-digit phone (auto-detects patient)"
                 value={walkinForm.phone}
                 onChange={e => handlePhoneChange(e.target.value)}
-                className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
                 required
               />
             </div>
@@ -389,7 +392,7 @@ export default function ReceptionDashboardPage() {
                 placeholder="e.g. Ramesh Kulkarni"
                 value={walkinForm.fullName}
                 onChange={e => setWalkinForm({ ...walkinForm, fullName: e.target.value })}
-                className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
                 required
               />
             </div>
@@ -402,7 +405,7 @@ export default function ReceptionDashboardPage() {
                   placeholder="35"
                   value={walkinForm.age}
                   onChange={e => setWalkinForm({ ...walkinForm, age: e.target.value })}
-                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
                 />
               </div>
               <div>
@@ -410,11 +413,11 @@ export default function ReceptionDashboardPage() {
                 <select
                   value={walkinForm.gender}
                   onChange={e => setWalkinForm({ ...walkinForm, gender: e.target.value })}
-                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
                 >
-                  <option value="Male" className="bg-slate-900">Male</option>
-                  <option value="Female" className="bg-slate-900">Female</option>
-                  <option value="Other" className="bg-slate-900">Other</option>
+                  <option value="Male" className="bg-white text-slate-900">Male</option>
+                  <option value="Female" className="bg-white text-slate-900">Female</option>
+                  <option value="Other" className="bg-white text-slate-900">Other</option>
                 </select>
               </div>
             </div>
@@ -424,12 +427,12 @@ export default function ReceptionDashboardPage() {
               <select
                 value={walkinForm.specialist}
                 onChange={e => setWalkinForm({ ...walkinForm, specialist: e.target.value })}
-                className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
               >
-                <option value="General Physician" className="bg-slate-900">General Physician</option>
-                <option value="Cardiologist" className="bg-slate-900">Cardiologist</option>
-                <option value="Orthopedic" className="bg-slate-900">Orthopedic</option>
-                <option value="Pediatrician" className="bg-slate-900">Pediatrician</option>
+                <option value="General Physician" className="bg-white text-slate-900">General Physician</option>
+                <option value="Cardiologist" className="bg-white text-slate-900">Cardiologist</option>
+                <option value="Orthopedic" className="bg-white text-slate-900">Orthopedic</option>
+                <option value="Pediatrician" className="bg-white text-slate-900">Pediatrician</option>
               </select>
             </div>
 
@@ -440,7 +443,7 @@ export default function ReceptionDashboardPage() {
                   type="text"
                   value={walkinForm.slot}
                   onChange={e => setWalkinForm({ ...walkinForm, slot: e.target.value })}
-                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
                 />
               </div>
               <div>
@@ -449,7 +452,7 @@ export default function ReceptionDashboardPage() {
                   type="text"
                   value={walkinForm.reason}
                   onChange={e => setWalkinForm({ ...walkinForm, reason: e.target.value })}
-                  className="w-full p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-white outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
                 />
               </div>
             </div>
@@ -473,7 +476,7 @@ export default function ReceptionDashboardPage() {
               placeholder="Search patient name, phone, token..." 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
-              className="w-full sm:w-72 p-3 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 outline-none focus:border-blue-500 transition" 
+              className="w-full sm:w-72 p-3 bg-white border border-slate-200 rounded-2xl text-xs text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
             />
           </div>
 

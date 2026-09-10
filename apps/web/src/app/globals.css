@@ -3,8 +3,8 @@
 
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 :root[data-theme="dark"] {
@@ -37,6 +37,14 @@ body {
   -ms-overflow-style: none;
 }
 
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100%;
+}
+
 /* ========================================================
    🚫 GLOBAL SCROLLBAR HIDING
    ======================================================== */
@@ -51,6 +59,7 @@ body::-webkit-scrollbar,
    📝 GLOBAL LIGHT FORM CONTROLS
    ======================================================== */
 
+
 @layer base {
   input,
   select,
@@ -63,6 +72,22 @@ body::-webkit-scrollbar,
     color: #64748b !important;
   }
 }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
 
 /* ========================================================
    📱 CUSTOM UTILITIES
