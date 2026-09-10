@@ -100,9 +100,10 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col md:flex-row transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col md:flex-row">
       
-      <aside className="w-full md:w-72 bg-white border-r border-slate-200 flex-col justify-between hidden md:flex sticky top-0 h-screen shadow-sm">
+      {/* Desktop Fixed Sidebar */}
+      <aside className="w-full md:w-72 bg-white border-r border-slate-200 flex flex-col justify-between hidden md:flex sticky top-0 h-screen shrink-0 shadow-sm">
         <div className="p-6 space-y-6">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
             <div className="bg-cyan-600 text-white p-2.5 rounded-2xl shadow-lg shadow-cyan-600/20">
@@ -141,7 +142,8 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
-      <main className="flex-1 p-4 md:p-10 space-y-8 overflow-y-auto">
+      {/* Main Content Area (No Redundant Boxes) */}
+      <main className="flex-1 p-4 md:p-10 space-y-8 min-w-0">
         
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
