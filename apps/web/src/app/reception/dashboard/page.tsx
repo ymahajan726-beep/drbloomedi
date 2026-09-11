@@ -38,7 +38,7 @@ export default function ReceptionDashboardPage() {
   const [tab, setTab] = useState('upi');
   const [customUpiId, setCustomUpiId] = useState('');
   const [paying, setPaying] = useState(false);
-  const [paymentStatusText, setPaymentStatusText] = useState('Securely Processing...');
+  const [paymentStatusText, setPaymentStatusText] = useState('Initializing Official Razorpay Gateway...');
   
   const [receipt, setReceipt] = useState<any | null>(null);
   const [paidMap, setPaidMap] = useState<Record<string, { isPaid: boolean; amount: number }>>({});
@@ -235,26 +235,51 @@ export default function ReceptionDashboardPage() {
   const finalizePayment = async (mode: string) => {
     if (!selectedApt) return;
     setPaying(true);
-    setPaymentStatusText('Initiating secure gateway connection...');
+    setPaymentStatusText('Connecting to Razorpay Secure Gateway...');
 
     const txnId = mode.includes('Cash') 
       ? `CASH-${Date.now().toString().slice(-6)}` 
       : `UPI-TXN-${Date.now().toString().slice(-6)}`;
 
     try {
-      if (!mode.includes('Cash')) {
-        setTimeout(() => setPaymentStatusText('Awaiting bank authorization...'), 1000);
-        setTimeout(() => setPaymentStatusText('Verifying cryptographic signature...'), 2000);
-      }
-
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const headers = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      if (mode.includes('Cash')) {
+        await fetch(`${BACKEND_URL}/payments/verify`, {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({
+            razorpay_order_id: `cash_ord_${Date.now()}`,
+            razorpay_payment_id: txnId,
+            razorpay_signature: 'cash_counter_verified',
+            appointmentId: selectedApt.id,
+            amount: bill.net,
+          }),
+        }).catch(() => {});
+
+        const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
+        setPaidMap(up);
+        try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
+
+        setReceipt({ 
+          patient: selectedApt.patient, 
+          appointmentNumber: selectedApt.appointmentNumber, 
+          bill: { ...bill }, 
+          txnId, 
+          mode: 'Cash Counter' 
+        });
+
+        setSelectedApt(null); 
+        setShowRazorpay(false); 
+        setPaying(false);
+        fetchAppointments();
+        return;
+      }
 
       // 1. Create Order from Backend using Live/Test keys setup
       const orderRes = await fetch(`${BACKEND_URL}/payments/create-order`, {
@@ -264,50 +289,93 @@ export default function ReceptionDashboardPage() {
         body: JSON.stringify({ billId: selectedApt.id, amount: bill.net })
       });
       const orderData = await orderRes.json();
-      const razorpayOrderId = orderData.orderId || `ord_${Date.now()}`;
 
-      // 2. Verify Payment on Backend
-      await fetch(`${BACKEND_URL}/payments/verify`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        signal: controller.signal,
-        body: JSON.stringify({
-          razorpay_order_id: razorpayOrderId,
-          razorpay_payment_id: txnId,
-          razorpay_signature: 'simulated_live_signature_verified',
-          appointmentId: selectedApt.id,
-          amount: bill.net,
-        }),
-      }).catch(() => {});
+      if (!orderData.success) {
+        throw new Error('Failed to create secure payment order');
+      }
 
-      clearTimeout(timeoutId);
+      // Load Razorpay Script Dynamically if not present
+      if (!(window as any).Razorpay) {
+        await new Promise((resolve) => {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = resolve;
+          document.body.appendChild(script);
+        });
+      }
 
-      const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
-      setPaidMap(up);
-      try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
+      // 2. Official Razorpay Checkout SDK Options Configuration
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'DrBlooMedi Hospital',
+        description: `Consultation & Services - Token ${selectedApt.appointmentNumber}`,
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          setPaymentStatusText('Verifying cryptographic signature...');
+          
+          try {
+            const verifyRes = await fetch(`${BACKEND_URL}/payments/verify`, {
+              method: 'POST',
+              headers,
+              credentials: 'include',
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                appointmentId: selectedApt.id,
+                amount: bill.net,
+              }),
+            });
+            
+            const verifyData = await verifyRes.json();
+            if (verifyData.success || verifyRes.ok) {
+              const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
+              setPaidMap(up);
+              try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
 
-      setReceipt({ 
-        patient: selectedApt.patient, 
-        appointmentNumber: selectedApt.appointmentNumber, 
-        bill: { ...bill }, 
-        txnId, 
-        mode: mode.includes('Cash') ? 'Cash Counter' : 'Razorpay Secure Online Gateway' 
+              setReceipt({ 
+                patient: selectedApt.patient, 
+                appointmentNumber: selectedApt.appointmentNumber, 
+                bill: { ...bill }, 
+                txnId: response.razorpay_payment_id, 
+                mode: 'Razorpay Secure Online Gateway' 
+              });
+
+              setSelectedApt(null); 
+              setShowRazorpay(false); 
+              fetchAppointments();
+            } else {
+              showToast('Payment verification failed on server!', 'error');
+            }
+          } catch (e) {
+            showToast('Error connecting during verification', 'error');
+          } finally {
+            setPaying(false);
+          }
+        },
+        prefill: {
+          name: selectedApt.patient?.fullName || 'Patient',
+          contact: selectedApt.patient?.phone || '',
+        },
+        theme: {
+          color: '#2563eb',
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        showToast(`Payment failed: ${response.error.description}`, 'error');
+        setPaying(false);
       });
+      rzp.open();
+      setPaying(false);
 
-      setSelectedApt(null); 
-      setShowRazorpay(false); 
-      setPaying(false);
-      fetchAppointments();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
-      setPaidMap(up);
-      setReceipt({ patient: selectedApt.patient, appointmentNumber: selectedApt.appointmentNumber, bill: { ...bill }, txnId, mode: 'Razorpay Secure Online Gateway' });
-      setSelectedApt(null); 
-      setShowRazorpay(false); 
       setPaying(false);
-      fetchAppointments();
+      showToast(err.message || 'Could not initialize online payment gateway.', 'error');
     }
   };
 
@@ -326,7 +394,7 @@ export default function ReceptionDashboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 font-sans text-slate-900 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/50 font-sans text-slate-900 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden">
       
       {/* Background Glow Accents */}
       <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none"></div>
@@ -340,37 +408,37 @@ export default function ReceptionDashboardPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200/80 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Reception & Discharge Terminal</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Reception & Discharge Terminal</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 mt-1">Live Counter & Billing Queue</h1>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => fetchAppointments()} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 transition">🔄 Refresh</button>
-          <button onClick={() => { if (typeof performLogout === 'function') performLogout('Logged out successfully.'); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-bold border border-rose-500/20 transition">Logout</button>
+          <button onClick={() => fetchAppointments()} className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300/60 transition shadow-xs">🔄 Refresh</button>
+          <button onClick={() => { if (typeof performLogout === 'function') performLogout('Logged out successfully.'); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 transition shadow-xs">Logout</button>
         </div>
       </div>
 
       {/* Analytics KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-slate-200/80 shadow-sm">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Patients</p>
           <p className="text-2xl font-black text-slate-900 mt-1">{analytics.total}</p>
         </div>
-        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Total Revenue</p>
-          <p className="text-2xl font-black text-emerald-400 mt-1">₹{analytics.rev}</p>
+        <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-slate-200/80 shadow-sm">
+          <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total Revenue</p>
+          <p className="text-2xl font-black text-emerald-600 mt-1">₹{analytics.rev}</p>
         </div>
-        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Discharged</p>
-          <p className="text-2xl font-black text-blue-400 mt-1">{analytics.discharged}</p>
+        <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-slate-200/80 shadow-sm">
+          <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Discharged</p>
+          <p className="text-2xl font-black text-blue-600 mt-1">{analytics.discharged}</p>
         </div>
-        <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Pending Settlement</p>
-          <p className="text-2xl font-black text-amber-400 mt-1">{analytics.pending}</p>
+        <div className="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-slate-200/80 shadow-sm">
+          <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Pending Settlement</p>
+          <p className="text-2xl font-black text-amber-600 mt-1">{analytics.pending}</p>
         </div>
       </div>
 
@@ -378,54 +446,54 @@ export default function ReceptionDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left: Walk-in Patient Token Issue Form */}
-        <div className="lg:col-span-4 bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
-          <div className="border-b border-slate-200 pb-3">
+        <div className="lg:col-span-4 bg-white/90 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 shadow-xl space-y-4">
+          <div className="border-b border-slate-100 pb-3">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Walk-in Patient Token Issue</h2>
             <p className="text-[11px] text-slate-400 mt-0.5">Instant counter registration & queue assignment</p>
           </div>
 
           <form onSubmit={handleWalkinSubmit} className="space-y-3.5 text-xs">
             <div>
-              <label className="block text-slate-600 font-bold mb-1">Mobile Number *</label>
+              <label className="block text-slate-700 font-bold mb-1">Mobile Number *</label>
               <input
                 type="text"
                 placeholder="10-digit phone (auto-detects patient)"
                 value={walkinForm.phone}
                 onChange={e => handlePhoneChange(e.target.value)}
-                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white transition"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-slate-600 font-bold mb-1">Patient Name *</label>
+              <label className="block text-slate-700 font-bold mb-1">Patient Name *</label>
               <input
                 type="text"
                 placeholder="e.g. Ramesh Kulkarni"
                 value={walkinForm.fullName}
                 onChange={e => setWalkinForm({ ...walkinForm, fullName: e.target.value })}
-                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white transition"
                 required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-600 font-bold mb-1">Age</label>
+                <label className="block text-slate-700 font-bold mb-1">Age</label>
                 <input
                   type="number"
                   placeholder="35"
                   value={walkinForm.age}
                   onChange={e => setWalkinForm({ ...walkinForm, age: e.target.value })}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white transition"
                 />
               </div>
               <div>
-                <label className="block text-slate-600 font-bold mb-1">Gender</label>
+                <label className="block text-slate-700 font-bold mb-1">Gender</label>
                 <select
                   value={walkinForm.gender}
                   onChange={e => setWalkinForm({ ...walkinForm, gender: e.target.value })}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
                 >
                   <option value="Male" className="bg-white text-slate-900">Male</option>
                   <option value="Female" className="bg-white text-slate-900">Female</option>
@@ -435,11 +503,11 @@ export default function ReceptionDashboardPage() {
             </div>
 
             <div>
-              <label className="block text-slate-600 font-bold mb-1">Assign Specialist</label>
+              <label className="block text-slate-700 font-bold mb-1">Assign Specialist</label>
               <select
                 value={walkinForm.specialist}
                 onChange={e => setWalkinForm({ ...walkinForm, specialist: e.target.value })}
-                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
               >
                 <option value="General Physician" className="bg-white text-slate-900">General Physician</option>
                 <option value="Cardiologist" className="bg-white text-slate-900">Cardiologist</option>
@@ -450,21 +518,21 @@ export default function ReceptionDashboardPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-600 font-bold mb-1">Time Slot</label>
+                <label className="block text-slate-700 font-bold mb-1">Time Slot</label>
                 <input
                   type="text"
                   value={walkinForm.slot}
                   onChange={e => setWalkinForm({ ...walkinForm, slot: e.target.value })}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
                 />
               </div>
               <div>
-                <label className="block text-slate-600 font-bold mb-1">Consult Reason</label>
+                <label className="block text-slate-700 font-bold mb-1">Consult Reason</label>
                 <input
                   type="text"
                   value={walkinForm.reason}
                   onChange={e => setWalkinForm({ ...walkinForm, reason: e.target.value })}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition"
                 />
               </div>
             </div>
@@ -472,7 +540,7 @@ export default function ReceptionDashboardPage() {
             <button
               type="submit"
               disabled={registering}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-600/30 transition mt-2 disabled:opacity-50"
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition mt-2 disabled:opacity-50 cursor-pointer"
             >
               {registering ? 'Issuing Token...' : '⚡ Generate Token & Assign Queue'}
             </button>
@@ -480,7 +548,7 @@ export default function ReceptionDashboardPage() {
         </div>
 
         {/* Right: Live Queue Table Container */}
-        <div className="lg:col-span-8 bg-white backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-xl space-y-4">
+        <div className="lg:col-span-8 bg-white/90 backdrop-blur-xl p-6 rounded-3xl border border-slate-200/80 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">OPD & Consultation Queue</h2>
             <input 
@@ -488,7 +556,7 @@ export default function ReceptionDashboardPage() {
               placeholder="Search patient name, phone, token..." 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
-              className="w-full sm:w-72 p-3 bg-white border border-slate-200 rounded-2xl text-xs text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500 transition"
+              className="w-full sm:w-72 p-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-xs text-slate-900 placeholder-slate-400 outline-none focus:border-blue-500 focus:bg-white transition"
             />
           </div>
 
@@ -496,42 +564,42 @@ export default function ReceptionDashboardPage() {
             <table className="w-full text-left text-xs min-w-[600px]">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
-                  <th className="py-3">Token</th>
-                  <th className="py-3">Patient Name</th>
-                  <th className="py-3">Mobile No</th>
-                  <th className="py-3">Slot</th>
-                  <th className="py-3 text-center">Status</th>
-                  <th className="py-3 text-right">Billing Action</th>
+                  <th className="py-3 px-2">Token</th>
+                  <th className="py-3 px-2">Patient Name</th>
+                  <th className="py-3 px-2">Mobile No</th>
+                  <th className="py-3 px-2">Slot</th>
+                  <th className="py-3 px-2 text-center">Status</th>
+                  <th className="py-3 px-2 text-right">Billing Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-medium">
+              <tbody className="divide-y divide-slate-100 font-medium">
                 {loading ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-slate-500 font-mono">Synchronizing live queue...</td></tr>
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-400 font-mono">Synchronizing live queue...</td></tr>
                 ) : list.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">No active appointments found.</td></tr>
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-400">No active appointments found.</td></tr>
                 ) : (
                   list.map(a => {
                     const paid = paidMap[a.id]?.isPaid || a.isPaid || a.paymentStatus === 'PAID';
                     return (
-                      <tr key={a.id} className="hover:bg-slate-100 transition">
-                        <td className="py-3.5 font-mono font-bold text-blue-400">{a.appointmentNumber || 'APT'}</td>
-                        <td className="py-3.5 font-bold text-slate-900">{a.patient?.fullName || 'Walk-in'}</td>
-                        <td className="py-3.5 text-slate-400 font-mono">{a.patient?.phone || 'N/A'}</td>
-                        <td className="py-3.5 text-slate-600">{a.timeSlot || '10:00 AM'}</td>
-                        <td className="py-3.5 text-center">
-                          <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      <tr key={a.id} className="hover:bg-slate-50 transition">
+                        <td className="py-3.5 px-2 font-mono font-bold text-blue-600">{a.appointmentNumber || 'APT'}</td>
+                        <td className="py-3.5 px-2 font-bold text-slate-900">{a.patient?.fullName || 'Walk-in'}</td>
+                        <td className="py-3.5 px-2 text-slate-500 font-mono">{a.patient?.phone || 'N/A'}</td>
+                        <td className="py-3.5 px-2 text-slate-600">{a.timeSlot || '10:00 AM'}</td>
+                        <td className="py-3.5 px-2 text-center">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200">
                             {a.status || 'Scheduled'}
                           </span>
                         </td>
-                        <td className="py-3.5 text-right">
+                        <td className="py-3.5 px-2 text-right">
                           {paid ? (
-                            <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-xl text-[10px] font-black border border-emerald-500/20">
+                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black border border-emerald-200">
                               ✓ Settled
                             </span>
                           ) : (
                             <button 
                               onClick={() => openBilling(a)} 
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-bold shadow-md transition active:scale-95"
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer"
                             >
                               💳 Settle Bill
                             </button>
@@ -550,90 +618,90 @@ export default function ReceptionDashboardPage() {
 
       {/* SLIDE-OVER BILLING SIDEBAR */}
       {selectedApt && (
-        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-xs z-50 flex justify-end transition-all">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end transition-all">
           <div className="bg-white border-l border-slate-200 w-full max-w-md h-full p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300">
             
             <div className="space-y-6">
-              <div className="flex justify-between items-start border-b border-slate-200 pb-4">
+              <div className="flex justify-between items-start border-b border-slate-100 pb-4">
                 <div>
-                  <span className="text-[10px] font-black px-2.5 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full uppercase">
+                  <span className="text-[10px] font-black px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-full uppercase">
                     Discharge & Billing Sidebar
                   </span>
                   <h3 className="text-lg font-black text-slate-900 mt-2">{selectedApt.patient?.fullName}</h3>
                   <p className="text-xs text-slate-500 font-medium">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
                 </div>
-                <button onClick={() => setSelectedApt(null)} aria-label="Close billing drawer" className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center font-bold transition-colors">✕</button>
+                <button onClick={() => setSelectedApt(null)} aria-label="Close billing drawer" className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center font-bold transition-colors cursor-pointer">✕</button>
               </div>
 
               {/* Bill Item Breakdown */}
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 border border-slate-200/80 rounded-2xl shadow-xs">
                   <span className="text-slate-700 font-medium">Consultation Fee</span>
                   <div className="relative w-24 shrink-0">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
-                    <input type="number" value={bill.consult} onChange={e => updateBill('consult', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                    <input type="number" value={bill.consult} onChange={e => updateBill('consult', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white border border-slate-200 rounded-xl font-semibold text-right text-slate-800 outline-none focus:border-blue-500" />
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 border border-slate-200/80 rounded-2xl shadow-xs">
                   <div>
                     <span className="text-slate-700 block font-medium">Pathology / Lab Tests</span>
-                    {bill.testNames.length > 0 && <span className="text-[10px] text-slate-500">{bill.testNames.join(', ')}</span>}
+                    {bill.testNames.length > 0 && <span className="text-[10px] text-slate-400">{bill.testNames.join(', ')}</span>}
                   </div>
                   <div className="relative w-24 shrink-0">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
-                    <input type="number" value={bill.lab} onChange={e => updateBill('lab', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                    <input type="number" value={bill.lab} onChange={e => updateBill('lab', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white border border-slate-200 rounded-xl font-semibold text-right text-slate-800 outline-none focus:border-blue-500" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 border border-slate-200/80 rounded-2xl shadow-xs">
                   <span className="text-slate-700 font-medium">Procedures & Treatment</span>
                   <div className="relative w-24 shrink-0">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
-                    <input type="number" value={bill.treatment || ''} placeholder="0" onChange={e => updateBill('treatment', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                    <input type="number" value={bill.treatment || ''} placeholder="0" onChange={e => updateBill('treatment', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white border border-slate-200 rounded-xl font-semibold text-right text-slate-800 outline-none focus:border-blue-500" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 border border-slate-200/80 rounded-2xl shadow-xs">
                   <span className="text-slate-700 font-medium">Pharmacy Medicines</span>
                   <div className="relative w-24 shrink-0">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
-                    <input type="number" value={bill.pharma || ''} placeholder="0" onChange={e => updateBill('pharma', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                    <input type="number" value={bill.pharma || ''} placeholder="0" onChange={e => updateBill('pharma', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white border border-slate-200 rounded-xl font-semibold text-right text-slate-800 outline-none focus:border-blue-500" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-all">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 border border-slate-200/80 rounded-2xl shadow-xs">
                   <span className="text-slate-700 font-medium">Discount / Concession</span>
                   <div className="relative w-24 shrink-0">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 font-medium">₹</span>
-                    <input type="number" value={bill.discount || ''} placeholder="0" onChange={e => updateBill('discount', Number(e.target.value))} className="w-full p-2 pl-6 bg-white border border-slate-200 rounded-lg font-semibold text-right text-slate-800 placeholder-slate-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
+                    <input type="number" value={bill.discount || ''} placeholder="0" onChange={e => updateBill('discount', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white border border-slate-200 rounded-xl font-semibold text-right text-slate-800 outline-none focus:border-blue-500" />
                   </div>
                 </div>
               </div>
 
               {/* Net Payable Banner */}
-              <div className="p-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-xl shadow-sm flex justify-between items-center">
+              <div className="p-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl shadow-sm flex justify-between items-center">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">Net Payable Amount</span>
-                <span className="text-emerald-400 font-bold text-2xl font-mono">₹{bill.net}.00</span>
+                <span className="text-emerald-400 font-black text-2xl font-mono">₹{bill.net}.00</span>
               </div>
             </div>
 
             {/* Payment Settlement Buttons */}
-            <div className="space-y-3 pt-6 border-t border-slate-200">
+            <div className="space-y-3 pt-6 border-t border-slate-100">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Select Payment Settlement Mode</p>
               
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   disabled={paying} 
-                  onClick={() => setShowRazorpay(true)} 
-                  className="py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs shadow-sm transition disabled:opacity-50"
+                  onClick={() => finalizePayment('Razorpay Online')} 
+                  className="py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-xs shadow-md shadow-blue-600/20 transition disabled:opacity-50 cursor-pointer"
                 >
                   ⚡ Razorpay Online
                 </button>
                 <button 
                   disabled={paying} 
                   onClick={() => finalizePayment('Cash Counter')} 
-                  className="py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium rounded-xl text-xs transition disabled:opacity-50"
+                  className="py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-2xl text-xs transition disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   💵 Cash Counter
                 </button>
@@ -644,155 +712,30 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* CENTRALIZED SECURE GATEWAY POPUP MODAL (CENTER OF SCREEN) */}
-      {showRazorpay && selectedApt && (
-        <div className="fixed inset-0 bg-slate-50 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-blue-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
-            
-            {/* Modal Header */}
-            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-              <div>
-                <span className="text-[10px] font-black px-2.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full uppercase">
-                  Razorpay Secure Gateway
-                </span>
-                <h3 className="text-base font-black text-slate-900 mt-1.5">{selectedApt.patient?.fullName}</h3>
-                <p className="text-[11px] text-slate-400 font-mono">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
-              </div>
-              <button onClick={() => setShowRazorpay(false)} className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-900 flex items-center justify-center font-bold">✕</button>
-            </div>
-
-            {/* Clear Bill Summary */}
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>Consultation & Services:</span>
-                <span className="font-mono font-bold">₹{bill.net}.00</span>
-              </div>
-              <div className="border-t border-slate-200/80 pt-2 flex justify-between items-center">
-                <span className="text-slate-400 font-bold uppercase text-[10px]">Total Payable</span>
-                <span className="text-xl font-black text-emerald-400 font-mono">₹{bill.net}.00</span>
-              </div>
-            </div>
-
-            {/* Payment Modes Tabs */}
-            <div className="grid grid-cols-3 gap-1.5 bg-slate-50 p-1.5 rounded-2xl text-xs font-bold border border-slate-200">
-              <button onClick={() => setTab('upi')} className={`py-2 rounded-xl transition ${tab === 'upi' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'}`}>📱 UPI QR</button>
-              <button onClick={() => setTab('card')} className={`py-2 rounded-xl transition ${tab === 'card' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'}`}>💳 Card</button>
-              <button onClick={() => setTab('netbanking')} className={`py-2 rounded-xl transition ${tab === 'netbanking' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'}`}>🏦 NetBank</button>
-            </div>
-
-            {/* Tab 1: UPI QR */}
-            {tab === 'upi' && (
-              <div className="space-y-3 text-center py-1">
-                <div className="bg-white p-3 rounded-2xl inline-block shadow-lg mx-auto">
-                  <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=upi://pay?pa=drbloomedi@okhdfcbank&pn=DrBlooMedi%20Hospital&am=${bill.net}&cu=INR`} 
-                    alt="UPI QR Code" 
-                    className="w-28 h-28 mx-auto rounded-lg"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-mono text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md block mx-auto w-max font-bold">VPA: drbloomedi@okhdfcbank</span>
-                  <p className="text-[11px] text-slate-400 mt-1">Scan with any UPI App or click quick simulate below</p>
-                </div>
-
-                <button 
-                  disabled={paying}
-                  onClick={() => finalizePayment('Razorpay Secure Online Gateway')}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/30 transition"
-                >
-                  ⚡ Simulate UPI Payment Success
-                </button>
-
-                <input 
-                  type="text" 
-                  placeholder="Or enter UPI ID (e.g. user@oksbi)" 
-                  value={customUpiId}
-                  onChange={(e) => setCustomUpiId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-center text-slate-900 placeholder-slate-500 outline-none focus:border-blue-500"
-                />
-              </div>
-            )}
-
-            {/* Tab 2: Card */}
-            {tab === 'card' && (
-              <div className="space-y-3 py-1 text-xs">
-                <div>
-                  <label className="text-slate-400 block font-bold mb-1">Card Number</label>
-                  <input type="text" defaultValue="4111 2222 3333 4444" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500 font-mono" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-slate-400 block font-bold mb-1">Expiry</label>
-                    <input type="text" defaultValue="12/28" className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none font-mono" />
-                  </div>
-                  <div>
-                    <label className="text-slate-400 block font-bold mb-1">CVV</label>
-                    <input type="password" defaultValue="388" className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none font-mono" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tab 3: Netbanking */}
-            {tab === 'netbanking' && (
-              <div className="py-2 space-y-2 text-xs">
-                <label className="text-slate-400 block font-bold">Select Preferred Bank</label>
-                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-blue-500">
-                  <option>HDFC Bank</option>
-                  <option>ICICI Bank</option>
-                  <option>State Bank of India (SBI)</option>
-                  <option>Axis Bank</option>
-                </select>
-              </div>
-            )}
-
-            {/* Final Action Buttons */}
-            <div className="flex gap-2 pt-2 border-t border-slate-200">
-              <button 
-                disabled={paying} 
-                onClick={() => finalizePayment('Razorpay Secure Online Gateway')} 
-                className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2"
-              >
-                {paying ? (
-                  <>
-                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    <span>{paymentStatusText}</span>
-                  </>
-                ) : (
-                  `Pay ₹${bill.net} Securely`
-                )}
-              </button>
-              <button disabled={paying} onClick={() => setShowRazorpay(false)} className="px-4 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-xs transition">Cancel</button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
       {/* Official Printed Receipt Modal */}
       {receipt && (
-        <div className="fixed inset-0 bg-slate-50 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
-            <div className="text-center space-y-1 border-b pb-3">
-              <span className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center font-bold text-sm">✓</span>
-              <h2 className="text-base font-black">Settled Successfully</h2>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white text-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 border border-slate-100">
+            <div className="text-center space-y-1 border-b border-slate-100 pb-3">
+              <span className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center font-bold text-base shadow-xs">✓</span>
+              <h2 className="text-base font-black text-slate-900">Settled Successfully</h2>
               <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">DrBlooMedi Official Invoice</p>
             </div>
             
-            <div className="space-y-2 bg-slate-50 p-4 rounded-2xl text-xs border border-slate-100">
-              <div className="flex justify-between"><span>Patient:</span><strong className="text-slate-900">{receipt.patient?.fullName}</strong></div>
-              <div className="flex justify-between"><span>Token No:</span><span className="font-mono">{receipt.appointmentNumber}</span></div>
-              <div className="flex justify-between"><span>Transaction ID:</span><span className="font-mono text-blue-600 font-bold">{receipt.txnId}</span></div>
-              <div className="flex justify-between"><span>Settlement Mode:</span><span className="font-bold text-emerald-700">{receipt.mode}</span></div>
-              <div className="border-t border-slate-200 pt-2 flex justify-between font-black text-sm">
-                <span>Net Total:</span>
-                <span className="text-emerald-700">₹{receipt.bill.net}.00</span>
+            <div className="space-y-2 bg-slate-50 p-4 rounded-2xl text-xs border border-slate-100/80">
+              <div className="flex justify-between"><span className="text-slate-500">Patient:</span><strong className="text-slate-900">{receipt.patient?.fullName}</strong></div>
+              <div className="flex justify-between"><span className="text-slate-500">Token No:</span><span className="font-mono font-semibold">{receipt.appointmentNumber}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Transaction ID:</span><span className="font-mono text-blue-600 font-bold">{receipt.txnId}</span></div>
+              <div className="flex justify-between"><span className="text-slate-500">Settlement Mode:</span><span className="font-bold text-emerald-700">{receipt.mode}</span></div>
+              <div className="border-t border-slate-200/60 pt-2 flex justify-between font-black text-sm">
+                <span className="text-slate-700">Net Total:</span>
+                <span className="text-emerald-600 font-mono">₹{receipt.bill.net}.00</span>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="flex-1 py-3 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold text-xs transition">🖨️ Print Receipt</button>
-              <button onClick={() => setReceipt(null)} className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition">Close</button>
+              <button onClick={() => window.print()} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-bold text-xs transition cursor-pointer">🖨️ Print Receipt</button>
+              <button onClick={() => setReceipt(null)} className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs transition cursor-pointer shadow-md shadow-blue-600/20">Close</button>
             </div>
           </div>
         </div>

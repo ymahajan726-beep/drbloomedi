@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import { ToastProvider } from '@/components/Toast';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -24,9 +23,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" data-theme="light">
-      <body className="antialiased min-h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden">
+      <body className="antialiased min-h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden selection:bg-blue-600 selection:text-white">
         <ThemeProvider>
           <ToastProvider>
+            {/* Official Razorpay Checkout Script Injection */}
+            <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+
             <div className="flex-1 flex flex-col w-full max-w-full overflow-x-hidden">
               {children}
             </div>
@@ -41,4 +43,3 @@ export default function RootLayout({
     </html>
   );
 }
-
