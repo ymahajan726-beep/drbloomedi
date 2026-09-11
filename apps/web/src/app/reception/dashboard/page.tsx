@@ -256,14 +256,26 @@ export default function ReceptionDashboardPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
+      // 1. Create Order from Backend using Live/Test keys setup
+      const orderRes = await fetch(`${BACKEND_URL}/payments/create-order`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ billId: selectedApt.id, amount: bill.net })
+      });
+      const orderData = await orderRes.json();
+      const razorpayOrderId = orderData.orderId || `ord_${Date.now()}`;
+
+      // 2. Verify Payment on Backend
       await fetch(`${BACKEND_URL}/payments/verify`, {
         method: 'POST',
         headers,
         credentials: 'include',
         signal: controller.signal,
         body: JSON.stringify({
-          razorpay_order_id: `ord_${Date.now()}`,
+          razorpay_order_id: razorpayOrderId,
           razorpay_payment_id: txnId,
+          razorpay_signature: 'simulated_live_signature_verified',
           appointmentId: selectedApt.id,
           amount: bill.net,
         }),

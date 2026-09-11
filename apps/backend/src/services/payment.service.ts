@@ -13,8 +13,8 @@ export class PaymentService {
   private readonly razorpay: Razorpay;
 
   constructor(private readonly dataSource: DataSource) {
-    if (!/^rzp_test_[A-Za-z0-9]+$/.test(this.razorpayKeyId)) {
-      throw new Error('RAZORPAY_KEY_ID must be a Razorpay test key starting with rzp_test_');
+    if (!/^rzp_(test|live)_[A-Za-z0-9]+$/.test(this.razorpayKeyId)) {
+      throw new Error('RAZORPAY_KEY_ID must be a valid Razorpay key starting with rzp_test_ or rzp_live_');
     }
 
     if (!this.razorpayKeySecret) {
