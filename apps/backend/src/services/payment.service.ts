@@ -65,10 +65,6 @@ export class PaymentService {
   }) {
     const targetId = body.appointmentId || body.billId;
 
-    if (!targetId) {
-      throw new BadRequestException('Appointment or Bill ID is required');
-    }
-
     if (!body.razorpay_order_id || !body.razorpay_payment_id || !body.razorpay_signature) {
       throw new BadRequestException('Razorpay order, payment, and signature are required');
     }
@@ -96,52 +92,68 @@ export class PaymentService {
       throw new BadRequestException(`Razorpay payment is not payable: ${payment.status}`);
     }
 
-    if (body.amount !== undefined && Number(order.amount) !== Math.round(Number(body.amount) * 100)) {
-      throw new BadRequestException('Payment amount does not match the Razorpay order');
-    }
-
     const txnId = body.razorpay_payment_id;
+    const paidAmount = Number(order.amount) / 100;
 
     const aptRepo = this.dataSource.getRepository(Appointment);
     const billRepo = this.dataSource.getRepository(Billing);
 
-    // B. Update Appointment in Postgres with Idempotency
-    try {
-      const apt = await aptRepo.findOne({
-        where: [{ id: targetId as any }, { appointmentNumber: targetId }] as any,
-        relations: { patient: true },
-      });
+    // B. Update Appointment if targetId matches
+    if (targetId) {
+      try {
+        const apt = await aptRepo.findOne({
+          where: [{ id: targetId as any }, { appointmentNumber: targetId }] as any,
+          relations: { patient: true },
+        });
 
-      if (apt) {
-        if ((apt as any).paymentStatus !== 'SUCCESS' && (apt as any).isPaid !== true) {
-          apt.status = AppointmentStatus?.COMPLETED || ('Completed' as any);
-          (apt as any).isPaid = true;
-          (apt as any).paymentId = txnId;
-          (apt as any).paymentStatus = 'SUCCESS';
-          await aptRepo.save(apt);
-          this.logger.log(`Appointment ${apt.id} successfully updated to PAID/COMPLETED.`);
+        if (apt) {
+          if ((apt as any).paymentStatus !== 'SUCCESS' && (apt as any).isPaid !== true) {
+            apt.status = AppointmentStatus?.COMPLETED || ('Completed' as any);
+            (apt as any).isPaid = true;
+            (apt as any).paymentId = txnId;
+            (apt as any).paymentStatus = 'SUCCESS';
+            await aptRepo.save(apt);
+          }
         }
+      } catch (e) {
+        this.logger.warn('Could not persist appointment status:', e);
       }
-    } catch (e) {
-      this.logger.warn('Could not persist appointment status:', e);
     }
 
-    // C. Update Billing Table if exists with Idempotency
+    // C. Find or Auto-Create Billing Record for Gross Revenue Tracking
     try {
-      let bill = await billRepo.findOne({
-        where: [{ id: targetId as any }, { appointment: { id: targetId } }] as any,
-      });
+      let bill = null;
+      if (targetId) {
+        bill = await billRepo.findOne({
+          where: [{ id: targetId as any }, { appointment: { id: targetId } }] as any,
+          relations: { patient: true },
+        });
+      }
 
       if (bill) {
-        if (bill.paymentStatus !== PaymentStatus.PAID) {
-          bill.paymentStatus = PaymentStatus.PAID;
-          (bill as any).transactionId = txnId;
-          await billRepo.save(bill);
-          this.logger.log(`Billing record ${bill.id} successfully updated to PAID.`);
-        }
+        bill.paymentStatus = PaymentStatus.PAID;
+        (bill as any).transactionId = txnId;
+        (bill as any).amount = paidAmount;
+        (bill as any).totalAmount = paidAmount;
+        await billRepo.save(bill);
+        this.logger.log(`Billing record ${bill.id} successfully updated to PAID.`);
+      } else {
+        const newBill = billRepo.create({
+          invoiceNumber: `INV-${Date.now()}`,
+          amount: paidAmount,
+          totalAmount: paidAmount,
+          subTotal: Number((paidAmount / 1.05).toFixed(2)),
+          gstAmount: Number((paidAmount - Number((paidAmount / 1.05).toFixed(2))).toFixed(2)),
+          paymentMethod: 'ONLINE',
+          paymentStatus: PaymentStatus.PAID,
+          lineItems: [{ itemDescription: 'Razorpay Online Settlement', amount: paidAmount }],
+          transactionId: txnId,
+        } as any);
+        await billRepo.save(newBill);
+        this.logger.log(`New PAID billing record created automatically for amount ₹${paidAmount}.`);
       }
     } catch (e) {
-      // Ignore if billing row not generated yet
+      this.logger.error('Failed to persist billing record during verification:', e);
     }
 
     return {
@@ -152,7 +164,7 @@ export class PaymentService {
     };
   }
 
-  // 3. Webhook Fallback Handler (Solves network drops & user closing window early)
+  // 3. Webhook Fallback Handler
   async handleWebhook(event: any, signature: string, rawBody: string) {
     if (!signature || !rawBody) {
       throw new BadRequestException('Razorpay webhook signature and raw body are required');
