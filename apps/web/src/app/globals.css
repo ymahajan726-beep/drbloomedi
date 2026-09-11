@@ -6,15 +6,13 @@
 }
 
 :root[data-theme="dark"] {
-  --background: #0f172a;
+  --background: #0b0f19;
   --foreground: #f8fafc;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 /* ========================================================
@@ -35,38 +33,51 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Automatically adapt common background classes for Dark Mode without changing component logic */
+/* Professional Dark Mode Overrides for cards and containers */
 :root[data-theme="dark"] .bg-white,
 :root[data-theme="dark"] .bg-slate-50,
 :root[data-theme="dark"] [class*="bg-gradient-to-"] {
-  background-color: #1e293b !important;
+  background-color: #111827 !important;
   color: #f8fafc !important;
-  border-color: #334155 !important;
+  border-color: #1f2937 !important;
+}
+
+:root[data-theme="dark"] text,
+:root[data-theme="dark"] span,
+:root[data-theme="dark"] p,
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] h4 {
+  color: inherit;
+}
+
+:root[data-theme="dark"] .text-slate-900,
+:root[data-theme="dark"] .text-slate-800,
+:root[data-theme="dark"] .text-slate-700 {
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] .text-slate-500,
+:root[data-theme="dark"] .text-slate-400 {
+  color: #9ca3af !important;
 }
 
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select,
 :root[data-theme="dark"] textarea {
-  background-color: #0f172a !important;
+  background-color: #1f2937 !important;
   color: #f8fafc !important;
-  border-color: #334155 !important;
+  border-color: #374151 !important;
 }
 
 :root[data-theme="dark"] input::placeholder,
 :root[data-theme="dark"] textarea::placeholder {
-  color: #94a3b8 !important;
-}
-
-html {
-  min-height: 100%;
-}
-
-body {
-  min-height: 100%;
+  color: #9ca3af !important;
 }
 
 /* ========================================================
-   🚫 GLOBAL SCROLLBAR HIDING & SCROLL FIX
+   🚫 GLOBAL SCROLLBAR HIDING
    ======================================================== */
 
 html::-webkit-scrollbar,
@@ -77,84 +88,4 @@ body::-webkit-scrollbar,
 
 main {
   min-height: 0;
-}
-
-/* ========================================================
-   📱 CUSTOM UTILITIES
-   ======================================================== */
-
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-}
-
-/* ========================================================
-   🚀 GLOBAL RESPONSIVE SHORTCUT RULES
-   ======================================================== */
-
-table {
-  width: 100%;
-}
-
-.overflow-x-auto,
-div:has(> table) {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.flex:not(.no-wrap) {
-  flex-wrap: wrap;
-}
-
-.grid-cols-3,
-.grid-cols-4,
-.grid-cols-5 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-@media (min-width: 768px) {
-  .md\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .md\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .lg\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .lg\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .lg\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  div[class*="w-["],
-  aside[class*="w-["] {
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-}
-
-img,
-video,
-canvas,
-svg {
-  max-width: 100%;
-  height: auto;
 }
