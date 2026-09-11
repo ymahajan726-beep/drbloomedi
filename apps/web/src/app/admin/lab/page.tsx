@@ -69,6 +69,7 @@ export default function LaboratoryManagementPage() {
   const [reportOrder, setReportOrder] = useState<LabOrder | null>(null);
   const [observedValue, setObservedValue] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [reportFileUrl, setReportFileUrl] = useState('');
   const [savingReport, setSavingReport] = useState(false);
   const [viewReport, setViewReport] = useState<LabOrder | null>(null);
 
@@ -127,6 +128,7 @@ export default function LaboratoryManagementPage() {
         throw new Error(data.message || 'Status update failed');
       }
 
+      showToast(`Sample status updated to ${nextStatus}`, 'success');
       await loadData(true);
     } catch (error: any) {
       showToast(error.message, 'error');
@@ -151,6 +153,7 @@ export default function LaboratoryManagementPage() {
           body: JSON.stringify({
             observedValue,
             remarks,
+            reportFileUrl: reportFileUrl || 'https://drbloomedi-reports.local/pdf-report.pdf',
           }),
         }
       );
@@ -160,11 +163,12 @@ export default function LaboratoryManagementPage() {
         throw new Error(data.message || 'Failed to save result');
       }
 
-      showToast('Diagnostic lab report generated and verified!', 'success');
+      showToast('Diagnostic lab report generated, verified & dispatched to Patient Portal!', 'success');
 
       setReportOrder(null);
       setObservedValue('');
       setRemarks('');
+      setReportFileUrl('');
       await loadData(true);
     } catch (error: any) {
       showToast(`Report Error: ${error.message}`, 'error');
@@ -307,23 +311,23 @@ export default function LaboratoryManagementPage() {
   });
 
   const field =
-    'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none';
+    'w-full p-2.5 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-xl font-bold outline-none text-slate-900 dark:text-white';
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-10 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] p-6 md:p-10 max-w-7xl mx-auto space-y-6 text-slate-900 dark:text-slate-100 transition-colors">
 
       {/* HEADER */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#111827] p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] font-bold px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full uppercase">
+          <span className="text-[10px] font-bold px-2.5 py-1 bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 rounded-full uppercase">
             Module 8 • Diagnostics
           </span>
 
-          <h1 className="text-2xl font-black text-slate-900 mt-2">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white mt-2">
             Laboratory & Pathology Portal
           </h1>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Sample Collection, Worklist Lifecycle, Clinical Reporting & PDF Dispatch
           </p>
         </div>
@@ -337,10 +341,10 @@ export default function LaboratoryManagementPage() {
             <button
               key={key}
               onClick={() => setTab(key as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                 tab === key
                   ? 'bg-purple-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-700'
+                  : 'bg-slate-100 dark:bg-[#1f2937] text-slate-700 dark:text-slate-300'
               }`}
             >
               {label}
@@ -351,14 +355,14 @@ export default function LaboratoryManagementPage() {
 
       {/* WORKLIST */}
       {tab === 'worklist' && (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white dark:bg-[#111827] p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Patient, Phone or Test..."
-              className="max-w-md w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold"
+              className="max-w-md w-full px-4 py-2 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white"
             />
 
             <div className="flex gap-2 flex-wrap items-center text-xs font-bold">
@@ -368,10 +372,10 @@ export default function LaboratoryManagementPage() {
                 <button
                   key={s}
                   onClick={() => setStatus(s)}
-                  className={`px-3 py-1 rounded-xl ${
+                  className={`px-3 py-1 rounded-xl transition cursor-pointer ${
                     status === s
-                      ? 'bg-white text-slate-900'
-                      : 'bg-slate-100 text-slate-600'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-100 dark:bg-[#1f2937] text-slate-600 dark:text-slate-300'
                   }`}
                 >
                   {s}
@@ -383,7 +387,7 @@ export default function LaboratoryManagementPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px]">
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold uppercase text-[10px]">
                   <th className="py-3 px-4">Patient</th>
                   <th className="py-3 px-4">Requested Test</th>
                   <th className="py-3 px-4">Price</th>
@@ -393,7 +397,7 @@ export default function LaboratoryManagementPage() {
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-slate-400 font-bold">
@@ -408,10 +412,10 @@ export default function LaboratoryManagementPage() {
                   </tr>
                 ) : (
                   filteredOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-slate-50 transition">
+                    <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-[#1f2937]/50 transition">
 
                       <td className="py-3 px-4">
-                        <p className="font-bold text-slate-900">
+                        <p className="font-bold text-slate-900 dark:text-white">
                           {order.patient?.fullName || 'Walk-in Patient'}
                         </p>
                         <p className="text-[10px] text-slate-400">
@@ -419,23 +423,23 @@ export default function LaboratoryManagementPage() {
                         </p>
                       </td>
 
-                      <td className="py-3 px-4 font-bold">
+                      <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
                         {order.labTest?.testName || 'Pathology Test'}
                       </td>
 
-                      <td className="py-3 px-4 font-black">
+                      <td className="py-3 px-4 font-black text-purple-600 dark:text-purple-400">
                         ₹{order.labTest?.price ?? 0}
                       </td>
 
                       <td className="py-3 px-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                           {order.status}
                         </span>
                       </td>
 
                       <td className="py-3 px-4">
                         {order.status === 'Completed' ? (
-                          <span className="font-mono font-bold text-purple-700">
+                          <span className="font-mono font-bold text-purple-700 dark:text-purple-400">
                             {order.resultValue || '-'} {order.labTest?.unit || ''}
                           </span>
                         ) : (
@@ -452,7 +456,7 @@ export default function LaboratoryManagementPage() {
                             onClick={() =>
                               updateStatus(order.id, 'Sample Collected')
                             }
-                            className="px-2.5 py-1 bg-blue-600 text-white rounded-lg text-[11px] font-bold"
+                            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-bold cursor-pointer"
                           >
                             Collect Sample
                           </button>
@@ -463,7 +467,7 @@ export default function LaboratoryManagementPage() {
                             onClick={() =>
                               updateStatus(order.id, 'In Progress')
                             }
-                            className="px-2.5 py-1 bg-amber-600 text-slate-900 rounded-lg text-[11px] font-bold"
+                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-bold cursor-pointer"
                           >
                             Send to Analyzer
                           </button>
@@ -476,8 +480,9 @@ export default function LaboratoryManagementPage() {
                               setReportOrder(order);
                               setObservedValue(order.resultValue || '');
                               setRemarks(order.technicianRemarks || '');
+                              setReportFileUrl(order.reportFileUrl || '');
                             }}
-                            className="px-2.5 py-1 bg-purple-600 text-white rounded-lg text-[11px] font-bold"
+                            className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-bold cursor-pointer"
                           >
                             Enter Results
                           </button>
@@ -486,7 +491,7 @@ export default function LaboratoryManagementPage() {
                         {order.status === 'Completed' && (
                           <button
                             onClick={() => setViewReport(order)}
-                            className="px-2.5 py-1 bg-white text-slate-900 rounded-lg text-[11px] font-bold"
+                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-900 dark:text-white rounded-lg text-[11px] font-bold cursor-pointer"
                           >
                             🖨️ Report
                           </button>
@@ -504,9 +509,9 @@ export default function LaboratoryManagementPage() {
 
       {/* BOOKING */}
       {tab === 'booking' && (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm max-w-xl mx-auto">
+        <div className="bg-white dark:bg-[#111827] p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm max-w-xl mx-auto">
 
-          <h2 className="text-sm font-black uppercase mb-5">
+          <h2 className="text-sm font-black uppercase mb-5 text-slate-900 dark:text-white">
             Book Laboratory Test
           </h2>
 
@@ -546,7 +551,7 @@ export default function LaboratoryManagementPage() {
               </select>
             </div>
 
-            <button className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold">
+            <button className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold cursor-pointer">
               Confirm Test Booking
             </button>
 
@@ -559,17 +564,17 @@ export default function LaboratoryManagementPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* ADD / EDIT FORM */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-[#111827] p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
 
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-sm font-black uppercase">
+              <h2 className="text-sm font-black uppercase text-slate-900 dark:text-white">
                 {editTest ? 'Edit Lab Test' : 'Add Test to Catalog'}
               </h2>
 
               {editTest && (
                 <button
                   onClick={resetTestForm}
-                  className="text-xs font-bold text-slate-500"
+                  className="text-xs font-bold text-slate-500 cursor-pointer"
                 >
                   Cancel Edit
                 </button>
@@ -633,7 +638,7 @@ export default function LaboratoryManagementPage() {
 
               <button
                 disabled={savingTest}
-                className="w-full py-2.5 bg-purple-600 text-white rounded-xl font-bold"
+                className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold cursor-pointer"
               >
                 {savingTest
                   ? 'Saving...'
@@ -646,13 +651,13 @@ export default function LaboratoryManagementPage() {
           </div>
 
           {/* TEST LIST */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div className="lg:col-span-2 bg-white dark:bg-[#111827] p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
 
-            <h2 className="text-sm font-black uppercase mb-4">
+            <h2 className="text-sm font-black uppercase mb-4 text-slate-900 dark:text-white">
               Available Test Menu
             </h2>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
 
               {tests.length === 0 ? (
                 <p className="py-8 text-center text-slate-400 text-xs">
@@ -665,7 +670,7 @@ export default function LaboratoryManagementPage() {
                     className="py-4 flex items-center justify-between gap-4"
                   >
                     <div>
-                      <p className="font-bold text-slate-900">
+                      <p className="font-bold text-slate-900 dark:text-white">
                         {test.testName}
                       </p>
 
@@ -682,14 +687,14 @@ export default function LaboratoryManagementPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className="font-black text-purple-700">
+                      <span className="font-black text-purple-700 dark:text-purple-400">
                         ₹{test.price}
                       </span>
 
                       {/* EDIT */}
                       <button
                         onClick={() => startEdit(test)}
-                        className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-bold hover:bg-blue-100"
+                        className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 rounded-lg text-[11px] font-bold hover:bg-blue-100 cursor-pointer"
                       >
                         ✏️ Edit
                       </button>
@@ -705,14 +710,14 @@ export default function LaboratoryManagementPage() {
 
       {/* REPORT ENTRY MODAL */}
       {reportOrder && (
-        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
 
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-white dark:bg-[#111827] text-slate-900 dark:text-slate-100 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
 
-            <div className="flex justify-between border-b pb-3 mb-4">
+            <div className="flex justify-between border-b dark:border-slate-800 pb-3 mb-4">
               <div>
-                <h3 className="font-black">
-                  Enter Pathology Result
+                <h3 className="font-black text-slate-900 dark:text-white">
+                  Enter Pathology Result & Report
                 </h3>
 
                 <p className="text-[11px] text-slate-500">
@@ -723,7 +728,7 @@ export default function LaboratoryManagementPage() {
 
               <button
                 onClick={() => setReportOrder(null)}
-                className="w-7 h-7 bg-slate-100 rounded-full font-bold"
+                className="w-7 h-7 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-full font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -749,6 +754,21 @@ export default function LaboratoryManagementPage() {
 
               <div>
                 <label className="label">
+                  Report Document / PDF URL (Max 20MB)
+                </label>
+
+                <input
+                  type="text"
+                  value={reportFileUrl}
+                  onChange={(e) => setReportFileUrl(e.target.value)}
+                  placeholder="Paste PDF report link or scan URL (Max size 20MB)"
+                  className={field}
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Uploaded reports up to 20MB are instantly synchronized to the Patient Portal.</p>
+              </div>
+
+              <div>
+                <label className="label">
                   Technician Remarks
                 </label>
 
@@ -765,14 +785,14 @@ export default function LaboratoryManagementPage() {
                 <button
                   type="button"
                   onClick={() => setReportOrder(null)}
-                  className="px-4 py-2 bg-slate-100 rounded-xl font-bold"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold cursor-pointer"
                 >
                   Cancel
                 </button>
 
                 <button
                   disabled={savingReport}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold cursor-pointer"
                 >
                   {savingReport ? 'Saving...' : '✓ Authorize & Complete'}
                 </button>
@@ -785,11 +805,11 @@ export default function LaboratoryManagementPage() {
 
       {/* REPORT VIEW */}
       {viewReport && (
-        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
 
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl">
+          <div className="bg-white dark:bg-[#111827] text-slate-900 dark:text-slate-100 rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 dark:border-slate-800">
 
-            <div className="border-b-2 border-slate-900 pb-4 flex justify-between">
+            <div className="border-b-2 border-slate-900 dark:border-slate-700 pb-4 flex justify-between">
               <div>
                 <h2 className="text-xl font-black">
                   DRBLOOMEDI DIAGNOSTIC LABORATORY
@@ -801,16 +821,16 @@ export default function LaboratoryManagementPage() {
 
               <button
                 onClick={() => setViewReport(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 font-bold"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-2xl my-5">
+            <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 dark:bg-[#1f2937] p-4 rounded-2xl my-5">
               <div>
                 <span className="small-label">Patient</span>
-                <p className="font-bold">
+                <p className="font-bold text-slate-900 dark:text-white">
                   {viewReport.patient?.fullName || 'N/A'}
                 </p>
                 <p className="text-slate-500">
@@ -820,7 +840,7 @@ export default function LaboratoryManagementPage() {
 
               <div className="text-right">
                 <span className="small-label">Order</span>
-                <p className="font-mono font-bold">
+                <p className="font-mono font-bold text-slate-900 dark:text-white">
                   {viewReport.orderNumber || viewReport.id.slice(0, 8)}
                 </p>
                 <p className="text-slate-500">
@@ -829,8 +849,8 @@ export default function LaboratoryManagementPage() {
               </div>
             </div>
 
-            <table className="w-full text-xs border border-slate-100">
-              <thead className="bg-slate-100">
+            <table className="w-full text-xs border border-slate-100 dark:border-slate-800">
+              <thead className="bg-slate-100 dark:bg-[#1f2937]">
                 <tr>
                   <th className="p-3 text-left">Investigation</th>
                   <th className="p-3 text-left">Observed Value</th>
@@ -840,11 +860,11 @@ export default function LaboratoryManagementPage() {
 
               <tbody>
                 <tr>
-                  <td className="p-3 font-bold">
+                  <td className="p-3 font-bold text-slate-900 dark:text-white">
                     {viewReport.labTest?.testName}
                   </td>
 
-                  <td className="p-3 font-mono font-black text-purple-700">
+                  <td className="p-3 font-mono font-black text-purple-700 dark:text-purple-400">
                     {viewReport.resultValue || '-'}{' '}
                     {viewReport.labTest?.unit || ''}
                   </td>
@@ -856,21 +876,28 @@ export default function LaboratoryManagementPage() {
               </tbody>
             </table>
 
-            <div className="text-xs bg-purple-50 p-3 rounded-xl mt-4">
+            {viewReport.reportFileUrl && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl text-xs flex justify-between items-center border border-blue-100 dark:border-blue-900">
+                <span className="font-bold text-blue-700 dark:text-blue-300">📄 Attached Lab Report Document (Max 20MB)</span>
+                <a href={viewReport.reportFileUrl} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-bold text-[11px]">View / Download PDF</a>
+              </div>
+            )}
+
+            <div className="text-xs bg-purple-50 dark:bg-purple-950/40 p-3 rounded-xl mt-4 border border-purple-100 dark:border-purple-900">
               <span className="small-label">
                 Technician Remarks
               </span>
 
-              <p className="text-slate-700 italic">
+              <p className="text-slate-700 dark:text-slate-300 italic">
                 {viewReport.technicianRemarks ||
                   'Clinical parameters verified.'}
               </p>
             </div>
 
-            <div className="flex justify-end pt-5 mt-5 border-t">
+            <div className="flex justify-end pt-5 mt-5 border-t dark:border-slate-800">
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-white text-slate-900 rounded-xl text-xs font-bold"
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl text-xs font-bold cursor-pointer"
               >
                 🖨️ Print / Save PDF
               </button>

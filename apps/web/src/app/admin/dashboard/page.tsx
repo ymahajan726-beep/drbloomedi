@@ -47,9 +47,11 @@ export default function DashboardPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         };
 
-        const [dashRes, aptRes] = await Promise.all([
+        // Fetch live metrics directly from backend database APIs
+        const [dashRes, aptRes, billRes] = await Promise.all([
           fetch(`${API_URL}/dashboard/admin`, { headers, credentials: "include" }).catch(() => null),
           fetch(`${API_URL}/appointments`, { headers, credentials: "include" }).catch(() => null),
+          fetch(`${API_URL}/billing`, { headers, credentials: "include" }).catch(() => null),
         ]);
 
         let docCount = 0, patCount = 0, recCount = 0, deptCount = 4;
@@ -66,60 +68,37 @@ export default function DashboardPage() {
         let revenue = 0;
         let settledList: any[] = [];
 
-        // Monthly & 30-day reset logic check
-        const currentMonthKey = new Date().toISOString().slice(0, 7); // e.g., '2026-09'
-        const savedMonth = localStorage.getItem("drbloomedi_active_month");
-        
-        if (savedMonth && savedMonth !== currentMonthKey) {
-          const oldLedger = localStorage.getItem("drbloomedi_paid_appointments_v2");
-          if (oldLedger) {
-            const reports = JSON.parse(localStorage.getItem("drbloomedi_monthly_reports") || "[]");
-            reports.push({ month: savedMonth, data: JSON.parse(oldLedger) });
-            localStorage.setItem("drbloomedi_monthly_reports", JSON.stringify(reports));
-          }
-          localStorage.setItem("drbloomedi_paid_appointments_v2", JSON.stringify({}));
-          localStorage.setItem("drbloomedi_active_month", currentMonthKey);
-        } else if (!savedMonth) {
-          localStorage.setItem("drbloomedi_active_month", currentMonthKey);
-        }
+        // Process Billing Database Records for Revenue and Settled List
+        if (billRes && billRes.ok) {
+          const billList = await billRes.json();
+          if (Array.isArray(billList)) {
+            const now = Date.now();
+            const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-        try {
-          const storedReports = localStorage.getItem("drbloomedi_monthly_reports");
-          if (storedReports) setMonthlyReports(JSON.parse(storedReports));
-        } catch {}
+            billList.forEach((bill: any) => {
+              const isPaid = bill.status === "PAID" || bill.paymentStatus === "PAID" || bill.isPaid === true;
+              const amt = Number(bill.amount || bill.netAmount || 500);
 
-        const now = Date.now();
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+              if (isPaid) {
+                revenue += amt;
+                const billTime = new Date(bill.updatedAt || bill.createdAt || Date.now()).getTime();
 
-        // Fetch actual paid settlements from ledger
-        try {
-          const ledger = localStorage.getItem("drbloomedi_paid_appointments_v2");
-          if (ledger) {
-            const parsed = JSON.parse(ledger);
-            let ledgerRev = 0;
-            Object.entries(parsed).forEach(([aptId, p]: [string, any]) => {
-              if (p?.isPaid) {
-                const amt = Number(p?.amount || 500);
-                ledgerRev += amt;
-                const timestamp = p.timestamp || now;
-                
-                // 24-hour window filter for live feed
-                if (now - timestamp <= TWENTY_FOUR_HOURS) {
+                // 24-hour rolling window check for recent settlements feed
+                if (now - billTime <= TWENTY_FOUR_HOURS) {
                   settledList.push({
-                    id: aptId,
+                    id: bill.id,
                     amount: amt,
-                    patientName: p.patient?.fullName || 'Verified Patient',
-                    token: p.appointmentNumber || 'OPD',
-                    phone: p.patient?.phone || 'Paid Online/Cash',
-                    mode: p.mode || 'Online Gateway / Cash',
-                    time: new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    patientName: bill.patient?.fullName || bill.patientName || 'Verified Patient',
+                    token: bill.appointment?.appointmentNumber || 'OPD',
+                    phone: bill.patient?.phone || bill.phone || 'N/A',
+                    mode: bill.paymentMethod || 'Online / Cash',
+                    time: new Date(billTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   });
                 }
               }
             });
-            revenue = ledgerRev;
           }
-        } catch {}
+        }
 
         if (aptRes && aptRes.ok) {
           const aptList = await aptRes.json();
@@ -133,20 +112,6 @@ export default function DashboardPage() {
 
               if (isDone) {
                 completed++;
-                const aptFee = Number(apt.doctor?.consultationFee) || 500;
-                if (revenue === 0) revenue += aptFee;
-
-                if (!settledList.some(s => s.id === apt.id) && (apt.isPaid || apt.paymentStatus === 'PAID')) {
-                  settledList.push({
-                    id: apt.id,
-                    token: apt.appointmentNumber || 'OPD',
-                    patientName: apt.patient?.fullName || 'Walk-in Patient',
-                    phone: apt.patient?.phone || 'N/A',
-                    amount: aptFee,
-                    mode: apt.paymentMethod || 'Hospital Counter',
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                  });
-                }
               } else {
                 waiting++;
               }
@@ -165,7 +130,7 @@ export default function DashboardPage() {
           totalPatients: patCount,
           totalReception: recCount,
           totalDepartments: deptCount,
-          grossRevenue: revenue || (completed * 500),
+          grossRevenue: revenue,
           completedConsultations: completed,
           waitingQueue: waiting,
         });
@@ -185,17 +150,18 @@ export default function DashboardPage() {
   }, []);
 
   const downloadExcelReport = (monthKey: string, reportData: any) => {
-    let csvContent = "data:text/csv;charset=utf-8,Appointment ID,Patient Name,Phone,Amount (INR),Payment Mode\n";
-    Object.entries(reportData || {}).forEach(([id, val]: [string, any]) => {
-      const row = [
-        id,
-        val.patient?.fullName || 'N/A',
-        val.patient?.phone || 'N/A',
-        val.amount || 500,
-        val.mode || 'Online/Cash'
-      ].join(",");
-      csvContent += row + "\n";
-    });
+    let csvContent = "data:text/csv;charset=utf-8,Bill ID,Patient Name,Amount (INR),Payment Mode\n";
+    if (Array.isArray(reportData)) {
+      reportData.forEach((val: any) => {
+        const row = [
+          val.id,
+          val.patientName || 'N/A',
+          val.amount || 500,
+          val.mode || 'Online/Cash'
+        ].join(",");
+        csvContent += row + "\n";
+      });
+    }
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -218,7 +184,7 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      {/* Top Header (Clean, no duplicate logout button) */}
+      {/* Top Header */}
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md shadow-xs mb-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
@@ -233,7 +199,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Live Synced
+              Database Synced
             </span>
             <button
               onClick={() => setShowArchiveModal(true)}
@@ -363,10 +329,10 @@ export default function DashboardPage() {
                   <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
                     Successfully Paid Patient Settlements (Last 24 Hours)
                   </h2>
-                  <p className="text-[11px] text-slate-400">Real-time rolling window showing patient name, mobile, amount & mode</p>
+                  <p className="text-[11px] text-slate-400">Database-backed rolling window showing settled bills</p>
                 </div>
                 <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-lg border border-emerald-200 dark:border-emerald-800">
-                  24h Rolling Feed Active
+                  Database Feed Active
                 </span>
               </div>
 
@@ -396,7 +362,7 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* MONTHLY REPORTS ARCHIVE MODAL WITH EXCEL/CSV EXPORT */}
+      {/* MONTHLY REPORTS ARCHIVE MODAL */}
       {showArchiveModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -406,13 +372,12 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-3 max-h-64 overflow-y-auto text-xs">
               {monthlyReports.length === 0 ? (
-                <p className="text-slate-400 text-center py-6">No previous monthly reports archived yet. Reports generate automatically at month rollover.</p>
+                <p className="text-slate-400 text-center py-6">No previous monthly reports archived yet.</p>
               ) : (
                 monthlyReports.map((rep, idx) => (
                   <div key={idx} className="p-3 bg-slate-50 dark:bg-[#1f2937] rounded-xl flex justify-between items-center">
                     <div>
                       <p className="font-bold text-slate-900 dark:text-white">Month: {rep.month}</p>
-                      <p className="text-[10px] text-slate-400">Total settled records: {Object.keys(rep.data || {}).length}</p>
                     </div>
                     <button 
                       onClick={() => downloadExcelReport(rep.month, rep.data)}
