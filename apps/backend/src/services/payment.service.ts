@@ -122,7 +122,7 @@ export class PaymentService {
 
     // C. Find or Auto-Create Billing Record for Gross Revenue Tracking
     try {
-      let bill = null;
+      let bill: Billing | null = null;
       if (targetId) {
         bill = await billRepo.findOne({
           where: [{ id: targetId as any }, { appointment: { id: targetId } }] as any,
