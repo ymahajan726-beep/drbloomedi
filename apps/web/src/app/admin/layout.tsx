@@ -222,9 +222,9 @@ export default function AdminLayout({
   );
 
   return (
-    <div className="h-screen min-h-0 flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
+    <div className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 lg:w-72 bg-white text-slate-600 flex-col justify-between shrink-0 z-20 border-r border-slate-200 h-screen sticky top-0">
+      <aside className="hidden md:flex w-64 lg:w-72 bg-white text-slate-600 flex-col justify-between shrink-0 z-20 border-r border-slate-200 h-full">
         {sidebarContent()}
       </aside>
 
@@ -242,7 +242,7 @@ export default function AdminLayout({
       )}
 
       {/* Main Workspace with Fluid Responsive Scaling */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden w-full">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10">
           <div className="flex items-center gap-3">
             {/* Mobile Hamburger Menu Toggle */}
@@ -270,7 +270,7 @@ export default function AdminLayout({
         </header>
 
         {/* Fluid Container matching Mobile, Tablets, Laptops & Desktops */}
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
+        <main className="flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
           {children}
         </main>
       </div>
