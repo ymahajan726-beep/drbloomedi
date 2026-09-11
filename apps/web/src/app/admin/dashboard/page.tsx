@@ -32,6 +32,8 @@ export default function DashboardPage() {
   const [recentSettled, setRecentSettled] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [monthlyReports, setMonthlyReports] = useState<any[]>([]);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -64,7 +66,31 @@ export default function DashboardPage() {
         let revenue = 0;
         let settledList: any[] = [];
 
-        // Check local paid ledger for real-time settled billing details
+        // Monthly & 30-day reset logic check
+        const currentMonthKey = new Date().toISOString().slice(0, 7); // e.g., '2026-09'
+        const savedMonth = localStorage.getItem("drbloomedi_active_month");
+        
+        if (savedMonth && savedMonth !== currentMonthKey) {
+          // New month started: Archive old month data into reports and reset current ledger
+          const oldLedger = localStorage.getItem("drbloomedi_paid_appointments_v2");
+          if (oldLedger) {
+            const reports = JSON.parse(localStorage.getItem("drbloomedi_monthly_reports") || "[]");
+            reports.push({ month: savedMonth, data: JSON.parse(oldLedger) });
+            localStorage.setItem("drbloomedi_monthly_reports", JSON.stringify(reports));
+          }
+          localStorage.setItem("drbloomedi_paid_appointments_v2", JSON.stringify({}));
+          localStorage.setItem("drbloomedi_active_month", currentMonthKey);
+        } else if (!savedMonth) {
+          localStorage.setItem("drbloomedi_active_month", currentMonthKey);
+        }
+
+        // Load archived monthly reports
+        try {
+          const storedReports = localStorage.getItem("drbloomedi_monthly_reports");
+          if (storedReports) setMonthlyReports(JSON.parse(storedReports));
+        } catch {}
+
+        // Fetch actual paid settlements from ledger
         try {
           const ledger = localStorage.getItem("drbloomedi_paid_appointments_v2");
           if (ledger) {
@@ -77,14 +103,14 @@ export default function DashboardPage() {
                 settledList.push({
                   id: aptId,
                   amount: amt,
-                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  mode: 'Online / Cash Settlement'
+                  patientName: p.patient?.fullName || 'Verified Patient',
+                  token: p.appointmentNumber || 'OPD',
+                  phone: p.patient?.phone || 'Paid Online/Cash',
+                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 });
               }
             });
-            if (ledgerRev > revenue) {
-              revenue = ledgerRev;
-            }
+            revenue = ledgerRev;
           }
         } catch {}
 
@@ -100,11 +126,8 @@ export default function DashboardPage() {
 
               if (isDone) {
                 completed++;
-                const aptFee = Number(apt.doctor?.consultationFee) || 500;
-                if (revenue === 0) revenue += aptFee;
-
-                // Push into live settled feed if not already captured
-                if (!settledList.some(s => s.id === apt.id)) {
+                if (!settledList.some(s => s.id === apt.id) && (apt.isPaid || apt.paymentStatus === 'PAID')) {
+                  const aptFee = Number(apt.doctor?.consultationFee) || 500;
                   settledList.push({
                     id: apt.id,
                     token: apt.appointmentNumber || 'OPD',
@@ -125,14 +148,14 @@ export default function DashboardPage() {
           }
         }
 
-        setRecentSettled(settledList.reverse().slice(0, 5)); // Show last 5 settled bills live
+        setRecentSettled(settledList.reverse());
 
         setStats({
           totalDoctors: docCount,
           totalPatients: patCount,
           totalReception: recCount,
           totalDepartments: deptCount,
-          grossRevenue: revenue || (completed * 500),
+          grossRevenue: revenue,
           completedConsultations: completed,
           waitingQueue: waiting,
         });
@@ -201,6 +224,12 @@ export default function DashboardPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               Live Synced
             </span>
+            <button
+              onClick={() => setShowArchiveModal(true)}
+              className="rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white px-3 py-2 text-xs font-bold transition border border-blue-200 dark:border-blue-900 shadow-xs cursor-pointer"
+            >
+              📁 Monthly Reports
+            </button>
             <button
               onClick={handleLogout}
               className="rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white px-4 py-2 text-xs font-bold transition border border-rose-200 dark:border-rose-900 shadow-xs cursor-pointer"
@@ -288,8 +317,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Lower Grid Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 gap-6">
+          <div className="space-y-6">
             <div className="bg-white dark:bg-[#111827] p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
@@ -327,9 +356,9 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
                   <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                    Recent Settled Bills & Counter Activity
+                    Successfully Paid Patient Settlements
                   </h2>
-                  <p className="text-[11px] text-slate-400">Live sync when reception settles patient invoice</p>
+                  <p className="text-[11px] text-slate-400">Real-time list of patients whose bills have been fully settled</p>
                 </div>
                 <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold rounded-lg border border-emerald-200 dark:border-emerald-800">
                   Live Feed Active
@@ -338,7 +367,7 @@ export default function DashboardPage() {
 
               <div className="space-y-2">
                 {recentSettled.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-4 text-center font-medium">No bills settled yet in current session.</p>
+                  <p className="text-xs text-slate-400 py-4 text-center font-medium">No paid patient settlements recorded yet.</p>
                 ) : (
                   recentSettled.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-[#1f2937] border border-slate-100 dark:border-slate-800 text-xs">
@@ -359,22 +388,36 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
-          {/* Right Side Quick Info */}
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-3xl shadow-lg space-y-4">
-              <span className="px-2.5 py-1 bg-white/20 text-white rounded-full text-[10px] font-bold uppercase tracking-wider">Command Center Note</span>
-              <h3 className="text-base font-black">Fully Synchronized & Zero Static Data</h3>
-              <p className="text-xs text-blue-100 leading-relaxed">
-                All metrics, financial numbers, and patient flow tallies are pulled directly from live database tables and secure local settlement ledgers.
-              </p>
-              <Link href="/reception/dashboard" className="inline-block w-full py-3 bg-white text-blue-700 text-center font-bold text-xs rounded-xl shadow-md transition hover:bg-blue-50">
-                Go to Reception Terminal →
-              </Link>
-            </div>
-          </div>
         </div>
       </main>
+
+      {/* MONTHLY REPORTS ARCHIVE MODAL */}
+      {showArchiveModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Archived Monthly Reports</h3>
+              <button onClick={() => setShowArchiveModal(false)} className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold">✕</button>
+            </div>
+            <div className="space-y-3 max-h-64 overflow-y-auto text-xs">
+              {monthlyReports.length === 0 ? (
+                <p className="text-slate-400 text-center py-6">No previous monthly reports archived yet. Reports generate automatically after 30 days/month rollover.</p>
+              ) : (
+                monthlyReports.map((rep, idx) => (
+                  <div key={idx} className="p-3 bg-slate-50 dark:bg-[#1f2937] rounded-xl flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white">Month: {rep.month}</p>
+                      <p className="text-[10px] text-slate-400">Entries recorded: {Object.keys(rep.data || {}).length}</p>
+                    </div>
+                    <span className="px-2.5 py-1 bg-blue-50 text-blue-600 font-bold rounded-lg text-[10px]">Archived</span>
+                  </div>
+                ))
+              )}
+            </div>
+            <button onClick={() => setShowArchiveModal(false)} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-xs cursor-pointer">Close Archive</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
