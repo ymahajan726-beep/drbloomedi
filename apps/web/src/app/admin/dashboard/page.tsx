@@ -207,8 +207,8 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md shadow-xs">
+      {/* Top Header (Unfixed / Normal Scroll) */}
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md shadow-xs mb-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
