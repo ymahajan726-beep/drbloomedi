@@ -76,23 +76,24 @@ export default function DashboardPage() {
             const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
             billList.forEach((bill: any) => {
-              const isPaid = bill.status === "PAID" || bill.paymentStatus === "PAID" || bill.isPaid === true;
-              const amt = Number(bill.amount || bill.netAmount || 500);
+              const statusStr = String(bill.status || bill.paymentStatus || '').toUpperCase();
+              const isPaid = statusStr === "PAID" || statusStr === "SUCCESS" || statusStr === "COMPLETED" || bill.isPaid === true;
+              const amt = Number(bill.amount || bill.totalAmount || bill.netAmount || 500);
 
               if (isPaid) {
                 revenue += amt;
                 const billTime = new Date(bill.updatedAt || bill.createdAt || Date.now()).getTime();
 
                 // 24-hour rolling window check for recent settlements feed
-                if (now - billTime <= TWENTY_FOUR_HOURS) {
+                if (now - billTime <= TWENTY_FOUR_HOURS || isNaN(billTime)) {
                   settledList.push({
-                    id: bill.id,
+                    id: bill.id || Math.random(),
                     amount: amt,
                     patientName: bill.patient?.fullName || bill.patientName || 'Verified Patient',
-                    token: bill.appointment?.appointmentNumber || 'OPD',
+                    token: bill.appointment?.appointmentNumber || bill.invoiceNumber || 'OPD',
                     phone: bill.patient?.phone || bill.phone || 'N/A',
                     mode: bill.paymentMethod || 'Online / Cash',
-                    time: new Date(billTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    time: !isNaN(billTime) ? new Date(billTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'
                   });
                 }
               }
