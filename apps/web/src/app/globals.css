@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #f8fafc;
   --foreground: #0f172a;
 }
 
 :root[data-theme="dark"] {
-  --background: #0b0f19;
-  --foreground: #f8fafc;
+  --background: #090d16;
+  --foreground: #f1f5f9;
 }
 
 @theme inline {
@@ -16,7 +16,7 @@
 }
 
 /* ========================================================
-   🌞 GLOBAL THEME SWITCHER ENFORCEMENT
+   ✨ PREMIUM GLOBAL THEME & GLASSMORPHISM STYLING
    ======================================================== */
 
 html,
@@ -30,50 +30,71 @@ body {
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Professional Dark Mode Overrides for cards and containers */
+/* Premium Dark Mode Card & Container Overrides across all portals */
 :root[data-theme="dark"] .bg-white,
 :root[data-theme="dark"] .bg-slate-50,
+:root[data-theme="dark"] .bg-slate-100,
 :root[data-theme="dark"] [class*="bg-gradient-to-"] {
   background-color: #111827 !important;
   color: #f8fafc !important;
   border-color: #1f2937 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4) !important;
 }
 
-:root[data-theme="dark"] text,
-:root[data-theme="dark"] span,
-:root[data-theme="dark"] p,
+/* Absolute clarity for all text elements in Dark Mode */
 :root[data-theme="dark"] h1,
 :root[data-theme="dark"] h2,
 :root[data-theme="dark"] h3,
-:root[data-theme="dark"] h4 {
-  color: inherit;
+:root[data-theme="dark"] h4,
+:root[data-theme="dark"] h5,
+:root[data-theme="dark"] h6,
+:root[data-theme="dark"] strong,
+:root[data-theme="dark"] th,
+:root[data-theme="dark"] td {
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] p,
+:root[data-theme="dark"] span:not([class*="text-"]) {
+  color: #cbd5e1 !important;
 }
 
 :root[data-theme="dark"] .text-slate-900,
 :root[data-theme="dark"] .text-slate-800,
-:root[data-theme="dark"] .text-slate-700 {
+:root[data-theme="dark"] .text-slate-700,
+:root[data-theme="dark"] .text-slate-600 {
   color: #f8fafc !important;
 }
 
 :root[data-theme="dark"] .text-slate-500,
 :root[data-theme="dark"] .text-slate-400 {
-  color: #9ca3af !important;
+  color: #94a3b8 !important;
 }
 
+/* Modern Table Row Hover & Borders for Dark Mode */
+:root[data-theme="dark"] tr {
+  border-color: #1f2937 !important;
+}
+
+:root[data-theme="dark"] tr:hover {
+  background-color: #1f2937 !important;
+}
+
+/* Sleek Input Controls in Dark Mode */
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select,
 :root[data-theme="dark"] textarea {
-  background-color: #1f2937 !important;
+  background-color: #0f172a !important;
   color: #f8fafc !important;
-  border-color: #374151 !important;
+  border-color: #334155 !important;
 }
 
 :root[data-theme="dark"] input::placeholder,
 :root[data-theme="dark"] textarea::placeholder {
-  color: #9ca3af !important;
+  color: #64748b !important;
 }
 
 /* ========================================================
