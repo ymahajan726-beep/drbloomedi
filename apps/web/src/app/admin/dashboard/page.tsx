@@ -76,11 +76,13 @@ export default function DashboardPage() {
             const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
             billList.forEach((bill: any) => {
-              const statusStr = String(bill.status || bill.paymentStatus || '').toUpperCase();
-              const isPaid = statusStr === "PAID" || statusStr === "SUCCESS" || statusStr === "COMPLETED" || bill.isPaid === true;
-              const amt = Number(bill.amount || bill.totalAmount || bill.netAmount || 500);
+              const statusValues = [bill.status, bill.paymentStatus, bill.payment_status]
+                .filter((status) => status !== null && status !== undefined)
+                .map((status) => String(status).trim().toUpperCase());
+              const isPaid = statusValues.some((status) => ["PAID", "SUCCESS", "COMPLETED"].includes(status)) || bill.isPaid === true;
+              const amt = Number(bill.amount ?? bill.totalAmount ?? bill.netAmount);
 
-              if (isPaid) {
+              if (isPaid && Number.isFinite(amt)) {
                 revenue += amt;
                 const billTime = new Date(bill.updatedAt || bill.createdAt || Date.now()).getTime();
 
@@ -106,9 +108,9 @@ export default function DashboardPage() {
           if (Array.isArray(aptList)) {
             aptList.forEach((apt: any) => {
               const isDone =
-                apt.status === "Completed" ||
-                apt.status === "COMPLETED" ||
-                apt.paymentStatus === "PAID" ||
+                [apt.status, apt.paymentStatus]
+                  .filter((status) => status !== null && status !== undefined)
+                  .some((status) => ["COMPLETED", "PAID", "SUCCESS"].includes(String(status).trim().toUpperCase())) ||
                 apt.isPaid === true;
 
               if (isDone) {

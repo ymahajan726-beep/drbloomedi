@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Billing, PaymentStatus } from '../entities/billing.entity';
+import { Billing, PaymentMethod, PaymentStatus } from '../entities/billing.entity';
 import { Appointment, AppointmentStatus } from '../entities/appointment.entity';
 import * as crypto from 'crypto';
 import Razorpay from 'razorpay';
@@ -97,22 +97,23 @@ export class PaymentService {
 
     const aptRepo = this.dataSource.getRepository(Appointment);
     const billRepo = this.dataSource.getRepository(Billing);
+    let appointment: Appointment | null = null;
 
     // B. Update Appointment if targetId matches
     if (targetId) {
       try {
-        const apt = await aptRepo.findOne({
+        appointment = await aptRepo.findOne({
           where: [{ id: targetId as any }, { appointmentNumber: targetId }] as any,
           relations: { patient: true },
         });
 
-        if (apt) {
-          if ((apt as any).paymentStatus !== 'SUCCESS' && (apt as any).isPaid !== true) {
-            apt.status = AppointmentStatus?.COMPLETED || ('Completed' as any);
-            (apt as any).isPaid = true;
-            (apt as any).paymentId = txnId;
-            (apt as any).paymentStatus = 'SUCCESS';
-            await aptRepo.save(apt);
+        if (appointment) {
+          if (String((appointment as any).paymentStatus || '').toUpperCase() !== 'SUCCESS' && (appointment as any).isPaid !== true) {
+            appointment.status = AppointmentStatus?.COMPLETED || ('Completed' as any);
+            (appointment as any).isPaid = true;
+            (appointment as any).paymentId = txnId;
+            (appointment as any).paymentStatus = 'SUCCESS';
+            await aptRepo.save(appointment);
           }
         }
       } catch (e) {
@@ -125,7 +126,7 @@ export class PaymentService {
       let bill: Billing | null = null;
       if (targetId) {
         bill = await billRepo.findOne({
-          where: [{ id: targetId as any }, { appointment: { id: targetId } }] as any,
+          where: { id: targetId as any },
           relations: { patient: true },
         });
       }
@@ -140,14 +141,12 @@ export class PaymentService {
       } else {
         const newBill = billRepo.create({
           invoiceNumber: `INV-${Date.now()}`,
-          amount: paidAmount,
+          patient: appointment?.patient,
+          consultationFee: paidAmount,
           totalAmount: paidAmount,
-          subTotal: Number((paidAmount / 1.05).toFixed(2)),
-          gstAmount: Number((paidAmount - Number((paidAmount / 1.05).toFixed(2))).toFixed(2)),
-          paymentMethod: 'ONLINE',
+          paymentMethod: PaymentMethod.UPI,
           paymentStatus: PaymentStatus.PAID,
-          lineItems: [{ itemDescription: 'Razorpay Online Settlement', amount: paidAmount }],
-          transactionId: txnId,
+          notes: `Razorpay payment ${txnId}`,
         } as any);
         await billRepo.save(newBill);
         this.logger.log(`New PAID billing record created automatically for amount ₹${paidAmount}.`);

@@ -40,10 +40,6 @@ export default function ReceptionDashboardPage() {
   const [paidMap, setPaidMap] = useState<Record<string, { isPaid: boolean; amount: number }>>({});
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('drbloomedi_paid_appointments_v2');
-      if (saved) setPaidMap(JSON.parse(saved));
-    } catch {}
     fetchAppointments();
     const poll = setInterval(() => fetchAppointments(true), 7000);
     return () => clearInterval(poll);
@@ -76,9 +72,9 @@ export default function ReceptionDashboardPage() {
         setPaidMap((prev) => {
           const up = { ...prev };
           data.forEach(item => {
-            if ((item.isPaid || item.paymentStatus === 'PAID') && !up[item.id]) up[item.id] = { isPaid: true, amount: 500 };
+            const status = String(item.paymentStatus || '').trim().toUpperCase();
+            if ((item.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) && !up[item.id]) up[item.id] = { isPaid: true, amount: Number(item.amount ?? item.totalAmount ?? 0) };
           });
-          try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
           return up;
         });
       }
@@ -208,13 +204,8 @@ export default function ReceptionDashboardPage() {
   const openBilling = async (apt: any) => {
     setSelectedApt(apt);
     const consult = Number(apt.doctor?.consultationFee) || 500;
-    let lab = 0; let names: string[] = [];
-    try {
-      const saved = localStorage.getItem(`drbloomedi_lab_orders_${apt.id}`);
-      if (saved) {
-        JSON.parse(saved).forEach((t: any) => { lab += Number(t.testPrice) || 350; names.push(t.testName); });
-      }
-    } catch {}
+    const lab = 0;
+    const names: string[] = [];
     setBill({ consult, lab, testNames: names, treatment: 0, pharma: 0, discount: 0, net: consult + lab });
   };
 
@@ -259,8 +250,6 @@ export default function ReceptionDashboardPage() {
 
         const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
         setPaidMap(up);
-        try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
-
         setReceipt({ 
           patient: selectedApt.patient, 
           appointmentNumber: selectedApt.appointmentNumber, 
@@ -324,8 +313,6 @@ export default function ReceptionDashboardPage() {
             if (verifyData.success || verifyRes.ok) {
               const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
               setPaidMap(up);
-              try { localStorage.setItem('drbloomedi_paid_appointments_v2', JSON.stringify(up)); } catch {}
-
               setReceipt({ 
                 patient: selectedApt.patient, 
                 appointmentNumber: selectedApt.appointmentNumber, 
@@ -372,7 +359,8 @@ export default function ReceptionDashboardPage() {
   const analytics = useMemo(() => {
     let rev = 0, discharged = 0, pending = 0;
     appointments.forEach(a => {
-      if (paidMap[a.id]?.isPaid || a.isPaid || a.paymentStatus === 'PAID') { discharged++; rev += Number(paidMap[a.id]?.amount || 500); }
+      const status = String(a.paymentStatus || '').trim().toUpperCase();
+      if (paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) { discharged++; rev += Number(paidMap[a.id]?.amount || a.amount || a.totalAmount || 0); }
       else { pending++; }
     });
     return { total: appointments.length, rev, discharged, pending };
@@ -380,7 +368,8 @@ export default function ReceptionDashboardPage() {
 
   // Reception queue should only show pending/unpaid appointments so settled ones move out of active queue
   const list = appointments.filter(a => {
-    const isPaid = paidMap[a.id]?.isPaid || a.isPaid || a.paymentStatus === 'PAID';
+    const status = String(a.paymentStatus || '').trim().toUpperCase();
+    const isPaid = paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status);
     if (isPaid) return false; // Hide settled bills from active queue
     const q = search.toLowerCase();
     return (a.patient?.fullName || '').toLowerCase().includes(q) || (a.patient?.phone || '').includes(q) || (a.appointmentNumber || '').toLowerCase().includes(q);
@@ -390,7 +379,7 @@ export default function ReceptionDashboardPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] font-sans text-slate-900 dark:text-slate-100 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden transition-colors">
       
       {/* Background Glow Accents */}
-      <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none"></div>
+      <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-blue-600/10 dark:bg-blue-950/20 rounded-full blur-[130px] pointer-events-none"></div>
 
       {/* Live Socket Alert Banner */}
       {liveAlert && (
@@ -411,7 +400,7 @@ export default function ReceptionDashboardPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => fetchAppointments()} className="px-4 py-2.5 bg-slate-100 dark:bg-[#1f2937] hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 transition shadow-xs cursor-pointer">🔄 Refresh</button>
-          <button onClick={() => { if (typeof performLogout === 'function') performLogout('Logged out successfully.'); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900 transition shadow-xs cursor-pointer">Logout</button>
+          <button onClick={() => { if (typeof performLogout === 'function') performLogout('Logged out successfully.'); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900 transition shadow-xs cursor-pointer">Logout</button>
         </div>
       </div>
 
@@ -572,7 +561,8 @@ export default function ReceptionDashboardPage() {
                   <tr><td colSpan={6} className="py-8 text-center text-slate-400">No active pending appointments found.</td></tr>
                 ) : (
                   list.map(a => {
-                    const paid = paidMap[a.id]?.isPaid || a.isPaid || a.paymentStatus === 'PAID';
+                    const status = String(a.paymentStatus || '').trim().toUpperCase();
+                    const paid = paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status);
                     return (
                       <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-[#1f2937]/50 transition">
                         <td className="py-3.5 px-2 font-mono font-bold text-blue-600 dark:text-blue-400">{a.appointmentNumber || 'APT'}</td>
@@ -688,7 +678,7 @@ export default function ReceptionDashboardPage() {
                 <button 
                   disabled={paying} 
                   onClick={() => finalizePayment('Cash Counter')} 
-                  className="py-3.5 bg-white dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-bold rounded-2xl text-xs transition disabled:opacity-50 cursor-pointer shadow-xs"
+                  className="py-3.5 bg-white dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-2xl text-xs transition disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   💵 Cash Counter
                 </button>
