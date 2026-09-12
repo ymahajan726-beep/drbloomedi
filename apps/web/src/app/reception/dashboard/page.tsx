@@ -12,6 +12,7 @@ export default function ReceptionDashboardPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [billingRecords, setBillingRecords] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
@@ -36,8 +37,8 @@ export default function ReceptionDashboardPage() {
   const [receipt, setReceipt] = useState<any | null>(null);
 
   useEffect(() => {
-    fetchAppointments();
-    const poll = setInterval(() => fetchAppointments(true), 7000);
+    fetchData();
+    const poll = setInterval(() => fetchData(true), 7000);
     return () => clearInterval(poll);
   }, []);
 
@@ -53,18 +54,25 @@ export default function ReceptionDashboardPage() {
     return () => { socket.disconnect(); };
   }, []);
 
-  const fetchAppointments = async (isBg = false) => {
+  const fetchData = async (isBg = false) => {
     try {
       if (!isBg) setLoading(true);
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const res = await fetch(`${BACKEND_URL}/appointments`, {
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const list = await res.json();
-        const data = Array.isArray(list) ? list : [];
-        setAppointments(data);
+      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+      const [aptRes, billRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/appointments`, { headers, credentials: 'include' }),
+        fetch(`${BACKEND_URL}/billing`, { headers, credentials: 'include' }).catch(() => null)
+      ]);
+
+      if (aptRes.ok) {
+        const list = await aptRes.json();
+        setAppointments(Array.isArray(list) ? list : []);
+      }
+
+      if (billRes && billRes.ok) {
+        const bList = await billRes.json();
+        setBillingRecords(Array.isArray(bList) ? bList : []);
       }
     } catch (e) { console.error(e); }
     finally { if (!isBg) setLoading(false); }
@@ -94,9 +102,7 @@ export default function ReceptionDashboardPage() {
             }
           }
         }
-      } catch (err) {
-        console.error('Error looking up patient by phone', err);
-      }
+      } catch (err) { console.error(err); }
     }
   };
 
@@ -109,10 +115,7 @@ export default function ReceptionDashboardPage() {
     setRegistering(true);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       let pId = walkinForm.patientId;
       if (!pId) {
@@ -125,17 +128,10 @@ export default function ReceptionDashboardPage() {
 
         if (!pId) {
           const patRes = await fetch(`${BACKEND_URL}/patients`, {
-            method: 'POST',
-            headers,
-            credentials: 'include',
+            method: 'POST', headers, credentials: 'include',
             body: JSON.stringify({
-              fullName: walkinForm.fullName,
-              phone: walkinForm.phone,
-              age: Number(walkinForm.age) || 30,
-              gender: walkinForm.gender,
-              bloodGroup: 'O+',
-              patientType: 'Outpatient',
-              email: `${walkinForm.phone}@drbloomedi.local`,
+              fullName: walkinForm.fullName, phone: walkinForm.phone, age: Number(walkinForm.age) || 30,
+              gender: walkinForm.gender, bloodGroup: 'O+', patientType: 'Outpatient', email: `${walkinForm.phone}@drbloomedi.local`,
             }),
           });
           if (patRes.ok) {
@@ -167,34 +163,26 @@ export default function ReceptionDashboardPage() {
       if (doctorId) appointmentPayload.doctorId = doctorId;
 
       const res = await fetch(`${BACKEND_URL}/appointments`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify(appointmentPayload),
+        method: 'POST', headers, credentials: 'include', body: JSON.stringify(appointmentPayload),
       });
 
       if (res.ok) {
         setWalkinForm({ fullName: '', phone: '', age: '', gender: 'Male', specialist: 'General Physician', slot: '10:00 AM', reason: 'General Checkup', patientId: '' });
-        fetchAppointments();
+        fetchData();
         showToast('Walk-in token issued successfully!', 'success');
       } else {
         const errData = await res.json().catch(() => ({}));
         showToast(errData.message || 'Failed to issue walk-in token.', 'error');
       }
     } catch (err: any) {
-      console.error(err);
       showToast(err.message || 'Network error while issuing token.', 'error');
-    } finally {
-      setRegistering(false);
-    }
+    } finally { setRegistering(false); }
   };
 
   const openBilling = async (apt: any) => {
     setSelectedApt(apt);
     const consult = Number(apt.doctor?.consultationFee) || 500;
-    const lab = 0;
-    const names: string[] = [];
-    setBill({ consult, lab, testNames: names, treatment: 0, pharma: 0, discount: 0, net: consult + lab });
+    setBill({ consult, lab: 0, testNames: [], treatment: 0, pharma: 0, discount: 0, net: consult });
   };
 
   const updateBill = (field: string, val: number) => {
@@ -217,24 +205,14 @@ export default function ReceptionDashboardPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
+      const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
       if (mode.includes('Cash')) {
         const patientId = selectedApt.patient?.id || selectedApt.patientId;
-        
         if (patientId) {
           await fetch(`${BACKEND_URL}/billing/consolidated/${patientId}/settle`, {
-            method: 'POST',
-            headers,
-            credentials: 'include',
-            body: JSON.stringify({
-              paymentMethod: 'CASH',
-              amount: bill.net,
-              appointmentId: selectedApt.id,
-            }),
+            method: 'POST', headers, credentials: 'include',
+            body: JSON.stringify({ paymentMethod: 'CASH', amount: bill.net, appointmentId: selectedApt.id }),
           }).catch(() => {});
         }
 
@@ -248,21 +226,15 @@ export default function ReceptionDashboardPage() {
 
         setSelectedApt(null); 
         setPaying(false);
-        fetchAppointments();
+        fetchData();
         return;
       }
 
       const orderRes = await fetch(`${BACKEND_URL}/payments/create-order`, {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ billId: selectedApt.id, amount: bill.net })
+        method: 'POST', headers, credentials: 'include', body: JSON.stringify({ billId: selectedApt.id, amount: bill.net })
       });
       const orderData = await orderRes.json();
-
-      if (!orderData.success) {
-        throw new Error('Failed to create secure payment order');
-      }
+      if (!orderData.success) throw new Error('Failed to create secure payment order');
 
       if (!(window as any).Razorpay) {
         await new Promise((resolve) => {
@@ -274,29 +246,17 @@ export default function ReceptionDashboardPage() {
       }
 
       const options = {
-        key: orderData.keyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        name: 'DrBlooMedi Hospital',
-        description: `Consultation & Services - Token ${selectedApt.appointmentNumber}`,
-        order_id: orderData.orderId,
+        key: orderData.keyId, amount: orderData.amount, currency: orderData.currency,
+        name: 'DrBlooMedi Hospital', description: `Consultation & Services - Token ${selectedApt.appointmentNumber}`, order_id: orderData.orderId,
         handler: async function (response: any) {
-          setPaymentStatusText('Verifying cryptographic signature...');
-          
           try {
             const verifyRes = await fetch(`${BACKEND_URL}/payments/verify`, {
-              method: 'POST',
-              headers,
-              credentials: 'include',
+              method: 'POST', headers, credentials: 'include',
               body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                appointmentId: selectedApt.id,
-                amount: bill.net,
+                razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature, appointmentId: selectedApt.id, amount: bill.net,
               }),
             });
-            
             const verifyData = await verifyRes.json();
             if (verifyData.success || verifyRes.ok) {
               setReceipt({ 
@@ -306,37 +266,21 @@ export default function ReceptionDashboardPage() {
                 txnId: response.razorpay_payment_id, 
                 mode: 'Razorpay Secure Online Gateway' 
               });
-
               setSelectedApt(null); 
-              fetchAppointments();
-            } else {
-              showToast('Payment verification failed on server!', 'error');
-            }
-          } catch (e) {
-            showToast('Error connecting during verification', 'error');
-          } finally {
-            setPaying(false);
-          }
+              fetchData();
+            } else { showToast('Payment verification failed on server!', 'error'); }
+          } catch { showToast('Error connecting during verification', 'error'); }
+          finally { setPaying(false); }
         },
-        prefill: {
-          name: selectedApt.patient?.fullName || 'Patient',
-          contact: selectedApt.patient?.phone || '',
-        },
-        theme: {
-          color: '#2563eb',
-        },
+        prefill: { name: selectedApt.patient?.fullName || 'Patient', contact: selectedApt.patient?.phone || '' },
+        theme: { color: '#2563eb' },
       };
 
       const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        showToast(`Payment failed: ${response.error.description}`, 'error');
-        setPaying(false);
-      });
+      rzp.on('payment.failed', (r: any) => { showToast(`Payment failed: ${r.error.description}`, 'error'); setPaying(false); });
       rzp.open();
       setPaying(false);
-
     } catch (err: any) {
-      console.error(err);
       setPaying(false);
       showToast(err.message || 'Could not initialize payment settlement.', 'error');
     }
@@ -344,21 +288,34 @@ export default function ReceptionDashboardPage() {
 
   const analytics = useMemo(() => {
     let rev = 0, discharged = 0, pending = 0;
+    
+    // Calculate accurate revenue directly from backend billing records or paid appointments
+    billingRecords.forEach(b => {
+      const st = String(b.status || b.paymentStatus || '').trim().toUpperCase();
+      if (st === 'PAID' || st === 'SUCCESS' || st === 'COMPLETED') {
+        rev += Number(b.amount || b.netAmount || b.totalAmount || 0);
+      }
+    });
+
     appointments.forEach(a => {
+      const status = String(a.status || '').trim().toUpperCase();
       const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
       const isPaid = a.isPaid === true || ['PAID', 'SUCCESS'].includes(paymentStatus);
-      const isCompleted = String(a.status || '').trim().toUpperCase() === 'COMPLETED';
 
       if (isPaid) {
         discharged++;
-        rev += Number(a.amount || a.totalAmount || 500);
-      } else if (isCompleted) {
+        if (rev === 0) {
+          rev += Number(a.amount || a.totalAmount || 500);
+        }
+      } else if (status === 'COMPLETED') {
         pending++;
       }
     });
-    return { total: appointments.length, rev, discharged, pending };
-  }, [appointments]);
 
+    return { total: appointments.length, rev, discharged, pending };
+  }, [appointments, billingRecords]);
+
+  // Queue lists only appointments completed by the doctor whose payment is NOT yet paid
   const list = appointments.filter(a => {
     const status = String(a.status || '').trim().toUpperCase();
     const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
@@ -378,7 +335,7 @@ export default function ReceptionDashboardPage() {
       {liveAlert && (
         <div className="p-3.5 bg-emerald-600 text-white text-xs rounded-2xl font-bold flex justify-between items-center shadow-xl animate-bounce border border-emerald-400/30">
           <span>🔔 {liveAlert}</span>
-          <button onClick={() => setLiveAlert(null)} className="bg-white/20 px-2.5 py-0.5 rounded-lg">✕</button>
+          <button onClick={() => setLiveAlert(null)} className="bg-white/20 px-2.5 py-0.5 rounded-lg cursor-pointer">✕</button>
         </div>
       )}
 
@@ -391,8 +348,8 @@ export default function ReceptionDashboardPage() {
           <h1 className="text-2xl font-black text-slate-900 dark:text-white mt-1">Live Counter & Billing Queue</h1>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => fetchAppointments()} className="px-4 py-2.5 bg-slate-100 dark:bg-[#1f2937] hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 transition shadow-xs cursor-pointer">🔄 Refresh</button>
-          <button onClick={() => { if (typeof performLogout === 'function') performLogout('Logged out successfully.'); else { localStorage.clear(); window.location.href = '/login'; } }} className="px-4 py-2.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900 transition shadow-xs cursor-pointer">Logout</button>
+          <button onClick={() => fetchData()} className="px-4 py-2.5 bg-slate-100 dark:bg-[#1f2937] hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 transition shadow-xs cursor-pointer">🔄 Refresh</button>
+          <button onClick={() => performLogout('Logged out successfully.')} className="px-4 py-2.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900 transition shadow-xs cursor-pointer">Logout</button>
         </div>
       </div>
 
