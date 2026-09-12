@@ -142,6 +142,7 @@ export class PaymentService {
         const newBill = billRepo.create({
           invoiceNumber: `INV-${Date.now()}`,
           patient: appointment?.patient,
+          appointment: appointment || null,
           consultationFee: paidAmount,
           totalAmount: paidAmount,
           paymentMethod: PaymentMethod.UPI,
