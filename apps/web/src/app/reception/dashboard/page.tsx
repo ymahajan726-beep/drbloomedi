@@ -207,79 +207,94 @@ export default function ReceptionDashboardPage() {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
+      const patientId = selectedApt.patient?.id || selectedApt.patientId;
+
       if (mode.includes('Cash')) {
-        const patientId = selectedApt.patient?.id || selectedApt.patientId;
         if (patientId) {
           await fetch(`${BACKEND_URL}/billing/consolidated/${patientId}/settle`, {
             method: 'POST', headers, credentials: 'include',
             body: JSON.stringify({ paymentMethod: 'CASH', amount: bill.net, appointmentId: selectedApt.id }),
           }).catch(() => {});
         }
+      }
 
-        setReceipt({ 
-          patient: selectedApt.patient, 
-          appointmentNumber: selectedApt.appointmentNumber, 
-          bill: { ...bill }, 
-          txnId, 
-          mode: 'Cash Counter' 
+      // CRITICAL FIX: Explicitly patch appointment status to PAID so it permanently leaves queue & updates Discharged count
+      await fetch(`${BACKEND_URL}/appointments/${selectedApt.id}/status`, {
+        method: 'PATCH', headers, credentials: 'include',
+        body: JSON.stringify({ status: 'PAID', paymentStatus: 'PAID', isPaid: true }),
+      }).catch(() => {});
+
+      if (!mode.includes('Cash')) {
+        const orderRes = await fetch(`${BACKEND_URL}/payments/create-order`, {
+          method: 'POST', headers, credentials: 'include', body: JSON.stringify({ billId: selectedApt.id, amount: bill.net })
         });
+        const orderData = await orderRes.json();
+        if (!orderData.success) throw new Error('Failed to create secure payment order');
 
-        setSelectedApt(null); 
+        if (!(window as any).Razorpay) {
+          await new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = resolve;
+            document.body.appendChild(script);
+          });
+        }
+
+        const options = {
+          key: orderData.keyId, amount: orderData.amount, currency: orderData.currency,
+          name: 'DrBlooMedi Hospital', description: `Consultation & Services - Token ${selectedApt.appointmentNumber}`, order_id: orderData.orderId,
+          handler: async function (response: any) {
+            try {
+              const verifyRes = await fetch(`${BACKEND_URL}/payments/verify`, {
+                method: 'POST', headers, credentials: 'include',
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature, appointmentId: selectedApt.id, amount: bill.net,
+                }),
+              });
+              const verifyData = await verifyRes.json();
+              if (verifyData.success || verifyRes.ok) {
+                // Ensure backend status is patched on online success too
+                await fetch(`${BACKEND_URL}/appointments/${selectedApt.id}/status`, {
+                  method: 'PATCH', headers, credentials: 'include',
+                  body: JSON.stringify({ status: 'PAID', paymentStatus: 'PAID', isPaid: true }),
+                }).catch(() => {});
+
+                setReceipt({ 
+                  patient: selectedApt.patient, 
+                  appointmentNumber: selectedApt.appointmentNumber, 
+                  bill: { ...bill }, 
+                  txnId: response.razorpay_payment_id, 
+                  mode: 'Razorpay Secure Online Gateway' 
+                });
+                setSelectedApt(null); 
+                fetchData();
+              } else { showToast('Payment verification failed on server!', 'error'); }
+            } catch { showToast('Error connecting during verification', 'error'); }
+            finally { setPaying(false); }
+          },
+          prefill: { name: selectedApt.patient?.fullName || 'Patient', contact: selectedApt.patient?.phone || '' },
+          theme: { color: '#2563eb' },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', (r: any) => { showToast(`Payment failed: ${r.error.description}`, 'error'); setPaying(false); });
+        rzp.open();
         setPaying(false);
-        fetchData();
         return;
       }
 
-      const orderRes = await fetch(`${BACKEND_URL}/payments/create-order`, {
-        method: 'POST', headers, credentials: 'include', body: JSON.stringify({ billId: selectedApt.id, amount: bill.net })
+      setReceipt({ 
+        patient: selectedApt.patient, 
+        appointmentNumber: selectedApt.appointmentNumber, 
+        bill: { ...bill }, 
+        txnId, 
+        mode: 'Cash Counter' 
       });
-      const orderData = await orderRes.json();
-      if (!orderData.success) throw new Error('Failed to create secure payment order');
 
-      if (!(window as any).Razorpay) {
-        await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = resolve;
-          document.body.appendChild(script);
-        });
-      }
-
-      const options = {
-        key: orderData.keyId, amount: orderData.amount, currency: orderData.currency,
-        name: 'DrBlooMedi Hospital', description: `Consultation & Services - Token ${selectedApt.appointmentNumber}`, order_id: orderData.orderId,
-        handler: async function (response: any) {
-          try {
-            const verifyRes = await fetch(`${BACKEND_URL}/payments/verify`, {
-              method: 'POST', headers, credentials: 'include',
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature, appointmentId: selectedApt.id, amount: bill.net,
-              }),
-            });
-            const verifyData = await verifyRes.json();
-            if (verifyData.success || verifyRes.ok) {
-              setReceipt({ 
-                patient: selectedApt.patient, 
-                appointmentNumber: selectedApt.appointmentNumber, 
-                bill: { ...bill }, 
-                txnId: response.razorpay_payment_id, 
-                mode: 'Razorpay Secure Online Gateway' 
-              });
-              setSelectedApt(null); 
-              fetchData();
-            } else { showToast('Payment verification failed on server!', 'error'); }
-          } catch { showToast('Error connecting during verification', 'error'); }
-          finally { setPaying(false); }
-        },
-        prefill: { name: selectedApt.patient?.fullName || 'Patient', contact: selectedApt.patient?.phone || '' },
-        theme: { color: '#2563eb' },
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', (r: any) => { showToast(`Payment failed: ${r.error.description}`, 'error'); setPaying(false); });
-      rzp.open();
+      setSelectedApt(null); 
       setPaying(false);
+      fetchData();
     } catch (err: any) {
       setPaying(false);
       showToast(err.message || 'Could not initialize payment settlement.', 'error');
@@ -289,7 +304,6 @@ export default function ReceptionDashboardPage() {
   const analytics = useMemo(() => {
     let rev = 0, discharged = 0, pending = 0;
     
-    // Calculate accurate revenue directly from backend billing records or paid appointments
     billingRecords.forEach(b => {
       const st = String(b.status || b.paymentStatus || '').trim().toUpperCase();
       if (st === 'PAID' || st === 'SUCCESS' || st === 'COMPLETED') {
@@ -300,7 +314,7 @@ export default function ReceptionDashboardPage() {
     appointments.forEach(a => {
       const status = String(a.status || '').trim().toUpperCase();
       const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
-      const isPaid = a.isPaid === true || ['PAID', 'SUCCESS'].includes(paymentStatus);
+      const isPaid = a.isPaid === true || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(status);
 
       if (isPaid) {
         discharged++;
@@ -315,12 +329,12 @@ export default function ReceptionDashboardPage() {
     return { total: appointments.length, rev, discharged, pending };
   }, [appointments, billingRecords]);
 
-  // Queue lists only appointments completed by the doctor whose payment is NOT yet paid
   const list = appointments.filter(a => {
     const status = String(a.status || '').trim().toUpperCase();
     const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
     
-    if (a.isPaid || ['PAID', 'SUCCESS'].includes(paymentStatus)) return false;
+    // Hide from queue if paid, success, or discharged
+    if (a.isPaid || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(status)) return false;
     if (status !== 'COMPLETED') return false;
 
     const q = search.toLowerCase();
@@ -339,7 +353,7 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white dark:bg-[#111827] backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
@@ -354,19 +368,19 @@ export default function ReceptionDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Patients</p>
+        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <p className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase tracking-wider">Total Patients</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{analytics.total}</p>
         </div>
-        <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Total Revenue</p>
           <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">₹{analytics.rev}</p>
         </div>
-        <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Discharged</p>
           <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{analytics.discharged}</p>
         </div>
-        <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">Pending Settlement</p>
           <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{analytics.pending}</p>
         </div>
@@ -374,7 +388,7 @@ export default function ReceptionDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        <div className="lg:col-span-4 bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+        <div className="lg:col-span-4 bg-white dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
             <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Walk-in Patient Token Issue</h2>
             <p className="text-[11px] text-slate-400 mt-0.5">Instant counter registration & queue assignment</p>
@@ -388,7 +402,7 @@ export default function ReceptionDashboardPage() {
                 placeholder="10-digit phone (auto-detects patient)"
                 value={walkinForm.phone}
                 onChange={e => handlePhoneChange(e.target.value)}
-                className="w-full p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
                 required
               />
             </div>
@@ -400,7 +414,7 @@ export default function ReceptionDashboardPage() {
                 placeholder="e.g. Ramesh Kulkarni"
                 value={walkinForm.fullName}
                 onChange={e => setWalkinForm({ ...walkinForm, fullName: e.target.value })}
-                className="w-full p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
                 required
               />
             </div>
@@ -413,7 +427,7 @@ export default function ReceptionDashboardPage() {
                   placeholder="35"
                   value={walkinForm.age}
                   onChange={e => setWalkinForm({ ...walkinForm, age: e.target.value })}
-                  className="w-full p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
                 />
               </div>
               <div>
@@ -421,7 +435,7 @@ export default function ReceptionDashboardPage() {
                 <select
                   value={walkinForm.gender}
                   onChange={e => setWalkinForm({ ...walkinForm, gender: e.target.value })}
-                  className="w-full p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
                 >
                   <option value="Male" className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white">Male</option>
                   <option value="Female" className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white">Female</option>
@@ -435,7 +449,7 @@ export default function ReceptionDashboardPage() {
               <select
                 value={walkinForm.specialist}
                 onChange={e => setWalkinForm({ ...walkinForm, specialist: e.target.value })}
-                className="w-full p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
+                className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
               >
                 <option value="General Physician" className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white">General Physician</option>
                 <option value="Cardiologist" className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white">Cardiologist</option>
@@ -451,7 +465,7 @@ export default function ReceptionDashboardPage() {
                   type="text"
                   value={walkinForm.slot}
                   onChange={e => setWalkinForm({ ...walkinForm, slot: e.target.value })}
-                  className="w-full p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
                 />
               </div>
               <div>
@@ -460,7 +474,7 @@ export default function ReceptionDashboardPage() {
                   type="text"
                   value={walkinForm.reason}
                   onChange={e => setWalkinForm({ ...walkinForm, reason: e.target.value })}
-                  className="w-full p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
+                  className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
                 />
               </div>
             </div>
@@ -475,7 +489,7 @@ export default function ReceptionDashboardPage() {
           </form>
         </div>
 
-        <div className="lg:col-span-8 bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
+        <div className="lg:col-span-8 bg-white dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
             <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">OPD & Consultation Queue</h2>
             <input 
@@ -483,7 +497,7 @@ export default function ReceptionDashboardPage() {
               placeholder="Search patient name, phone, token..." 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
-              className="w-full sm:w-72 p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
+              className="w-full sm:w-72 p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition"
             />
           </div>
 
@@ -553,7 +567,7 @@ export default function ReceptionDashboardPage() {
               </div>
 
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
                   <span className="text-slate-700 dark:text-slate-300 font-medium">Consultation Fee</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
@@ -561,7 +575,7 @@ export default function ReceptionDashboardPage() {
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
                   <div>
                     <span className="text-slate-700 dark:text-slate-300 block font-medium">Pathology / Lab Tests</span>
                     {bill.testNames.length > 0 && <span className="text-[10px] text-slate-400">{bill.testNames.join(', ')}</span>}
@@ -572,7 +586,7 @@ export default function ReceptionDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
                   <span className="text-slate-700 dark:text-slate-300 font-medium">Procedures & Treatment</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
@@ -580,7 +594,7 @@ export default function ReceptionDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
                   <span className="text-slate-700 dark:text-slate-300 font-medium">Pharmacy Medicines</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
@@ -588,7 +602,7 @@ export default function ReceptionDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs">
                   <span className="text-slate-700 dark:text-slate-300 font-medium">Discount / Concession</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
