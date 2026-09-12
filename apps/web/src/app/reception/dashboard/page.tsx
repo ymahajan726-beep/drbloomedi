@@ -199,6 +199,7 @@ export default function ReceptionDashboardPage() {
     setPaying(true);
     setPaymentStatusText('Processing Settlement...');
 
+    const currentAptId = selectedApt.id;
     const txnId = mode.includes('Cash') 
       ? `CASH-${Date.now().toString().slice(-6)}` 
       : `UPI-TXN-${Date.now().toString().slice(-6)}`;
@@ -213,19 +214,19 @@ export default function ReceptionDashboardPage() {
         if (patientId) {
           await fetch(`${BACKEND_URL}/billing/consolidated/${patientId}/settle`, {
             method: 'POST', headers, credentials: 'include',
-            body: JSON.stringify({ paymentMethod: 'CASH', amount: bill.net, appointmentId: selectedApt.id }),
+            body: JSON.stringify({ paymentMethod: 'CASH', amount: bill.net, appointmentId: currentAptId }),
           }).catch(() => {});
         }
       }
 
-      await fetch(`${BACKEND_URL}/appointments/${selectedApt.id}/status`, {
+      await fetch(`${BACKEND_URL}/appointments/${currentAptId}/status`, {
         method: 'PATCH', headers, credentials: 'include',
         body: JSON.stringify({ status: 'PAID', paymentStatus: 'PAID', isPaid: true }),
       }).catch(() => {});
 
       if (!mode.includes('Cash')) {
         const orderRes = await fetch(`${BACKEND_URL}/payments/create-order`, {
-          method: 'POST', headers, credentials: 'include', body: JSON.stringify({ billId: selectedApt.id, amount: bill.net })
+          method: 'POST', headers, credentials: 'include', body: JSON.stringify({ billId: currentAptId, amount: bill.net })
         });
         const orderData = await orderRes.json();
         if (!orderData.success) throw new Error('Failed to create secure payment order');
@@ -248,15 +249,18 @@ export default function ReceptionDashboardPage() {
                 method: 'POST', headers, credentials: 'include',
                 body: JSON.stringify({
                   razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature, appointmentId: selectedApt.id, amount: bill.net,
+                  razorpay_signature: response.razorpay_signature, appointmentId: currentAptId, amount: bill.net,
                 }),
               });
               const verifyData = await verifyRes.json();
               if (verifyData.success || verifyRes.ok) {
-                await fetch(`${BACKEND_URL}/appointments/${selectedApt.id}/status`, {
+                await fetch(`${BACKEND_URL}/appointments/${currentAptId}/status`, {
                   method: 'PATCH', headers, credentials: 'include',
                   body: JSON.stringify({ status: 'PAID', paymentStatus: 'PAID', isPaid: true }),
                 }).catch(() => {});
+
+                // INSTANT LOCAL REMOVAL
+                setAppointments(prev => prev.filter(item => String(item.id) !== String(currentAptId)));
 
                 setReceipt({ 
                   patient: selectedApt.patient, 
@@ -281,6 +285,9 @@ export default function ReceptionDashboardPage() {
         setPaying(false);
         return;
       }
+
+      // INSTANT LOCAL REMOVAL FOR CASH
+      setAppointments(prev => prev.filter(item => String(item.id) !== String(currentAptId)));
 
       setReceipt({ 
         patient: selectedApt.patient, 
@@ -318,7 +325,7 @@ export default function ReceptionDashboardPage() {
     appointments.forEach(a => {
       const status = String(a.status || '').trim().toUpperCase();
       const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
-      const isPaid = a.isPaid === true || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(status);
+      const isPaid = a.isPaid === true || ['PAID', 'SUCCESS', 'DISCHARGED', 'SETTLED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED', 'SETTLED'].includes(status);
 
       if (!isPaid && status === 'COMPLETED') {
         pending++;
@@ -328,12 +335,12 @@ export default function ReceptionDashboardPage() {
     return { 
       total: appointments.length, 
       rev, 
-      discharged: Math.max(discharged, appointments.filter(a => ['PAID', 'SUCCESS', 'DISCHARGED'].includes(String(a.status || '').toUpperCase())).length), 
+      discharged: Math.max(discharged, appointments.filter(a => ['PAID', 'SUCCESS', 'DISCHARGED', 'SETTLED'].includes(String(a.status || '').toUpperCase())).length), 
       pending 
     };
   }, [appointments, billingRecords]);
 
-  // Enhanced list filter: checks appointment ID, bill mapping, and explicit PAID status to remove settled patients instantly
+  // Aggressive filtering: hides any patient whose ID is in billingRecords or whose status is settled
   const list = useMemo(() => {
     const paidIds = new Set([
       ...billingRecords.map(b => String(b.appointmentId || '')),
@@ -354,6 +361,7 @@ export default function ReceptionDashboardPage() {
         return false;
       }
       
+      // Only show appointments that are marked Completed by the doctor
       if (status !== 'COMPLETED') return false;
 
       const q = search.toLowerCase();
