@@ -218,7 +218,6 @@ export default function ReceptionDashboardPage() {
         }
       }
 
-      // CRITICAL FIX: Explicitly patch appointment status to PAID so it permanently leaves queue & updates Discharged count
       await fetch(`${BACKEND_URL}/appointments/${selectedApt.id}/status`, {
         method: 'PATCH', headers, credentials: 'include',
         body: JSON.stringify({ status: 'PAID', paymentStatus: 'PAID', isPaid: true }),
@@ -254,7 +253,6 @@ export default function ReceptionDashboardPage() {
               });
               const verifyData = await verifyRes.json();
               if (verifyData.success || verifyRes.ok) {
-                // Ensure backend status is patched on online success too
                 await fetch(`${BACKEND_URL}/appointments/${selectedApt.id}/status`, {
                   method: 'PATCH', headers, credentials: 'include',
                   body: JSON.stringify({ status: 'PAID', paymentStatus: 'PAID', isPaid: true }),
@@ -302,7 +300,7 @@ export default function ReceptionDashboardPage() {
   };
 
   const analytics = useMemo(() => {
-    let rev = 0, discharged = 0, pending = 0;
+    let rev = 0;
     
     billingRecords.forEach(b => {
       const st = String(b.status || b.paymentStatus || '').trim().toUpperCase();
@@ -311,35 +309,47 @@ export default function ReceptionDashboardPage() {
       }
     });
 
+    const discharged = billingRecords.filter(b => {
+      const st = String(b.status || b.paymentStatus || '').trim().toUpperCase();
+      return st === 'PAID' || st === 'SUCCESS' || st === 'COMPLETED';
+    }).length;
+
+    let pending = 0;
     appointments.forEach(a => {
       const status = String(a.status || '').trim().toUpperCase();
       const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
       const isPaid = a.isPaid === true || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(status);
 
-      if (isPaid) {
-        discharged++;
-        if (rev === 0) {
-          rev += Number(a.amount || a.totalAmount || 500);
-        }
-      } else if (status === 'COMPLETED') {
+      if (!isPaid && status === 'COMPLETED') {
         pending++;
       }
     });
 
-    return { total: appointments.length, rev, discharged, pending };
+    return { 
+      total: appointments.length, 
+      rev, 
+      discharged: Math.max(discharged, appointments.filter(a => ['PAID', 'SUCCESS', 'DISCHARGED'].includes(String(a.status || '').toUpperCase())).length), 
+      pending 
+    };
   }, [appointments, billingRecords]);
 
-  const list = appointments.filter(a => {
-    const status = String(a.status || '').trim().toUpperCase();
-    const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
-    
-    // Hide from queue if paid, success, or discharged
-    if (a.isPaid || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(status)) return false;
-    if (status !== 'COMPLETED') return false;
+  const list = useMemo(() => {
+    const paidAppointmentIds = new Set(billingRecords.map(b => String(b.appointmentId || b.billId || '')));
 
-    const q = search.toLowerCase();
-    return (a.patient?.fullName || '').toLowerCase().includes(q) || (a.patient?.phone || '').includes(q) || (a.appointmentNumber || '').toLowerCase().includes(q);
-  });
+    return appointments.filter(a => {
+      const status = String(a.status || '').trim().toUpperCase();
+      const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
+      
+      if (paidAppointmentIds.has(String(a.id)) || a.isPaid || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(status)) {
+        return false;
+      }
+      
+      if (status !== 'COMPLETED') return false;
+
+      const q = search.toLowerCase();
+      return (a.patient?.fullName || '').toLowerCase().includes(q) || (a.patient?.phone || '').includes(q) || (a.appointmentNumber || '').toLowerCase().includes(q);
+    });
+  }, [appointments, billingRecords, search]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] font-sans text-slate-900 dark:text-slate-100 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden transition-colors">
