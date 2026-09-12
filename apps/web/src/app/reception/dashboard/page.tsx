@@ -17,7 +17,6 @@ export default function ReceptionDashboardPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
 
-  // Walk-in Patient Form State with auto-detect support
   const [walkinForm, setWalkinForm] = useState({
     fullName: '',
     phone: '',
@@ -32,10 +31,8 @@ export default function ReceptionDashboardPage() {
 
   const [selectedApt, setSelectedApt] = useState<any | null>(null);
   const [bill, setBill] = useState({ consult: 500, lab: 0, testNames: [] as string[], treatment: 0, pharma: 0, discount: 0, net: 500 });
-  
   const [paying, setPaying] = useState(false);
   const [paymentStatusText, setPaymentStatusText] = useState('Initializing Official Payment Gateway...');
-  
   const [receipt, setReceipt] = useState<any | null>(null);
 
   useEffect(() => {
@@ -56,7 +53,6 @@ export default function ReceptionDashboardPage() {
     return () => { socket.disconnect(); };
   }, []);
 
-  // Fetch appointments exclusively from the backend database endpoint without localstorage fallback for state persistence
   const fetchAppointments = async (isBg = false) => {
     try {
       if (!isBg) setLoading(true);
@@ -346,7 +342,6 @@ export default function ReceptionDashboardPage() {
     }
   };
 
-  // Analytics calculated directly from backend-synced appointment states (paid/completed)
   const analytics = useMemo(() => {
     let rev = 0, discharged = 0, pending = 0;
     appointments.forEach(a => {
@@ -364,15 +359,11 @@ export default function ReceptionDashboardPage() {
     return { total: appointments.length, rev, discharged, pending };
   }, [appointments]);
 
-  // Queue displays only appointments that are marked 'COMPLETED' by the doctor but NOT yet paid/settled
   const list = appointments.filter(a => {
     const status = String(a.status || '').trim().toUpperCase();
     const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
     
-    // If already paid or success, hide from reception queue
     if (a.isPaid || ['PAID', 'SUCCESS'].includes(paymentStatus)) return false;
-
-    // Must be completed by doctor to show up on reception billing queue
     if (status !== 'COMPLETED') return false;
 
     const q = search.toLowerCase();
@@ -391,7 +382,6 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* Header with fully harmonized dark mode styling */}
       <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -702,7 +692,7 @@ export default function ReceptionDashboardPage() {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-2xl font-bold text-xs transition cursor-pointer">🖨️ Print Receipt:</span>
+              <button onClick={() => window.print()} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-2xl font-bold text-xs transition cursor-pointer">🖨️ Print Receipt</button>
               <button onClick={() => setReceipt(null)} className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs transition cursor-pointer shadow-md shadow-blue-600/20">Close</button>
             </div>
           </div>
