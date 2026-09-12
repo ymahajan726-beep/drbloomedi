@@ -34,7 +34,7 @@ export default function ReceptionDashboardPage() {
   const [bill, setBill] = useState({ consult: 500, lab: 0, testNames: [] as string[], treatment: 0, pharma: 0, discount: 0, net: 500 });
   
   const [paying, setPaying] = useState(false);
-  const [paymentStatusText, setPaymentStatusText] = useState('Initializing Official Razorpay Gateway...');
+  const [paymentStatusText, setPaymentStatusText] = useState('Initializing Official Payment Gateway...');
   
   const [receipt, setReceipt] = useState<any | null>(null);
   const [paidMap, setPaidMap] = useState<Record<string, { isPaid: boolean; amount: number }>>({});
@@ -72,8 +72,10 @@ export default function ReceptionDashboardPage() {
         setPaidMap((prev) => {
           const up = { ...prev };
           data.forEach(item => {
-            const status = String(item.paymentStatus || '').trim().toUpperCase();
-            if ((item.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) && !up[item.id]) up[item.id] = { isPaid: true, amount: Number(item.amount ?? item.totalAmount ?? 0) };
+            const status = String(item.paymentStatus || item.status || '').trim().toUpperCase();
+            if ((item.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) && !up[item.id]) {
+              up[item.id] = { isPaid: true, amount: Number(item.amount ?? item.totalAmount ?? 0) };
+            }
           });
           return up;
         });
@@ -221,7 +223,7 @@ export default function ReceptionDashboardPage() {
   const finalizePayment = async (mode: string) => {
     if (!selectedApt) return;
     setPaying(true);
-    setPaymentStatusText('Connecting to Razorpay Secure Gateway...');
+    setPaymentStatusText('Processing Settlement...');
 
     const txnId = mode.includes('Cash') 
       ? `CASH-${Date.now().toString().slice(-6)}` 
@@ -234,22 +236,25 @@ export default function ReceptionDashboardPage() {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      if (mode.includes('Cash')) {
-        await fetch(`${BACKEND_URL}/payments/verify`, {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-          body: JSON.stringify({
-            razorpay_order_id: `cash_ord_${Date.now()}`,
-            razorpay_payment_id: txnId,
-            razorpay_signature: 'cash_counter_verified',
-            appointmentId: selectedApt.id,
-            amount: bill.net,
-          }),
-        }).catch(() => {});
+      const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
+      setPaidMap(up);
 
-        const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
-        setPaidMap(up);
+      if (mode.includes('Cash')) {
+        const patientId = selectedApt.patient?.id || selectedApt.patientId;
+        
+        if (patientId) {
+          await fetch(`${BACKEND_URL}/billing/consolidated/${patientId}/settle`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({
+              paymentMethod: 'CASH',
+              amount: bill.net,
+              appointmentId: selectedApt.id,
+            }),
+          }).catch(() => {});
+        }
+
         setReceipt({ 
           patient: selectedApt.patient, 
           appointmentNumber: selectedApt.appointmentNumber, 
@@ -311,8 +316,8 @@ export default function ReceptionDashboardPage() {
             
             const verifyData = await verifyRes.json();
             if (verifyData.success || verifyRes.ok) {
-              const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
-              setPaidMap(up);
+              const upMap = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
+              setPaidMap(upMap);
               setReceipt({ 
                 patient: selectedApt.patient, 
                 appointmentNumber: selectedApt.appointmentNumber, 
@@ -352,25 +357,29 @@ export default function ReceptionDashboardPage() {
     } catch (err: any) {
       console.error(err);
       setPaying(false);
-      showToast(err.message || 'Could not initialize online payment gateway.', 'error');
+      showToast(err.message || 'Could not initialize payment settlement.', 'error');
     }
   };
 
   const analytics = useMemo(() => {
     let rev = 0, discharged = 0, pending = 0;
     appointments.forEach(a => {
-      const status = String(a.paymentStatus || '').trim().toUpperCase();
-      if (paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) { discharged++; rev += Number(paidMap[a.id]?.amount || a.amount || a.totalAmount || 0); }
-      else { pending++; }
+      const status = String(a.paymentStatus || a.status || '').trim().toUpperCase();
+      if (paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) { 
+        discharged++; 
+        rev += Number(paidMap[a.id]?.amount || a.amount || a.totalAmount || 0); 
+      } else { 
+        pending++; 
+      }
     });
     return { total: appointments.length, rev, discharged, pending };
   }, [appointments, paidMap]);
 
-  // Reception queue should only show pending/unpaid appointments so settled ones move out of active queue
   const list = appointments.filter(a => {
-    const status = String(a.paymentStatus || '').trim().toUpperCase();
-    const isPaid = paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status);
-    if (isPaid) return false; // Hide settled bills from active queue
+    if (paidMap[a.id]?.isPaid) return false;
+    const status = String(a.paymentStatus || a.status || '').trim().toUpperCase();
+    if (a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) return false;
+    
     const q = search.toLowerCase();
     return (a.patient?.fullName || '').toLowerCase().includes(q) || (a.patient?.phone || '').includes(q) || (a.appointmentNumber || '').toLowerCase().includes(q);
   });
@@ -378,10 +387,8 @@ export default function ReceptionDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] font-sans text-slate-900 dark:text-slate-100 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden transition-colors">
       
-      {/* Background Glow Accents */}
       <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-blue-600/10 dark:bg-blue-950/20 rounded-full blur-[130px] pointer-events-none"></div>
 
-      {/* Live Socket Alert Banner */}
       {liveAlert && (
         <div className="p-3.5 bg-emerald-600 text-white text-xs rounded-2xl font-bold flex justify-between items-center shadow-xl animate-bounce border border-emerald-400/30">
           <span>🔔 {liveAlert}</span>
@@ -389,7 +396,7 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header with fixed dark mode classes */}
       <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -404,7 +411,6 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      {/* Analytics KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Patients</p>
@@ -424,10 +430,8 @@ export default function ReceptionDashboardPage() {
         </div>
       </div>
 
-      {/* TWO COLUMN LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left: Walk-in Patient Token Issue Form */}
         <div className="lg:col-span-4 bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
             <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Walk-in Patient Token Issue</h2>
@@ -529,7 +533,6 @@ export default function ReceptionDashboardPage() {
           </form>
         </div>
 
-        {/* Right: Live Queue Table Container */}
         <div className="lg:col-span-8 bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
             <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">OPD & Consultation Queue</h2>
@@ -561,8 +564,6 @@ export default function ReceptionDashboardPage() {
                   <tr><td colSpan={6} className="py-8 text-center text-slate-400">No active pending appointments found.</td></tr>
                 ) : (
                   list.map(a => {
-                    const status = String(a.paymentStatus || '').trim().toUpperCase();
-                    const paid = paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status);
                     return (
                       <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-[#1f2937]/50 transition">
                         <td className="py-3.5 px-2 font-mono font-bold text-blue-600 dark:text-blue-400">{a.appointmentNumber || 'APT'}</td>
@@ -593,7 +594,6 @@ export default function ReceptionDashboardPage() {
 
       </div>
 
-      {/* SLIDE-OVER BILLING SIDEBAR */}
       {selectedApt && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end transition-all">
           <div className="bg-white dark:bg-[#111827] border-l border-slate-200 dark:border-slate-800 w-full max-w-md h-full p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300">
@@ -610,7 +610,6 @@ export default function ReceptionDashboardPage() {
                 <button onClick={() => setSelectedApt(null)} aria-label="Close billing drawer" className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white flex items-center justify-center font-bold transition-colors cursor-pointer">✕</button>
               </div>
 
-              {/* Bill Item Breakdown */}
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between items-center gap-3 p-3 bg-slate-50/50 dark:bg-[#1f2937] border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs">
                   <span className="text-slate-700 dark:text-slate-300 font-medium">Consultation Fee</span>
@@ -656,14 +655,12 @@ export default function ReceptionDashboardPage() {
                 </div>
               </div>
 
-              {/* Net Payable Banner */}
               <div className="p-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl shadow-sm flex justify-between items-center">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-300">Net Payable Amount</span>
                 <span className="text-emerald-400 font-black text-2xl font-mono">₹{bill.net}.00</span>
               </div>
             </div>
 
-            {/* Payment Settlement Buttons */}
             <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Select Payment Settlement Mode</p>
               
@@ -689,7 +686,6 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* Official Printed Receipt Modal */}
       {receipt && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#111827] text-slate-900 dark:text-slate-100 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 border border-slate-100 dark:border-slate-800">
