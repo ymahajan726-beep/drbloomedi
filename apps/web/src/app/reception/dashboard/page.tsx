@@ -37,7 +37,6 @@ export default function ReceptionDashboardPage() {
   const [paymentStatusText, setPaymentStatusText] = useState('Initializing Official Payment Gateway...');
   
   const [receipt, setReceipt] = useState<any | null>(null);
-  const [paidMap, setPaidMap] = useState<Record<string, { isPaid: boolean; amount: number }>>({});
 
   useEffect(() => {
     fetchAppointments();
@@ -57,6 +56,7 @@ export default function ReceptionDashboardPage() {
     return () => { socket.disconnect(); };
   }, []);
 
+  // Fetch appointments exclusively from the backend database endpoint without localstorage fallback for state persistence
   const fetchAppointments = async (isBg = false) => {
     try {
       if (!isBg) setLoading(true);
@@ -69,16 +69,6 @@ export default function ReceptionDashboardPage() {
         const list = await res.json();
         const data = Array.isArray(list) ? list : [];
         setAppointments(data);
-        setPaidMap((prev) => {
-          const up = { ...prev };
-          data.forEach(item => {
-            const status = String(item.paymentStatus || item.status || '').trim().toUpperCase();
-            if ((item.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) && !up[item.id]) {
-              up[item.id] = { isPaid: true, amount: Number(item.amount ?? item.totalAmount ?? 0) };
-            }
-          });
-          return up;
-        });
       }
     } catch (e) { console.error(e); }
     finally { if (!isBg) setLoading(false); }
@@ -236,9 +226,6 @@ export default function ReceptionDashboardPage() {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      const up = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
-      setPaidMap(up);
-
       if (mode.includes('Cash')) {
         const patientId = selectedApt.patient?.id || selectedApt.patientId;
         
@@ -316,8 +303,6 @@ export default function ReceptionDashboardPage() {
             
             const verifyData = await verifyRes.json();
             if (verifyData.success || verifyRes.ok) {
-              const upMap = { ...paidMap, [selectedApt.id]: { isPaid: true, amount: bill.net } };
-              setPaidMap(upMap);
               setReceipt({ 
                 patient: selectedApt.patient, 
                 appointmentNumber: selectedApt.appointmentNumber, 
@@ -361,25 +346,35 @@ export default function ReceptionDashboardPage() {
     }
   };
 
+  // Analytics calculated directly from backend-synced appointment states (paid/completed)
   const analytics = useMemo(() => {
     let rev = 0, discharged = 0, pending = 0;
     appointments.forEach(a => {
-      const status = String(a.paymentStatus || a.status || '').trim().toUpperCase();
-      if (paidMap[a.id]?.isPaid || a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) { 
-        discharged++; 
-        rev += Number(paidMap[a.id]?.amount || a.amount || a.totalAmount || 0); 
-      } else { 
-        pending++; 
+      const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
+      const isPaid = a.isPaid === true || ['PAID', 'SUCCESS'].includes(paymentStatus);
+      const isCompleted = String(a.status || '').trim().toUpperCase() === 'COMPLETED';
+
+      if (isPaid) {
+        discharged++;
+        rev += Number(a.amount || a.totalAmount || 500);
+      } else if (isCompleted) {
+        pending++;
       }
     });
     return { total: appointments.length, rev, discharged, pending };
-  }, [appointments, paidMap]);
+  }, [appointments]);
 
+  // Queue displays only appointments that are marked 'COMPLETED' by the doctor but NOT yet paid/settled
   const list = appointments.filter(a => {
-    if (paidMap[a.id]?.isPaid) return false;
-    const status = String(a.paymentStatus || a.status || '').trim().toUpperCase();
-    if (a.isPaid || ['PAID', 'SUCCESS', 'COMPLETED'].includes(status)) return false;
+    const status = String(a.status || '').trim().toUpperCase();
+    const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
     
+    // If already paid or success, hide from reception queue
+    if (a.isPaid || ['PAID', 'SUCCESS'].includes(paymentStatus)) return false;
+
+    // Must be completed by doctor to show up on reception billing queue
+    if (status !== 'COMPLETED') return false;
+
     const q = search.toLowerCase();
     return (a.patient?.fullName || '').toLowerCase().includes(q) || (a.patient?.phone || '').includes(q) || (a.appointmentNumber || '').toLowerCase().includes(q);
   });
@@ -396,7 +391,7 @@ export default function ReceptionDashboardPage() {
         </div>
       )}
 
-      {/* Header with fixed dark mode classes */}
+      {/* Header with fully harmonized dark mode styling */}
       <div className="bg-white/90 dark:bg-[#111827] backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -571,8 +566,8 @@ export default function ReceptionDashboardPage() {
                         <td className="py-3.5 px-2 text-slate-500 dark:text-slate-400 font-mono">{a.patient?.phone || 'N/A'}</td>
                         <td className="py-3.5 px-2 text-slate-600 dark:text-slate-300">{a.timeSlot || '10:00 AM'}</td>
                         <td className="py-3.5 px-2 text-center">
-                          <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
-                            {a.status || 'Scheduled'}
+                          <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
+                            {a.status || 'Completed'}
                           </span>
                         </td>
                         <td className="py-3.5 px-2 text-right">
@@ -707,7 +702,7 @@ export default function ReceptionDashboardPage() {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-2xl font-bold text-xs transition cursor-pointer">🖨️ Print Receipt</button>
+              <button onClick={() => window.print()} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-2xl font-bold text-xs transition cursor-pointer">🖨️ Print Receipt:</span>
               <button onClick={() => setReceipt(null)} className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs transition cursor-pointer shadow-md shadow-blue-600/20">Close</button>
             </div>
           </div>

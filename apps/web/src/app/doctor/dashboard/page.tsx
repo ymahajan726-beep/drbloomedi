@@ -33,11 +33,8 @@ export default function DoctorDashboard() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
 
-  // 1. SECURITY & SCRATCH-LEVEL MULTI-LOGIN SESSION GUARD
   useEffect(() => {
     const token = getActiveToken();
-    const role = (localStorage.getItem('doctor_role') || localStorage.getItem('userRole') || '').toUpperCase();
-
     if (!token) {
       window.location.replace('/login');
       return;
@@ -48,7 +45,6 @@ export default function DoctorDashboard() {
     setIsAuthorized(true);
     loadAppointments();
     
-    // Auto refresh queue every 8 seconds for live sync
     const interval = setInterval(loadAppointments, 8000);
     return () => clearInterval(interval);
   }, []);
@@ -63,19 +59,19 @@ export default function DoctorDashboard() {
 
       if (res.ok) {
         const data = await res.json();
-        let list = Array.isArray(data) ? data : [];
+        const list = Array.isArray(data) ? data : [];
         
-        // SORTING: Scheduled / Pending patients on top, Completed at the bottom
-        list.sort((a, b) => {
-          const aIsDone = a.status === 'Completed' || a.status === 'COMPLETED';
-          const bIsDone = b.status === 'Completed' || b.status === 'COMPLETED';
-          if (aIsDone === bIsDone) return 0;
-          return aIsDone ? 1 : -1;
+        // FILTER: Keep only pending/scheduled/confirmed appointments in the doctor's active queue
+        const activeList = list.filter((a) => {
+          const st = String(a.status || '').trim().toUpperCase();
+          return st === 'SCHEDULED' || st === 'CONFIRMED' || st === 'PENDING';
         });
 
-        setAppointments(list);
-        if (!selectedPatient && list.length > 0) {
-          setSelectedPatient(list[0]);
+        setAppointments(activeList);
+        if (!selectedPatient && activeList.length > 0) {
+          setSelectedPatient(activeList[0]);
+        } else if (selectedPatient && !activeList.some(a => a.id === selectedPatient.id)) {
+          setSelectedPatient(activeList[0] || null);
         }
       }
     } catch (err) {
@@ -95,9 +91,6 @@ export default function DoctorDashboard() {
         body: JSON.stringify({ status: newStatus }),
       });
       await loadAppointments();
-      if (selectedPatient && selectedPatient.id === id) {
-        setSelectedPatient((prev) => (prev ? { ...prev, status: newStatus } : null));
-      }
     } catch (err) {
       console.error(err);
     }
@@ -111,12 +104,7 @@ export default function DoctorDashboard() {
     );
   }
 
-  const pendingCount = appointments.filter(
-    (a) => a.status === 'Scheduled' || a.status === 'Confirmed' || a.status === 'PENDING'
-  ).length;
-  const completedCount = appointments.filter(
-    (a) => a.status === 'Completed' || a.status === 'COMPLETED'
-  ).length;
+  const pendingCount = appointments.length;
 
   const filteredAppointments = appointments.filter(a => {
     const q = searchFilter.toLowerCase();
@@ -129,11 +117,8 @@ export default function DoctorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 font-sans text-slate-900 relative overflow-hidden pb-12">
-      
-      {/* Background Animated Glow Accents */}
       <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[140px] pointer-events-none"></div>
 
-      {/* Top Header */}
       <header className="bg-white backdrop-blur-xl border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-tr from-emerald-600 to-teal-600 text-white rounded-2xl flex items-center justify-center font-black text-sm shadow-lg shadow-emerald-600/20">
@@ -152,7 +137,7 @@ export default function DoctorDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={loadAppointments}
-            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-750 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 transition shadow-sm"
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 transition shadow-sm cursor-pointer"
           >
             🔄 Sync Queue
           </button>
@@ -160,53 +145,34 @@ export default function DoctorDashboard() {
             ● Cabin Active
           </span>
           <button
-            onClick={() => {
-              localStorage.removeItem('doctor_token');
-              localStorage.removeItem('doctor_role');
-              localStorage.removeItem('doctor_email');
-              performLogout('Logged out successfully.');
-            }}
-            className="px-3.5 py-2 text-xs text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl font-bold transition"
+            onClick={() => performLogout('Logged out successfully.')}
+            className="px-3.5 py-2 text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl font-bold transition cursor-pointer"
           >
             Logout
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
-        
-        {/* Metric Counters */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Waiting Queue</p>
-              <p className="text-2xl font-black text-amber-400 mt-1">{pendingCount}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Consultation Queue</p>
+              <p className="text-2xl font-black text-amber-500 mt-1">{pendingCount}</p>
             </div>
-            <span className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl text-lg">⏳</span>
+            <span className="p-3 bg-amber-50 text-amber-600 rounded-xl text-lg">⏳</span>
           </div>
 
           <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed Today</p>
-              <p className="text-2xl font-black text-emerald-400 mt-1">{completedCount}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Active Patients</p>
+              <p className="text-2xl font-black text-blue-600 mt-1">{appointments.length}</p>
             </div>
-            <span className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-lg">✅</span>
-          </div>
-
-          <div className="bg-white backdrop-blur-md p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Scheduled</p>
-              <p className="text-2xl font-black text-blue-400 mt-1">{appointments.length}</p>
-            </div>
-            <span className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl text-lg">🩺</span>
+            <span className="p-3 bg-blue-50 text-blue-600 rounded-xl text-lg">🩺</span>
           </div>
         </div>
 
-        {/* OPD Queue and Chart Workspace */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Left: Queue Table (8 Cols) */}
           <div className="lg:col-span-8 bg-white backdrop-blur-xl border border-slate-200 rounded-3xl overflow-hidden shadow-xl space-y-4 p-6">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-slate-200 pb-4">
               <div>
@@ -236,69 +202,55 @@ export default function DoctorDashboard() {
                     <th className="py-3 px-3 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-medium">
+                <tbody className="divide-y divide-slate-100 font-medium">
                   {loading ? (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-slate-400 font-mono">Loading active OPD queue...</td>
                     </tr>
                   ) : filteredAppointments.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-400">No patients found in queue.</td>
+                      <td colSpan={6} className="py-8 text-center text-slate-400">No pending consultations in queue.</td>
                     </tr>
                   ) : (
-                    filteredAppointments.map((apt) => {
-                      const isDone = apt.status === 'Completed' || apt.status === 'COMPLETED';
-                      return (
-                        <tr
-                          key={apt.id}
-                          onClick={() => setSelectedPatient(apt)}
-                          className={`cursor-pointer transition ${
-                            selectedPatient?.id === apt.id ? 'bg-slate-100 border-l-4 border-emerald-500' : 'hover:bg-slate-100'
-                          }`}
-                        >
-                          <td className="py-3.5 px-3 font-mono font-bold text-emerald-400">{apt.appointmentNumber}</td>
-                          <td className="py-3.5 px-3 font-bold text-slate-900">
-                            <div>{apt.patient?.fullName || 'Walk-in Patient'}</div>
-                            <div className="text-[10px] text-slate-400 font-normal">
-                              {apt.patient?.age || '25'} yrs • {apt.patient?.gender || 'N/A'} • {apt.patient?.bloodGroup || 'O+'}
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-3 text-slate-600 font-mono">{apt.timeSlot}</td>
-                          <td className="py-3.5 px-3 text-slate-600 max-w-[180px] truncate">{apt.symptoms || 'General OPD Evaluation'}</td>
-                          <td className="py-3.5 px-3 text-center">
-                            <span
-                              className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${
-                                isDone
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              }`}
-                            >
-                              {apt.status}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                            <Link
-                              href={`/doctor/consult/${apt.id}`}
-                              className={`inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl font-bold text-[11px] transition shadow-md ${
-                                isDone
-                                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
-                                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20'
-                              }`}
-                            >
-                              <span>{isDone ? '📄' : '🩺'}</span>
-                              <span>{isDone ? 'View Rx' : 'Start Consult'}</span>
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })
+                    filteredAppointments.map((apt) => (
+                      <tr
+                        key={apt.id}
+                        onClick={() => setSelectedPatient(apt)}
+                        className={`cursor-pointer transition ${
+                          selectedPatient?.id === apt.id ? 'bg-slate-50 border-l-4 border-emerald-500' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <td className="py-3.5 px-3 font-mono font-bold text-blue-600">{apt.appointmentNumber}</td>
+                        <td className="py-3.5 px-3 font-bold text-slate-900">
+                          <div>{apt.patient?.fullName || 'Walk-in Patient'}</div>
+                          <div className="text-[10px] text-slate-400 font-normal">
+                            {apt.patient?.age || '25'} yrs • {apt.patient?.gender || 'N/A'} • {apt.patient?.bloodGroup || 'O+'}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-3 text-slate-600 font-mono">{apt.timeSlot}</td>
+                        <td className="py-3.5 px-3 text-slate-600 max-w-[180px] truncate">{apt.symptoms || 'General OPD Evaluation'}</td>
+                        <td className="py-3.5 px-3 text-center">
+                          <span className="px-2.5 py-1 rounded-full font-bold text-[10px] bg-amber-50 text-amber-600 border border-amber-200">
+                            {apt.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                          <Link
+                            href={`/doctor/consult/${apt.id}`}
+                            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl font-bold text-[11px] transition shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/20"
+                          >
+                            <span>🩺</span>
+                            <span>Start Consult</span>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Right: Selected Patient Active EMR Card (4 Cols) */}
           <div className="lg:col-span-4 bg-white backdrop-blur-xl border border-slate-200 rounded-3xl p-6 shadow-xl space-y-4">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider pb-3 border-b border-slate-200 flex items-center justify-between">
               <span>Active Patient EMR File</span>
@@ -313,7 +265,7 @@ export default function DoctorDashboard() {
                       <h4 className="font-black text-slate-900 text-sm">{selectedPatient.patient?.fullName}</h4>
                       <p className="text-[11px] text-slate-400 font-mono">Phone: {selectedPatient.patient?.phone || 'N/A'}</p>
                     </div>
-                    <span className="px-2.5 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 font-black text-[10px] rounded-lg">
+                    <span className="px-2.5 py-1 bg-rose-50 text-rose-600 border border-rose-200 font-black text-[10px] rounded-lg">
                       {selectedPatient.patient?.bloodGroup || 'O+'}
                     </span>
                   </div>
@@ -321,13 +273,13 @@ export default function DoctorDashboard() {
                   <div className="text-[11px] text-slate-600 pt-2 border-t border-slate-200/80 flex justify-between">
                     <span><strong>Age:</strong> {selectedPatient.patient?.age || '25'} Yrs</span>
                     <span><strong>Gender:</strong> {selectedPatient.patient?.gender || 'Male'}</span>
-                    <span><strong>Token:</strong> <span className="text-emerald-400 font-mono">{selectedPatient.appointmentNumber}</span></span>
+                    <span><strong>Token:</strong> <span className="text-blue-600 font-mono">{selectedPatient.appointmentNumber}</span></span>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Chief Complaints / Symptoms</label>
-                  <p className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-200">
+                  <p className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800">
                     {selectedPatient.symptoms || 'General OPD Evaluation requested.'}
                   </p>
                 </div>
@@ -345,26 +297,23 @@ export default function DoctorDashboard() {
                     className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2"
                   >
                     <span>🩺</span>
-                    <span>{selectedPatient.status === 'Completed' || selectedPatient.status === 'COMPLETED' ? 'Open Digital Prescription File' : 'Enter Consultation Cabin →'}</span>
+                    <span>Enter Consultation Cabin →</span>
                   </Link>
 
-                  {selectedPatient.status !== 'Completed' && selectedPatient.status !== 'COMPLETED' && (
-                    <button
-                      onClick={() => handleUpdateStatus(selectedPatient.id, 'Completed')}
-                      className="w-full py-3 bg-slate-100 hover:bg-slate-750 text-slate-600 border border-slate-300 rounded-xl font-bold transition text-xs"
-                    >
-                      Quick Mark as Cleared
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleUpdateStatus(selectedPatient.id, 'Completed')}
+                    className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl font-bold transition text-xs cursor-pointer"
+                  >
+                    Quick Mark as Cleared
+                  </button>
                 </div>
               </div>
             ) : (
-              <div className="py-16 text-center text-slate-500 text-xs">
+              <div className="py-16 text-center text-slate-400 text-xs">
                 Select any patient from the live queue to inspect chart demographics and initiate digital E-Prescription.
               </div>
             )}
           </div>
-
         </div>
       </main>
     </div>
