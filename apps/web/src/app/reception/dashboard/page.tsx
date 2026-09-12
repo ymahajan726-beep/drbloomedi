@@ -333,14 +333,24 @@ export default function ReceptionDashboardPage() {
     };
   }, [appointments, billingRecords]);
 
+  // Enhanced list filter: checks appointment ID, bill mapping, and explicit PAID status to remove settled patients instantly
   const list = useMemo(() => {
-    const paidAppointmentIds = new Set(billingRecords.map(b => String(b.appointmentId || b.billId || '')));
+    const paidIds = new Set([
+      ...billingRecords.map(b => String(b.appointmentId || '')),
+      ...billingRecords.map(b => String(b.billId || '')),
+      ...billingRecords.map(b => String(b.id || '')),
+    ]);
 
     return appointments.filter(a => {
       const status = String(a.status || '').trim().toUpperCase();
       const paymentStatus = String(a.paymentStatus || '').trim().toUpperCase();
       
-      if (paidAppointmentIds.has(String(a.id)) || a.isPaid || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(paymentStatus) || ['PAID', 'SUCCESS', 'DISCHARGED'].includes(status)) {
+      if (
+        paidIds.has(String(a.id)) || 
+        a.isPaid === true || 
+        ['PAID', 'SUCCESS', 'DISCHARGED', 'SETTLED'].includes(paymentStatus) || 
+        ['PAID', 'SUCCESS', 'DISCHARGED', 'SETTLED'].includes(status)
+      ) {
         return false;
       }
       
