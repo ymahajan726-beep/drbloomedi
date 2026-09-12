@@ -6,9 +6,12 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  RelationId,
 } from 'typeorm';
+
 import { Patient } from './patient.entity';
 import { Doctor } from './doctor.entity';
+import { Appointment } from './appointment.entity';
 
 export enum PaymentStatus {
   PAID = 'Paid',
@@ -72,6 +75,16 @@ export class Billing {
   @ManyToOne(() => Doctor, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'doctorId' })
   doctor: Doctor;
+
+  @ManyToOne(() => Appointment, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'appointmentId' })
+  appointment: Appointment;
+
+  @RelationId((billing: Billing) => billing.appointment)
+  appointmentId: string;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -8,6 +8,7 @@ import {
   Body,
   Query,
 } from '@nestjs/common';
+
 import { BillingService } from '../services/billing.service';
 import { PaymentStatus, PaymentMethod } from '../entities/billing.entity';
 
@@ -35,8 +36,13 @@ export class BillingController {
   async settleDischargeBill(
     @Param('patientId') patientId: string,
     @Body('paymentMethod') paymentMethod?: PaymentMethod,
+    @Body('appointmentId') appointmentId?: string,
   ) {
-    return this.billingService.settleDischargeBill(patientId, paymentMethod);
+    return this.billingService.settleDischargeBill(
+      patientId,
+      paymentMethod,
+      appointmentId,
+    );
   }
 
   // 4. Single Bill Details by ID
