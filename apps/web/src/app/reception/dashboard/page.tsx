@@ -405,15 +405,6 @@ export default function ReceptionDashboardPage() {
         selectedApt.patient?.id ||
         selectedApt.patientId;
 
-      /*
-       * CASH PAYMENT
-       *
-       * Payment is considered successful only when
-       * backend/database confirms the settlement.
-       *
-       * No local appointment removal is performed.
-       * After successful backend save, fresh data is fetched.
-       */
       if (mode.includes('Cash')) {
         if (!patientId) {
           throw new Error(
@@ -446,10 +437,6 @@ export default function ReceptionDashboardPage() {
           );
         }
 
-        /*
-         * Backend is the source of truth.
-         * Refresh after successful database persistence.
-         */
         await fetchData();
 
         setReceipt({
@@ -467,13 +454,6 @@ export default function ReceptionDashboardPage() {
         return;
       }
 
-      /*
-       * ONLINE PAYMENT
-       *
-       * Do NOT mark appointment as paid before Razorpay
-       * verification. Backend verification is responsible
-       * for successful payment persistence.
-       */
       const orderRes = await fetch(
         `${BACKEND_URL}/payments/create-order`,
         {
@@ -555,10 +535,6 @@ export default function ReceptionDashboardPage() {
               .json()
               .catch(() => ({}));
 
-            /*
-             * Payment is successful only if backend
-             * explicitly confirms it.
-             */
             if (!verifyRes.ok || !verifyData.success) {
               throw new Error(
                 verifyData.message ||
@@ -566,12 +542,6 @@ export default function ReceptionDashboardPage() {
               );
             }
 
-            /*
-             * Do NOT PATCH appointment here.
-             * Do NOT locally remove appointment.
-             *
-             * Backend/database is now the source of truth.
-             */
             await fetchData();
 
             setReceipt({
@@ -631,10 +601,6 @@ export default function ReceptionDashboardPage() {
 
       rzp.open();
 
-      /*
-       * Razorpay popup is now handling payment.
-       * The handler will control final settlement state.
-       */
       setPaying(false);
     } catch (err: any) {
       setPaying(false);
@@ -650,10 +616,6 @@ export default function ReceptionDashboardPage() {
   const analytics = useMemo(() => {
     let rev = 0;
 
-    /*
-     * Revenue is calculated only from paid billing
-     * records returned by the backend.
-     */
     billingRecords.forEach((b) => {
       const st = String(
         b.status ||
@@ -677,10 +639,6 @@ export default function ReceptionDashboardPage() {
       }
     });
 
-    /*
-     * Discharged patients are based on successful
-     * billing settlements from backend.
-     */
     const paidBillingRecords =
       billingRecords.filter((b) => {
         const st = String(
@@ -701,13 +659,6 @@ export default function ReceptionDashboardPage() {
     const discharged =
       paidBillingRecords.length;
 
-    /*
-     * Pending Settlement:
-     *
-     * Completed appointments remain pending unless
-     * there is a PAID billing record linked to that
-     * appointment through appointmentId.
-     */
     const paidAppointmentIds = new Set(
       paidBillingRecords
         .map(
@@ -743,13 +694,6 @@ export default function ReceptionDashboardPage() {
     };
   }, [appointments, billingRecords]);
 
-  /*
-   * Queue is controlled from fresh backend data.
-   *
-   * A completed appointment is hidden only when a
-   * successful billing record is linked to that
-   * appointment.
-   */
   const list = useMemo(() => {
     const paidIds = new Set(
       billingRecords
@@ -784,18 +728,10 @@ export default function ReceptionDashboardPage() {
         .trim()
         .toUpperCase();
 
-      /*
-       * Only a backend-confirmed paid billing record
-       * removes the appointment from the queue.
-       */
       if (paidIds.has(String(a.id))) {
         return false;
       }
 
-      /*
-       * Only show appointments that are marked
-       * Completed by the doctor.
-       */
       if (status !== 'COMPLETED') {
         return false;
       }
