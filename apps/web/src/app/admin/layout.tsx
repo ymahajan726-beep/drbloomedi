@@ -17,14 +17,12 @@ export default function AdminLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const getCookie = (name: string) => {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      return match ? match[2] : null;
-    };
-
-    const token = getCookie('token') || localStorage.getItem('token');
-    const savedRole = (getCookie('userRole') || localStorage.getItem('userRole'))?.toUpperCase();
-    const savedEmail = localStorage.getItem('userEmail') || '';
+    // Use only tab-specific sessionStorage.
+    // Do not use localStorage or cookies for authentication.
+    const token = sessionStorage.getItem('token');
+    const savedRole =
+      sessionStorage.getItem('userRole')?.toUpperCase() || null;
+    const savedEmail = sessionStorage.getItem('userEmail') || '';
 
     if (!token || !savedRole) {
       window.location.href = '/login';
@@ -39,27 +37,14 @@ export default function AdminLayout({
       return;
     }
 
-    if (savedRole === 'RECEPTION') {
-      const adminOnlyRoutes = [
-        '/admin/dashboard',
-        '/admin/users',
-        '/admin/roles',
-        '/admin/reports',
-        '/admin/departments',
-        '/admin/doctors',
-        '/admin/reception',
-        '/admin/billing',
-        '/admin/billing/new',
-        '/admin/pharmacy',
-        '/admin/lab',
-        '/admin/emr',
-        '/admin/ipd',
-        '/admin/documents',
-      ];
-      if (adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
-        window.location.href = '/reception/dashboard';
-        return;
-      }
+    if (savedRole === 'RECEPTION' || savedRole === 'RECEPTIONIST') {
+      window.location.href = '/reception/dashboard';
+      return;
+    }
+
+    if (savedRole !== 'ADMIN') {
+      window.location.href = '/login';
+      return;
     }
 
     setIsAuthorized(true);

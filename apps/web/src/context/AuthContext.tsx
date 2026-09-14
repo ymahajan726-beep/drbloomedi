@@ -1,329 +1,175 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useTransition,
-} from "react";
-import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import Link from "next/link";
+import { queueToast, useToast } from "@/components/Toast";
 
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  role: "ADMIN" | "DOCTOR" | "RECEPTION" | "RECEPTIONIST" | "PATIENT";
-}
+const BACKEND_URL = "https://drbloomedi-backend.onrender.com";
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (token: string, userData: User) => void;
-  logout: () => void;
-  refreshAuth: () => Promise<void>;
-}
+export default function LoginPage() {
+  const { showToast } = useToast();
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-// Backend URL
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://drbloomedi-backend.onrender.com";
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-export function AuthProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const router = useRouter();
-  const [, startTransition] = useTransition();
-
-  /*
-   * Get the token for the CURRENT BROWSER TAB.
-   *
-   * sessionStorage is tab-specific.
-   * This prevents Admin / Doctor / Reception tabs
-   * from sharing the same active token.
-   */
-  const getSessionToken = () => {
-    if (typeof window === "undefined") return null;
-
-    return (
-      sessionStorage.getItem("token") ||
-      sessionStorage.getItem("admin_token") ||
-      sessionStorage.getItem("doctor_token") ||
-      sessionStorage.getItem("reception_token") ||
-      sessionStorage.getItem("patient_token")
-    );
-  };
-
-  /*
-   * Get cached user for the CURRENT TAB.
-   */
-  const getSessionUser = () => {
-    if (typeof window === "undefined") return null;
-
-    const sessionUser = sessionStorage.getItem("user");
-
-    if (!sessionUser) return null;
+    setLoading(true);
+    setError("");
 
     try {
-      return JSON.parse(sessionUser) as User;
-    } catch {
-      console.warn("Failed to parse cached session user");
-      return null;
-    }
-  };
+      const cleanEmail = email.trim().toLowerCase();
 
-  const refreshAuth = async () => {
-    const token = getSessionToken();
-    const cachedUser = getSessionUser();
+      const loginEndpoint = `${BACKEND_URL}/auth/login`;
 
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    /*
-     * Use cached user first to avoid unnecessary
-     * loading/flickering while auth is being verified.
-     */
-    if (cachedUser) {
-      setUser(cachedUser);
-    }
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/auth/me`, {
-        method: "GET",
+      const res = await fetch(loginEndpoint, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
         },
         credentials: "include",
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+        }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
 
-        setUser(data);
-
-        // Save verified user only in CURRENT TAB
-        sessionStorage.setItem("user", JSON.stringify(data));
-        sessionStorage.setItem("userRole", data.role);
-
-        const roleKey =
-          data.role === "RECEPTIONIST"
-            ? "RECEPTION"
-            : data.role;
-
-        sessionStorage.setItem("active_role", roleKey);
-
-        // Keep role-specific tab token available
-        sessionStorage.setItem(
-          `${roleKey.toLowerCase()}_token`,
-          token
+        throw new Error(
+          errData.message ||
+            `Authentication failed with status ${res.status}`
         );
-      } else if (response.status === 401) {
-        /*
-         * Token is invalid/expired.
-         * Clear ONLY the current tab session.
-         */
-        sessionStorage.removeItem("token");
-        sessionStorage.removeItem("user");
-        sessionStorage.removeItem("userRole");
-        sessionStorage.removeItem("userEmail");
-        sessionStorage.removeItem("active_role");
-        sessionStorage.removeItem("admin_token");
-        sessionStorage.removeItem("doctor_token");
-        sessionStorage.removeItem("reception_token");
-        sessionStorage.removeItem("patient_token");
-
-        setUser(null);
       }
-    } catch (err) {
-      /*
-       * Backend/network failure:
-       * Do NOT logout the user if a valid token
-       * is still available in the current tab.
-       */
-      console.warn(
-        "Could not verify session with backend, continuing with local session",
-        err
+
+      const data = await res.json();
+
+      const userRole = (
+        data.user?.role ||
+        data.role ||
+        "ADMIN"
+      ).toUpperCase();
+
+      const token =
+        data.accessToken ||
+        data.access_token ||
+        data.token ||
+        "";
+
+      if (!token) {
+        throw new Error(
+          "No authorization token returned by backend."
+        );
+      }
+
+      const roleKey =
+        userRole === "RECEPTIONIST" ? "RECEPTION" : userRole;
+
+      const lowerKey = roleKey.toLowerCase();
+
+      sessionStorage.setItem("token", token);
+
+      // Added only this user session data
+      sessionStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: data.user?.id || "",
+          email: data.user?.email || cleanEmail,
+          name: data.user?.name,
+          role: userRole,
+        })
+      );
+
+      sessionStorage.setItem("userRole", userRole);
+
+      sessionStorage.setItem(
+        "userEmail",
+        data.user?.email || cleanEmail
+      );
+
+      sessionStorage.setItem(
+        `${lowerKey}_token`,
+        token
+      );
+
+      sessionStorage.setItem(
+        `${lowerKey}_role`,
+        userRole
+      );
+
+      sessionStorage.setItem(
+        `${lowerKey}_email`,
+        data.user?.email || cleanEmail
+      );
+
+      sessionStorage.setItem(
+        "session_started_at",
+        Date.now().toString()
+      );
+
+      if (userRole === "DOCTOR") {
+        queueToast(
+          "Login successful. Opening Doctor Panel.",
+          "success"
+        );
+
+        window.location.href = "/doctor/dashboard";
+      } else if (
+        userRole === "RECEPTION" ||
+        userRole === "RECEPTIONIST"
+      ) {
+        queueToast(
+          "Login successful. Opening Reception Desk.",
+          "success"
+        );
+
+        window.location.href = "/reception/dashboard";
+      } else {
+        queueToast(
+          "Login successful. Opening Admin Dashboard.",
+          "success"
+        );
+
+        window.location.href = "/admin/dashboard";
+      }
+    } catch (err: any) {
+      setError(err.message || "Unable to authenticate.");
+
+      showToast(
+        err.message || "Unable to authenticate.",
+        "error"
       );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    refreshAuth();
-  }, []);
+  const handleAutofill = (
+    role: "ADMIN" | "DOCTOR" | "RECEPTION"
+  ) => {
+    if (role === "ADMIN") {
+      setEmail("admin@drbloomedi.com");
+      setPassword("Admin@1234");
+    } else if (role === "DOCTOR") {
+      setEmail("doctor@gmail.com");
+      setPassword("11111111");
+    } else {
+      setEmail("rajesh@gmail.com");
+      setPassword("22222222");
+    }
 
-  const login = (token: string, userData: User) => {
-    const roleKey =
-      userData.role === "RECEPTIONIST"
-        ? "RECEPTION"
-        : userData.role;
-
-    /*
-     * CURRENT TAB SESSION
-     */
-    sessionStorage.setItem("token", token);
-    sessionStorage.setItem("user", JSON.stringify(userData));
-    sessionStorage.setItem("userRole", userData.role);
-    sessionStorage.setItem("userEmail", userData.email);
-    sessionStorage.setItem("active_role", roleKey);
-
-    sessionStorage.setItem(
-      `${roleKey.toLowerCase()}_token`,
-      token
-    );
-
-    sessionStorage.setItem(
-      `${roleKey.toLowerCase()}_role`,
-      userData.role
-    );
-
-    sessionStorage.setItem(
-      `${roleKey.toLowerCase()}_email`,
-      userData.email
-    );
-
-    sessionStorage.setItem(
-      "session_started_at",
-      Date.now().toString()
-    );
-
-    /*
-     * Keep role-specific localStorage keys only as
-     * compatibility with older parts of the application.
-     *
-     * The current AuthContext NEVER reads these first.
-     */
-    localStorage.setItem(
-      `${roleKey.toLowerCase()}_token`,
-      token
-    );
-
-    localStorage.setItem(
-      `${roleKey.toLowerCase()}_role`,
-      userData.role
-    );
-
-    localStorage.setItem(
-      `${roleKey.toLowerCase()}_email`,
-      userData.email
-    );
-
-    /*
-     * Cookies are kept for compatibility with existing
-     * application/backend behavior.
-     */
-    const isHttps =
-      typeof window !== "undefined" &&
-      window.location.protocol === "https:";
-
-    const cookieConfig =
-      "; path=/; max-age=86400; SameSite=Lax" +
-      (isHttps ? "; Secure" : "");
-
-    document.cookie = `access_token=${encodeURIComponent(
-      token
-    )}${cookieConfig}`;
-
-    document.cookie = `user_role=${encodeURIComponent(
-      userData.role
-    )}${cookieConfig}`;
-
-    /*
-     * Update React state immediately.
-     */
-    setUser(userData);
-
-    /*
-     * Role-based navigation.
-     */
-    startTransition(() => {
-      if (userData.role === "DOCTOR") {
-        router.push("/doctor/dashboard");
-      } else if (userData.role === "RECEPTION" || userData.role === "RECEPTIONIST") {
-        router.push("/reception/dashboard");
-      } else if (userData.role === "PATIENT") {
-        router.push("/patient/dashboard");
-      } else {
-        router.push("/admin/dashboard");
-      }
-    });
-  };
-
-  const logout = () => {
-    /*
-     * Clear ONLY the current browser TAB.
-     *
-     * Do NOT remove another tab's session.
-     */
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("userRole");
-    sessionStorage.removeItem("userEmail");
-    sessionStorage.removeItem("active_role");
-    sessionStorage.removeItem("admin_token");
-    sessionStorage.removeItem("doctor_token");
-    sessionStorage.removeItem("reception_token");
-    sessionStorage.removeItem("patient_token");
-    sessionStorage.removeItem("admin_role");
-    sessionStorage.removeItem("doctor_role");
-    sessionStorage.removeItem("reception_role");
-    sessionStorage.removeItem("patient_role");
-    sessionStorage.removeItem("admin_email");
-    sessionStorage.removeItem("doctor_email");
-    sessionStorage.removeItem("reception_email");
-    sessionStorage.removeItem("patient_email");
-    sessionStorage.removeItem("session_started_at");
-
-    /*
-     * Clear only compatibility cookies.
-     *
-     * Note:
-     * Cookies are browser-wide, so middleware should NOT
-     * use them for tab-specific authorization.
-     */
-    document.cookie = "access_token=; path=/; max-age=0;";
-    document.cookie = "user_role=; path=/; max-age=0;";
-
-    setUser(null);
-
-    window.location.href = "/login";
+    setError("");
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        refreshAuth,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <div className="min-h-screen">
+      {/* Keep your existing login UI here exactly as it was */}
+    </div>
   );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error(
-      "useAuth must be used within an AuthProvider"
-    );
-  }
-
-  return context;
 }

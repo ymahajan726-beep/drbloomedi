@@ -41,7 +41,10 @@ export default function DashboardPage() {
         setLoading(true);
         setError("");
 
-        const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") || localStorage.getItem("token") : null;
+        const token =
+              typeof window !== "undefined"
+             ? sessionStorage.getItem("token")
+               : null;
         const headers = {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
