@@ -1,4 +1,5 @@
-// src/utils/api.ts (Scratch Solution for Unified & Safe Fetching)
+// src/utils/api.ts
+import toast from 'react-hot-toast';
 
 const BACKEND_URL = "https://drbloomedi-backend.onrender.com";
 
@@ -24,11 +25,33 @@ export async function secureFetch(endpoint: string, options: RequestInit = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${BACKEND_URL}${endpoint}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  try {
+    const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
 
-  return response;
+    // HTTP Error handling (jaise 400, 401, 403, 500)
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = errorData.message || `Error: ${response.statusText}`;
+      toast.error(errorMsg);
+      return response;
+    }
+
+    // Success Toast handling for CRUD methods (POST, PUT, DELETE)
+    const method = (options.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'DELETE'].includes(method)) {
+      if (method === 'POST') toast.success('Created successfully');
+      if (method === 'PUT') toast.success('Updated successfully');
+      if (method === 'DELETE') toast.success('Deleted successfully');
+    }
+
+    return response;
+  } catch (error: any) {
+    // Network ya unexpected errors ke liye
+    toast.error(error.message || 'Network error or server unreachable');
+    throw error;
+  }
 }
