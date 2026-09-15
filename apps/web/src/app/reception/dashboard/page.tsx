@@ -53,6 +53,7 @@ export default function ReceptionDashboardPage() {
     return () => clearInterval(poll);
   }, []);
 
+  // FIXED SOCKET LISTENER: Event name matched with backend ('appointment:new') + Toast integration
   useEffect(() => {
     const socket: Socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
@@ -61,18 +62,19 @@ export default function ReceptionDashboardPage() {
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
 
-    socket.on('reception:appointment:new', (newApt: any) => {
+    socket.on('appointment:new', (newApt: any) => {
       setAppointments((prev) =>
         prev.some((i) => i.id === newApt.id)
           ? prev
           : [newApt, ...prev],
       );
 
-      setLiveAlert(
-        `⚡ LIVE ARRIVAL: ${
-          newApt.patient?.fullName || 'Patient'
-        } (${newApt.appointmentNumber || 'OPD'})`,
-      );
+      const alertMsg = `⚡ LIVE ARRIVAL: ${
+        newApt.patient?.fullName || 'Patient'
+      } (${newApt.appointmentNumber || 'OPD'})`;
+
+      setLiveAlert(alertMsg);
+      showToast(alertMsg, 'success'); // Triggering toast notification as requested
 
       setTimeout(() => setLiveAlert(null), 8000);
     });
@@ -450,7 +452,7 @@ export default function ReceptionDashboardPage() {
 
         setSelectedApt(null);
         setPaying(false);
-
+        showToast('Bill settled successfully via Cash!', 'success');
         return;
       }
 
@@ -556,6 +558,7 @@ export default function ReceptionDashboardPage() {
             });
 
             setSelectedApt(null);
+            showToast('Online payment verified and settled successfully!', 'success');
           } catch (err: any) {
             showToast(
               err.message ||

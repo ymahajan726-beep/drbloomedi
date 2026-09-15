@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { performLogout } from '@/utils/logout';
+import { ToastProvider } from '@/components/Toast'; // Added ToastProvider import
 
 export default function AdminLayout({
   children,
@@ -207,58 +208,60 @@ export default function AdminLayout({
   );
 
   return (
-    <div className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 lg:w-72 bg-white text-slate-600 flex-col justify-between shrink-0 z-20 border-r border-slate-200 h-full">
-        {sidebarContent()}
-      </aside>
+    <ToastProvider> {/* Wrapped with ToastProvider so all CRUD toasts display globally */}
+      <div className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:flex w-64 lg:w-72 bg-white text-slate-600 flex-col justify-between shrink-0 z-20 border-r border-slate-200 h-full">
+          {sidebarContent()}
+        </aside>
 
-      {/* Mobile Sidebar Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          ></div>
-          <aside className="relative w-72 max-w-[85vw] bg-white text-slate-600 flex flex-col justify-between z-10 h-full border-r border-slate-200 shadow-2xl animate-in slide-in-from-left duration-300 ease-out">
-            {sidebarContent(true)}
-          </aside>
-        </div>
-      )}
-
-      {/* Main Workspace with Fluid Responsive Scaling */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
-        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10">
-          <div className="flex items-center gap-3">
-            {/* Mobile Hamburger Menu Toggle */}
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition font-bold text-xs sm:text-sm"
-            >
-              ☰ Menu
-            </button>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase text-slate-400 tracking-wider hidden sm:inline">Workspace:</span>
-              <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
-                {role || 'ADMIN'}
-              </span>
-            </div>
+        {/* Mobile Sidebar Overlay */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden">
+            <div
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+              onClick={() => setMobileMenuOpen(false)}
+            ></div>
+            <aside className="relative w-72 max-w-[85vw] bg-white text-slate-600 flex flex-col justify-between z-10 h-full border-r border-slate-200 shadow-2xl animate-in slide-in-from-left duration-300 ease-out">
+              {sidebarContent(true)}
+            </aside>
           </div>
+        )}
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition shadow-sm"
-          >
-            <span>🚪</span>
-            <span>Logout</span>
-          </button>
-        </header>
+        {/* Main Workspace with Fluid Responsive Scaling */}
+        <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+          <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10">
+            <div className="flex items-center gap-3">
+              {/* Mobile Hamburger Menu Toggle */}
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition font-bold text-xs sm:text-sm"
+              >
+                ☰ Menu
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase text-slate-400 tracking-wider hidden sm:inline">Workspace:</span>
+                <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+                  {role || 'ADMIN'}
+                </span>
+              </div>
+            </div>
 
-        {/* Fluid Container matching Mobile, Tablets, Laptops & Desktops */}
-        <main className="flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
-          {children}
-        </main>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition shadow-sm"
+            >
+              <span>🚪</span>
+              <span>Logout</span>
+            </button>
+          </header>
+
+          {/* Fluid Container matching Mobile, Tablets, Laptops & Desktops */}
+          <main className="flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }
