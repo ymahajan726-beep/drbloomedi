@@ -47,13 +47,25 @@ export class UsersController {
     @Body('email') email: string,
     @Body('password') password: string,
     @Body('role') role?: UserRole,
+    @Body('name') name?: string,
+    @Body('fullName') fullName?: string,
+    @Body('phone') phone?: string,
   ) {
+    // Agar service me extra fields support karni hai toh pass karein ya default createUser use karein
     return this.usersService.createUser(email, password, role);
   }
 
   // =====================================================
-  // TOGGLE ACTIVE STATUS
+  // TOGGLE ACTIVE STATUS (Updated to support both /active and /status)
   // =====================================================
+  @Patch(':id/active')
+  async toggleActiveStatus(
+    @Param('id') id: string,
+    @Body('isActive') isActive: boolean,
+  ) {
+    return this.usersService.setActive(id, isActive);
+  }
+
   @Patch(':id/status')
   async toggleStatus(
     @Param('id') id: string,

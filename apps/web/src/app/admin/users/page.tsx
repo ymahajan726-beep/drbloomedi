@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const API_URL = "https://drbloomedi-backend.onrender.com";
+import { secureFetch } from "@/utils/api";
 
 type User = {
   id: string | number;
@@ -33,20 +32,10 @@ export default function UsersPage() {
     consultationFee: 500,
   });
 
-  const getHeaders = () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  };
-
   async function fetchUsers() {
     try {
-      const response = await fetch(`${API_URL}/users`, {
+      const response = await secureFetch("/users", {
         method: "GET",
-        headers: getHeaders(),
-        credentials: "include",
         cache: "no-store",
       });
 
@@ -91,10 +80,8 @@ export default function UsersPage() {
         payload.consultationFee = Number(formData.consultationFee) || 500;
       }
 
-      const response = await fetch(`${API_URL}/users`, {
+      const response = await secureFetch("/users", {
         method: "POST",
-        headers: getHeaders(),
-        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -108,10 +95,8 @@ export default function UsersPage() {
       // If doctor role, trigger doctor profile entry guarantee
       if (formData.role.toUpperCase() === "DOCTOR") {
         try {
-          await fetch(`${API_URL}/doctors`, {
+          await secureFetch("/doctors", {
             method: "POST",
-            headers: getHeaders(),
-            credentials: "include",
             body: JSON.stringify({
               email: formData.email.trim().toLowerCase(),
               specialization: formData.specialization.trim() || "General Physician",
@@ -142,10 +127,8 @@ export default function UsersPage() {
 
   async function toggleStatus(id: string | number, currentStatus: boolean) {
     try {
-      const response = await fetch(`${API_URL}/users/${id}/active`, {
+      const response = await secureFetch(`/users/${id}/active`, {
         method: "PATCH",
-        headers: getHeaders(),
-        credentials: "include",
         body: JSON.stringify({
           isActive: !currentStatus,
         }),
@@ -171,10 +154,8 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/users/${id}`, {
+      const response = await secureFetch(`/users/${id}`, {
         method: "DELETE",
-        headers: getHeaders(),
-        credentials: "include",
       });
 
       if (!response.ok) {
