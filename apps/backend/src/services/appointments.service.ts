@@ -9,7 +9,6 @@ import { Appointment, AppointmentStatus } from '../entities/appointment.entity';
 import { Patient } from '../entities/patient.entity';
 import { Doctor } from '../entities/doctor.entity';
 import { Department } from '../entities/department.entity';
-// Assuming EventsGateway exists to broadcast socket events. Adjust path if necessary.
 import { EventsGateway } from '../gateways/events.gateway'; 
 
 @Injectable()
@@ -23,10 +22,10 @@ export class AppointmentsService {
     private readonly doctorRepo: Repository<Doctor>,
     @InjectRepository(Department)
     private readonly deptRepo: Repository<Department>,
-    private readonly eventsGateway: EventsGateway, // 1. Injected EventsGateway for real-time socket sync
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
-  async findAll(search?: string, status?: string): Promise<Appointment[]> {
+  async findAll(search?: string, status?: string, doctorId?: string | number): Promise<Appointment[]> {
     const qb = this.appointmentRepo
       .createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.patient', 'patient')
@@ -38,6 +37,11 @@ export class AppointmentsService {
 
     if (status) {
       qb.andWhere('appointment.status = :status', { status });
+    }
+
+    // Doctor-wise filtering for doctor dashboard / cabins
+    if (doctorId) {
+      qb.andWhere('doctor.id = :doctorId', { doctorId: Number(doctorId) });
     }
 
     if (search) {
@@ -100,12 +104,11 @@ export class AppointmentsService {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const appointmentNumber = `APT-${new Date().getFullYear()}-${randomSuffix}`;
 
-    // 2. STATUS SET TO 'COMPLETED' SO IT MATCHES RECEPTION QUEUE FILTER INSTANTLY
     const appointment = this.appointmentRepo.create({
       appointmentNumber,
       appointmentDate: data.appointmentDate || new Date().toISOString().split('T')[0],
       timeSlot: safeTimeSlot,
-      status: AppointmentStatus.COMPLETED, 
+      status: AppointmentStatus.SCHEDULED, 
       symptoms: data.symptoms || data.reason || 'General Consultation',
       patient,
       doctor,
@@ -114,7 +117,6 @@ export class AppointmentsService {
 
     const savedAppointment = await this.appointmentRepo.save(appointment);
 
-    // 3. BROADCAST VIA SOCKET.IO SO FRONTEND GETS IT INSTANTLY
     try {
       const fullAppointment = await this.findOne(savedAppointment.id);
       if (this.eventsGateway && this.eventsGateway.server) {

@@ -9,7 +9,6 @@ type User = {
   role: string;
   isActive: boolean;
   name?: string;
-  fullName?: string;
   phone?: string;
 };
 
@@ -83,9 +82,9 @@ export default function UsersPage() {
     setFormError(null);
 
     try {
+      const trimmedName = formData.name.trim();
       const payload: any = {
-        name: formData.name.trim(),
-        fullName: formData.name.trim(),
+        name: trimmedName,
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         role: formData.role.toUpperCase(),
@@ -119,6 +118,7 @@ export default function UsersPage() {
           await secureFetch("/doctors", {
             method: "POST",
             body: JSON.stringify({
+              name: trimmedName,
               email: formData.email.trim().toLowerCase(),
               specialization:
                 formData.specialization.trim() || "General Physician",
@@ -140,6 +140,11 @@ export default function UsersPage() {
 
       setShowModal(false);
       await fetchUsers();
+
+      setToast({
+        type: "success",
+        message: "Staff member onboarded successfully.",
+      });
     } catch (error: any) {
       console.error("CREATE USER ERROR:", error);
       setFormError(error.message || "Error saving staff member.");
@@ -303,6 +308,9 @@ export default function UsersPage() {
                     Staff Identity
                   </th>
                   <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
+                    Mobile No
+                  </th>
+                  <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
                     Department / Role
                   </th>
                   <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
@@ -326,18 +334,15 @@ export default function UsersPage() {
 
                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
                       <p className="font-bold text-gray-900 dark:text-white">
-                        {user.fullName ||
-                          user.name ||
-                          user.email.split("@")[0]}
+                        {user.name || user.email.split("@")[0]}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {user.email}
                       </p>
-                      {user.phone && (
-                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                          📞 {user.phone}
-                        </p>
-                      )}
+                    </td>
+
+                    <td className="px-6 py-4 font-mono text-xs text-gray-700 dark:text-gray-300">
+                      {user.phone ? `📞 ${user.phone}` : <span className="text-gray-400 italic">Not Provided</span>}
                     </td>
 
                     <td className="px-6 py-4 text-gray-900 dark:text-white">

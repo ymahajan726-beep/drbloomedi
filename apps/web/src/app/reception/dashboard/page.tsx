@@ -13,7 +13,9 @@ export default function ReceptionDashboardPage() {
   const { showToast } = useToast();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [billingRecords, setBillingRecords] = useState<any[]>([]);
+  const [doctorsList, setDoctorsList] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [selectedDoctorQueue, setSelectedDoctorQueue] = useState<string>('ALL'); // <--- Doctor-wise queue filter state
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [liveAlert, setLiveAlert] = useState<string | null>(null);
@@ -23,7 +25,8 @@ export default function ReceptionDashboardPage() {
     phone: '',
     age: '',
     gender: 'Male',
-    specialist: 'General Physician',
+    specialist: '',
+    doctorId: '',
     slot: '10:00 AM',
     reason: 'General Checkup',
     patientId: '',
@@ -41,17 +44,43 @@ export default function ReceptionDashboardPage() {
     net: 500,
   });
   const [paying, setPaying] = useState(false);
-  const [paymentStatusText, setPaymentStatusText] = useState(
-    'Initializing Official Payment Gateway...',
-  );
   const [receipt, setReceipt] = useState<any | null>(null);
 
   useEffect(() => {
     fetchData();
+    fetchDoctors();
     const poll = setInterval(() => fetchData(true), 7000);
 
     return () => clearInterval(poll);
   }, []);
+
+  const fetchDoctors = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await fetch(`${BACKEND_URL}/doctors`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setDoctorsList(data);
+          if (!walkinForm.doctorId) {
+            setWalkinForm((prev) => ({
+              ...prev,
+              doctorId: data[0].id,
+              specialization: data[0].specialization || 'General Physician',
+            }));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch doctors list:', err);
+    }
+  };
 
   useEffect(() => {
     const socket: Socket = io(BACKEND_URL, {
@@ -61,18 +90,23 @@ export default function ReceptionDashboardPage() {
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
 
-    socket.on('reception:appointment:new', (newApt: any) => {
-      setAppointments((prev) =>
-        prev.some((i) => i.id === newApt.id)
-          ? prev
-          : [newApt, ...prev],
-      );
+    socket.on('appointment:new', (newApt: any) => {
+      if (newApt && newApt.id) {
+        setAppointments((prev) => {
+          const exists = prev.some((i) => String(i.id) === String(newApt.id));
+          if (exists) return prev;
+          return [newApt, ...prev];
+        });
+      }
 
-      setLiveAlert(
-        `⚡ LIVE ARRIVAL: ${
-          newApt.patient?.fullName || 'Patient'
-        } (${newApt.appointmentNumber || 'OPD'})`,
-      );
+      fetchData(true);
+
+      const patientName = newApt?.patient?.fullName || newApt?.fullName || 'Patient';
+      const aptNum = newApt?.appointmentNumber || 'OPD';
+      const alertMsg = `⚡ LIVE ARRIVAL: ${patientName} (${aptNum})`;
+
+      setLiveAlert(alertMsg);
+      showToast(alertMsg, 'success');
 
       setTimeout(() => setLiveAlert(null), 8000);
     });
@@ -257,22 +291,10 @@ export default function ReceptionDashboardPage() {
         }
       }
 
-      let doctorId = undefined;
-
-      try {
-        const docRes = await fetch(`${BACKEND_URL}/doctors`, {
-          headers,
-          credentials: 'include',
-        });
-
-        if (docRes.ok) {
-          const docs = await docRes.json();
-
-          if (Array.isArray(docs) && docs.length > 0) {
-            doctorId = docs[0].id;
-          }
-        }
-      } catch {}
+      let doctorId = walkinForm.doctorId;
+      if (!doctorId && doctorsList.length > 0) {
+        doctorId = doctorsList[0].id;
+      }
 
       const appointmentPayload: any = {
         patientId: pId,
@@ -280,13 +302,13 @@ export default function ReceptionDashboardPage() {
           .toISOString()
           .split('T')[0],
         timeSlot: walkinForm.slot || '10:00 AM',
-        status: 'Scheduled',
+        status: 'Scheduled', 
         symptoms:
           walkinForm.reason || 'Walk-in Consultation',
       };
 
       if (doctorId) {
-        appointmentPayload.doctorId = doctorId;
+        appointmentPayload.doctorId = Number(doctorId);
       }
 
       const res = await fetch(
@@ -300,21 +322,43 @@ export default function ReceptionDashboardPage() {
       );
 
       if (res.ok) {
-        setWalkinForm({
+        const newAppointmentData = await res.json().catch(() => ({}));
+        
+        const selectedDocObj = doctorsList.find((d) => String(d.id) === String(doctorId));
+
+        const formattedNewApt = {
+          id: newAppointmentData.id || Date.now(),
+          appointmentNumber: newAppointmentData.appointmentNumber || `APT-${Math.floor(1000 + Math.random() * 9000)}`,
+          status: 'Scheduled',
+          timeSlot: walkinForm.slot || '10:00 AM',
+          appointmentDate: new Date().toISOString().split('T')[0],
+          patient: {
+            id: pId,
+            fullName: walkinForm.fullName,
+            phone: walkinForm.phone,
+          },
+          doctor: selectedDocObj || {
+            consultationFee: 500,
+          }
+        };
+
+        setAppointments((prev) => [formattedNewApt, ...prev]);
+
+        setWalkinForm((prev) => ({
+          ...prev,
           fullName: '',
           phone: '',
           age: '',
           gender: 'Male',
-          specialist: 'General Physician',
           slot: '10:00 AM',
           reason: 'General Checkup',
           patientId: '',
-        });
+        }));
 
-        fetchData();
+        await fetchData(true);
 
         showToast(
-          'Walk-in token issued successfully!',
+          'Walk-in token issued & assigned to queue successfully!',
           'success',
         );
       } else {
@@ -382,10 +426,8 @@ export default function ReceptionDashboardPage() {
     if (!selectedApt) return;
 
     setPaying(true);
-    setPaymentStatusText('Processing Settlement...');
 
     const currentAptId = selectedApt.id;
-
     const txnId = mode.includes('Cash')
       ? `CASH-${Date.now().toString().slice(-6)}`
       : `UPI-TXN-${Date.now().toString().slice(-6)}`;
@@ -450,7 +492,7 @@ export default function ReceptionDashboardPage() {
 
         setSelectedApt(null);
         setPaying(false);
-
+        showToast('Bill settled successfully via Cash!', 'success');
         return;
       }
 
@@ -508,10 +550,6 @@ export default function ReceptionDashboardPage() {
 
         handler: async function (response: any) {
           try {
-            setPaymentStatusText(
-              'Verifying payment with hospital server...',
-            );
-
             const verifyRes = await fetch(
               `${BACKEND_URL}/payments/verify`,
               {
@@ -556,6 +594,7 @@ export default function ReceptionDashboardPage() {
             });
 
             setSelectedApt(null);
+            showToast('Online payment verified and settled successfully!', 'success');
           } catch (err: any) {
             showToast(
               err.message ||
@@ -677,7 +716,8 @@ export default function ReceptionDashboardPage() {
         .trim()
         .toUpperCase();
 
-      if (status !== 'COMPLETED') {
+      const isValidStatus = status === 'SCHEDULED' || status === 'COMPLETED' || status === 'PENDING';
+      if (!isValidStatus) {
         return false;
       }
 
@@ -694,6 +734,7 @@ export default function ReceptionDashboardPage() {
     };
   }, [appointments, billingRecords]);
 
+  // Queue List Filtered by Doctor and Search Query
   const list = useMemo(() => {
     const paidIds = new Set(
       billingRecords
@@ -721,7 +762,7 @@ export default function ReceptionDashboardPage() {
         .map((id: any) => String(id)),
     );
 
-    return appointments.filter((a) => {
+    const filtered = appointments.filter((a) => {
       const status = String(
         a.status || '',
       )
@@ -732,8 +773,17 @@ export default function ReceptionDashboardPage() {
         return false;
       }
 
-      if (status !== 'COMPLETED') {
+      const isValidStatus = status === 'SCHEDULED' || status === 'COMPLETED' || status === 'PENDING';
+      if (!isValidStatus) {
         return false;
+      }
+
+      // Doctor-wise queue filter check
+      if (selectedDoctorQueue !== 'ALL') {
+        const aptDocId = String(a.doctorId || a.doctor?.id || '');
+        if (aptDocId !== String(selectedDoctorQueue)) {
+          return false;
+        }
       }
 
       const q = search.toLowerCase();
@@ -748,10 +798,18 @@ export default function ReceptionDashboardPage() {
           .includes(q)
       );
     });
+
+    return filtered.sort((x, y) => {
+      const dateX = new Date(x.createdAt || x.appointmentDate || 0).getTime();
+      const dateY = new Date(y.createdAt || y.appointmentDate || 0).getTime();
+      if (dateX !== dateY) return dateY - dateX;
+      return String(y.id || '').localeCompare(String(x.id || ''));
+    });
   }, [
     appointments,
     billingRecords,
     search,
+    selectedDoctorQueue,
   ]);
 
   return (
@@ -973,46 +1031,42 @@ export default function ReceptionDashboardPage() {
 
             <div>
               <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">
-                Assign Specialist
+                Assign Doctor & Specialist *
               </label>
 
               <select
-                value={walkinForm.specialist}
-                onChange={(e) =>
+                value={walkinForm.doctorId}
+                onChange={(e) => {
+                  const selectedDocId = e.target.value;
+                  const docObj = doctorsList.find((d) => String(d.id) === String(selectedDocId));
                   setWalkinForm({
                     ...walkinForm,
-                    specialist: e.target.value,
-                  })
-                }
+                    doctorId: selectedDocId,
+                    specialist: docObj?.specialization || 'General Physician',
+                  });
+                }}
                 className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition"
               >
-                <option
-                  value="General Physician"
-                  className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
-                >
-                  General Physician
-                </option>
+                {doctorsList.length === 0 ? (
+                  <option value="">Loading doctors...</option>
+                ) : (
+                  doctorsList.map((doc: any) => {
+                    const rawName = doc.user?.fullName || doc.name || '';
+                    const cleanName = rawName.replace(/^Dr\.\s*Doctor/i, 'Dr.').replace(/^Doctor/i, 'Dr.').trim();
+                    const displayName = cleanName ? (cleanName.startsWith('Dr.') ? cleanName : `Dr. ${cleanName}`) : 'Doctor';
+                    const specialization = doc.specialization || 'General Physician';
 
-                <option
-                  value="Cardiologist"
-                  className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
-                >
-                  Cardiologist
-                </option>
-
-                <option
-                  value="Orthopedic"
-                  className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
-                >
-                  Orthopedic
-                </option>
-
-                <option
-                  value="Pediatrician"
-                  className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
-                >
-                  Pediatrician
-                </option>
+                    return (
+                      <option
+                        key={doc.id}
+                        value={doc.id}
+                        className="bg-white dark:bg-[#111827] text-slate-900 dark:text-white"
+                      >
+                        {displayName} - {specialization}
+                      </option>
+                    );
+                  })
+                )}
               </select>
             </div>
 
@@ -1084,6 +1138,42 @@ export default function ReceptionDashboardPage() {
             />
           </div>
 
+          {/* Doctor-wise Queue Filter Bar (Practical Cabin Tab Selector) */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setSelectedDoctorQueue('ALL')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                selectedDoctorQueue === 'ALL'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-100 dark:bg-[#1f2937] text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              All Queues
+            </button>
+            {doctorsList.map((doc: any) => {
+              const rawName = doc.user?.fullName || doc.name || '';
+              const cleanName = rawName.replace(/^Dr\.\s*Doctor/i, 'Dr.').replace(/^Doctor/i, 'Dr.').trim();
+              const displayName = cleanName ? (cleanName.startsWith('Dr.') ? cleanName : `Dr. ${cleanName}`) : `Dr. #${doc.id}`;
+              const specialization = doc.specialization || 'General';
+
+              return (
+                <button
+                  key={doc.id}
+                  type="button"
+                  onClick={() => setSelectedDoctorQueue(String(doc.id))}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    selectedDoctorQueue === String(doc.id)
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-slate-100 dark:bg-[#1f2937] text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  {displayName} ({specialization})
+                </button>
+              );
+            })}
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[600px]">
               <thead>
@@ -1130,7 +1220,7 @@ export default function ReceptionDashboardPage() {
                       colSpan={6}
                       className="py-8 text-center text-slate-400"
                     >
-                      No active pending appointments found.
+                      No active pending appointments found for this doctor queue.
                     </td>
                   </tr>
                 ) : (
@@ -1163,7 +1253,7 @@ export default function ReceptionDashboardPage() {
                         <td className="py-3.5 px-2 text-center">
                           <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900">
                             {a.status ||
-                              'Completed'}
+                              'Scheduled'}
                           </span>
                         </td>
 

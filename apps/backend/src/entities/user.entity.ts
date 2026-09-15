@@ -18,8 +18,11 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', nullable: true, default: 'Staff User' })
+  @Column({ type: 'varchar', nullable: true })
   name: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  phone: string; // <--- Yeh hona sabse zaroori hai!
 
   @Column({ unique: true })
   email: string;

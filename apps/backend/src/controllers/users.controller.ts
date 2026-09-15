@@ -6,7 +6,6 @@ import {
   Delete,
   Param,
   Body,
-  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
 import { UserRole } from '../entities/user.entity';
@@ -51,12 +50,17 @@ export class UsersController {
     @Body('fullName') fullName?: string,
     @Body('phone') phone?: string,
   ) {
-    // Agar service me extra fields support karni hai toh pass karein ya default createUser use karein
-    return this.usersService.createUser(email, password, role);
+    return this.usersService.createUser(
+      email,
+      password,
+      role || UserRole.PATIENT,
+      fullName || name,
+      phone,
+    );
   }
 
   // =====================================================
-  // TOGGLE ACTIVE STATUS (Updated to support both /active and /status)
+  // TOGGLE ACTIVE STATUS
   // =====================================================
   @Patch(':id/active')
   async toggleActiveStatus(

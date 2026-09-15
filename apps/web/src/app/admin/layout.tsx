@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { performLogout } from '@/utils/logout';
-import { ToastProvider } from '@/components/Toast'; // Added ToastProvider import
+import { ToastProvider } from '@/components/Toast';
 
 export default function AdminLayout({
   children,
@@ -12,12 +12,14 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [isMounted, setIsMounted] = useState(false);
   const [role, setRole] = useState<string | null>(null);
   const [email, setEmail] = useState<string>('');
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     // Use only tab-specific sessionStorage.
     // Do not use localStorage or cookies for authentication.
     const token = sessionStorage.getItem('token');
@@ -55,9 +57,10 @@ export default function AdminLayout({
     performLogout('Logged out successfully.');
   };
 
-  if (!isAuthorized) {
+  // Prevent hydration mismatch by returning a safe loader until mounted on client
+  if (!isMounted || !isAuthorized) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-white text-slate-900 font-sans">
+      <div suppressHydrationWarning className="h-screen w-screen flex items-center justify-center bg-white text-slate-900 font-sans">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase">
@@ -208,8 +211,8 @@ export default function AdminLayout({
   );
 
   return (
-    <ToastProvider> {/* Wrapped with ToastProvider so all CRUD toasts display globally */}
-      <div className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
+    <ToastProvider>
+      <div suppressHydrationWarning className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex w-64 lg:w-72 bg-white text-slate-600 flex-col justify-between shrink-0 z-20 border-r border-slate-200 h-full">
           {sidebarContent()}
@@ -217,7 +220,7 @@ export default function AdminLayout({
 
         {/* Mobile Sidebar Overlay */}
         {mobileMenuOpen && (
-          <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="fixed inset-0 z-50 flex md:hidden" suppressHydrationWarning>
             <div
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
               onClick={() => setMobileMenuOpen(false)}
@@ -229,7 +232,7 @@ export default function AdminLayout({
         )}
 
         {/* Main Workspace with Fluid Responsive Scaling */}
-        <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden" suppressHydrationWarning>
           <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10">
             <div className="flex items-center gap-3">
               {/* Mobile Hamburger Menu Toggle */}

@@ -47,14 +47,31 @@ export class UsersService {
   }
 
   // =====================================================
-  // FIND ALL USERS
+  // FIND ALL USERS (With Name & Phone Fallback)
   // =====================================================
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find({
+    const users = await this.userRepository.find({
       order: {
         createdAt: 'DESC',
       },
+    });
+
+    return users.map((user) => {
+      // Name fallback
+      if (!user.name || user.name === 'Staff User') {
+        user.name = user.email ? user.email.split('@')[0] : 'User';
+      }
+
+      // Phone fallback: extract from permissions if physical column is missing
+      if (!user.phone && user.permissions && Array.isArray(user.permissions)) {
+        const phonePerm = user.permissions.find((p) => p.startsWith('PHONE:'));
+        if (phonePerm) {
+          user.phone = phonePerm.replace('PHONE:', '');
+        }
+      }
+
+      return user;
     });
   }
 
@@ -85,19 +102,22 @@ export class UsersService {
         password: hashedPassword,
         role: UserRole.ADMIN,
         isActive: true,
-      });
+      } as any);
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user as any);
+    return Array.isArray(saved) ? saved[0] : (saved as User);
   }
 
   // =====================================================
-  // CREATE USER
+  // CREATE USER (Supports Name and Phone with Safe Fallback)
   // =====================================================
 
   async createUser(
     email: string,
     password: string,
     role: UserRole = UserRole.PATIENT,
+    name?: string,
+    phone?: string,
   ): Promise<User> {
     const existingUser =
       await this.findByEmail(email);
@@ -114,15 +134,39 @@ export class UsersService {
         10,
       );
 
-    const user =
-      this.userRepository.create({
-        email,
-        password: hashedPassword,
-        role,
-        isActive: true,
-      });
+    const resolvedName = name || email.split('@')[0];
+    const permissionsList = phone ? [`PHONE:${phone}`] : [];
 
-    return this.userRepository.save(user);
+    try {
+      // Try saving with standard phone column
+      const user =
+        this.userRepository.create({
+          email,
+          password: hashedPassword,
+          role,
+          name: resolvedName,
+          phone: phone || null,
+          permissions: permissionsList,
+          isActive: true,
+        } as any);
+
+      const saved = await this.userRepository.save(user as any);
+      return Array.isArray(saved) ? saved[0] : (saved as User);
+    } catch (err) {
+      // Fallback: save safely inside permissions if phone column is missing in DB
+      const user =
+        this.userRepository.create({
+          email,
+          password: hashedPassword,
+          role,
+          name: resolvedName,
+          permissions: permissionsList,
+          isActive: true,
+        } as any);
+
+      const saved = await this.userRepository.save(user as any);
+      return Array.isArray(saved) ? saved[0] : (saved as User);
+    }
   }
 
   // =====================================================
@@ -217,10 +261,6 @@ export class UsersService {
       return null;
     }
 
-    /*
-     * Check whether reset token exists
-     * and is still valid.
-     */
     if (
       !user.resetPasswordExpires ||
       user.resetPasswordExpires.getTime() <
