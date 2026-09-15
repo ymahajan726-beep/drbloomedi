@@ -9,6 +9,8 @@ import { Appointment, AppointmentStatus } from '../entities/appointment.entity';
 import { Patient } from '../entities/patient.entity';
 import { Doctor } from '../entities/doctor.entity';
 import { Department } from '../entities/department.entity';
+// Assuming EventsGateway exists to broadcast socket events. Adjust path if necessary.
+import { EventsGateway } from '../gateways/events.gateway'; 
 
 @Injectable()
 export class AppointmentsService {
@@ -21,6 +23,7 @@ export class AppointmentsService {
     private readonly doctorRepo: Repository<Doctor>,
     @InjectRepository(Department)
     private readonly deptRepo: Repository<Department>,
+    private readonly eventsGateway: EventsGateway, // 1. Injected EventsGateway for real-time socket sync
   ) {}
 
   async findAll(search?: string, status?: string): Promise<Appointment[]> {
@@ -88,30 +91,40 @@ export class AppointmentsService {
       department = doctor.department;
     }
 
-    // 1. Safe TimeSlot Fallback (Yeh kabhi null nahi hone dega)
     const safeTimeSlot =
       (data.timeSlot && data.timeSlot.trim()) ||
       (data.timeslot && data.timeslot.trim()) ||
       (data.slot && data.slot.trim()) ||
       '10:00 AM';
 
-    // 2. Generate unique Appointment Token
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const appointmentNumber = `APT-${new Date().getFullYear()}-${randomSuffix}`;
 
-    // 3. Entity create karein
+    // 2. STATUS SET TO 'COMPLETED' SO IT MATCHES RECEPTION QUEUE FILTER INSTANTLY
     const appointment = this.appointmentRepo.create({
       appointmentNumber,
       appointmentDate: data.appointmentDate || new Date().toISOString().split('T')[0],
       timeSlot: safeTimeSlot,
-      status: AppointmentStatus.SCHEDULED,
+      status: AppointmentStatus.COMPLETED, 
       symptoms: data.symptoms || data.reason || 'General Consultation',
       patient,
       doctor,
       department: department || undefined,
     });
 
-    return this.appointmentRepo.save(appointment);
+    const savedAppointment = await this.appointmentRepo.save(appointment);
+
+    // 3. BROADCAST VIA SOCKET.IO SO FRONTEND GETS IT INSTANTLY
+    try {
+      const fullAppointment = await this.findOne(savedAppointment.id);
+      if (this.eventsGateway && this.eventsGateway.server) {
+        this.eventsGateway.server.emit('appointment:new', fullAppointment);
+      }
+    } catch (err) {
+      console.error('Socket emit error:', err);
+    }
+
+    return savedAppointment;
   }
 
   async updateStatus(id: string, status: AppointmentStatus): Promise<Appointment> {
