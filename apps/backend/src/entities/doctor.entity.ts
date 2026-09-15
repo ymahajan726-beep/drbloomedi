@@ -17,9 +17,12 @@ export class Doctor {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => User)
+  @OneToOne(() => User, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn()
-  user: User;
+  user: User | null;
 
   @Column({ length: 150, nullable: true })
   specialization: string;
