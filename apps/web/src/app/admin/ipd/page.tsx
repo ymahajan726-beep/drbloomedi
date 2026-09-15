@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
+import { getActiveToken, getAuthHeaders } from '@/utils/session';
 
 interface Patient {
   id: string;
@@ -68,15 +69,13 @@ export default function IpdManagementPage() {
 
   // 1. Auth Guard
   useEffect(() => {
-    const getCookie = (name: string) => {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      return match ? match[2] : null;
-    };
+    const token = getActiveToken();
+    const role = sessionStorage.getItem('userRole')?.toUpperCase();
 
-    const token = getCookie('token') || localStorage.getItem('token');
-    const role = (getCookie('userRole') || localStorage.getItem('userRole'))?.toUpperCase();
-
-    if (!token || (role !== 'ADMIN' && role !== 'RECEPTION' && role !== 'DOCTOR')) {
+    if (
+      !token ||
+      (role !== 'ADMIN' && role !== 'RECEPTION' && role !== 'DOCTOR')
+    ) {
       window.location.replace('/login');
       return;
     }
@@ -89,10 +88,18 @@ export default function IpdManagementPage() {
     try {
       setLoading(true);
       const [bedsRes, admissionsRes, patientsRes, docsRes] = await Promise.all([
-        fetch('https://drbloomedi-backend.onrender.com/ipd/beds'),
-        fetch('https://drbloomedi-backend.onrender.com/ipd/admissions?status=Admitted'),
-        fetch('https://drbloomedi-backend.onrender.com/patients'),
-        fetch('https://drbloomedi-backend.onrender.com/doctors'),
+        fetch('https://drbloomedi-backend.onrender.com/ipd/beds', {
+          headers: getAuthHeaders(),
+        }),
+        fetch('https://drbloomedi-backend.onrender.com/ipd/admissions?status=Admitted', {
+          headers: getAuthHeaders(),
+        }),
+        fetch('https://drbloomedi-backend.onrender.com/patients', {
+          headers: getAuthHeaders(),
+        }),
+        fetch('https://drbloomedi-backend.onrender.com/doctors', {
+          headers: getAuthHeaders(),
+        }),
       ]);
 
       if (bedsRes.ok) setBeds(await bedsRes.json());
@@ -119,7 +126,7 @@ export default function IpdManagementPage() {
       setActionLoading(true);
       const res = await fetch('https://drbloomedi-backend.onrender.com/ipd/beds', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           bedNumber: newBedNumber,
           wardType: newWardType,
@@ -156,7 +163,7 @@ export default function IpdManagementPage() {
       setActionLoading(true);
       const res = await fetch('https://drbloomedi-backend.onrender.com/ipd/admit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           patientId: admitPatientId,
           bedId: admitBedId,
@@ -191,13 +198,16 @@ export default function IpdManagementPage() {
 
     try {
       setActionLoading(true);
-      const res = await fetch(`https://drbloomedi-backend.onrender.com/ipd/discharge/${dischargeTarget.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dischargeSummary: dischargeSummaryText,
-        }),
-      });
+      const res = await fetch(
+        `https://drbloomedi-backend.onrender.com/ipd/discharge/${dischargeTarget.id}`,
+        {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            dischargeSummary: dischargeSummaryText,
+          }),
+        }
+      );
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
@@ -215,7 +225,10 @@ export default function IpdManagementPage() {
     }
   };
 
-  const filteredBeds = wardFilter ? beds.filter((b) => b.wardType === wardFilter) : beds;
+  const filteredBeds = wardFilter
+    ? beds.filter((b) => b.wardType === wardFilter)
+    : beds;
+
   const availableBeds = beds.filter((b) => b.status === 'Available');
 
   if (!isAuthorized) {
@@ -231,8 +244,12 @@ export default function IpdManagementPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">IPD & Bed / Ward Management</h1>
-          <p className="text-xs text-slate-400">Live Bed Occupancy • In-Patient Admissions • Clinical Discharge</p>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">
+            IPD & Bed / Ward Management
+          </h1>
+          <p className="text-xs text-slate-400">
+            Live Bed Occupancy • In-Patient Admissions • Clinical Discharge
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -255,32 +272,48 @@ export default function IpdManagementPage() {
       {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Total Beds</p>
-          <p className="text-2xl font-black text-slate-900 mt-1">{beds.length}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase">
+            Total Beds
+          </p>
+          <p className="text-2xl font-black text-slate-900 mt-1">
+            {beds.length}
+          </p>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-emerald-600 uppercase">Available</p>
-          <p className="text-2xl font-black text-emerald-600 mt-1">{availableBeds.length}</p>
+          <p className="text-[10px] font-bold text-emerald-600 uppercase">
+            Available
+          </p>
+          <p className="text-2xl font-black text-emerald-600 mt-1">
+            {availableBeds.length}
+          </p>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-rose-600 uppercase">Occupied</p>
+          <p className="text-[10px] font-bold text-rose-600 uppercase">
+            Occupied
+          </p>
           <p className="text-2xl font-black text-rose-600 mt-1">
             {beds.filter((b) => b.status === 'Occupied').length}
           </p>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-purple-600 uppercase">Active In-Patients</p>
-          <p className="text-2xl font-black text-purple-600 mt-1">{admissions.length}</p>
+          <p className="text-[10px] font-bold text-purple-600 uppercase">
+            Active In-Patients
+          </p>
+          <p className="text-2xl font-black text-purple-600 mt-1">
+            {admissions.length}
+          </p>
         </div>
       </div>
 
       {/* Bed Matrix Grid Section */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">Ward & Bed Occupancy Matrix</h2>
+          <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+            Ward & Bed Occupancy Matrix
+          </h2>
 
           <div className="flex items-center gap-2">
             <select
@@ -306,6 +339,7 @@ export default function IpdManagementPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {filteredBeds.map((bed) => {
               const isOccupied = bed.status === 'Occupied';
+
               return (
                 <div
                   key={bed.id}
@@ -316,10 +350,15 @@ export default function IpdManagementPage() {
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="font-mono font-black text-sm">{bed.bedNumber}</span>
+                    <span className="font-mono font-black text-sm">
+                      {bed.bedNumber}
+                    </span>
+
                     <span
                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                        isOccupied ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-800'
+                        isOccupied
+                          ? 'bg-rose-200 text-rose-800'
+                          : 'bg-emerald-200 text-emerald-800'
                       }`}
                     >
                       {bed.status}
@@ -327,8 +366,12 @@ export default function IpdManagementPage() {
                   </div>
 
                   <div className="mt-3">
-                    <span className="text-[10px] block opacity-75 font-medium">{bed.wardType}</span>
-                    <span className="text-[11px] font-bold">₹{bed.dailyRate}/day</span>
+                    <span className="text-[10px] block opacity-75 font-medium">
+                      {bed.wardType}
+                    </span>
+                    <span className="text-[11px] font-bold">
+                      ₹{bed.dailyRate}/day
+                    </span>
                   </div>
                 </div>
               );
@@ -358,40 +401,66 @@ export default function IpdManagementPage() {
                 <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">Loading admissions...</td>
+                  <td
+                    colSpan={7}
+                    className="p-8 text-center text-slate-400"
+                  >
+                    Loading admissions...
+                  </td>
                 </tr>
               ) : admissions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">
+                  <td
+                    colSpan={7}
+                    className="p-8 text-center text-slate-400 font-medium"
+                  >
                     No active admissions at present.
                   </td>
                 </tr>
               ) : (
                 admissions.map((adm) => (
-                  <tr key={adm.id} className="hover:bg-slate-50/70 transition">
-                    <td className="p-3.5 font-mono font-bold text-blue-600">{adm.admissionNumber}</td>
+                  <tr
+                    key={adm.id}
+                    className="hover:bg-slate-50/70 transition"
+                  >
+                    <td className="p-3.5 font-mono font-bold text-blue-600">
+                      {adm.admissionNumber}
+                    </td>
+
                     <td className="p-3.5 font-bold text-slate-900">
                       <div>{adm.patient?.fullName}</div>
-                      <div className="text-[10px] text-slate-400 font-normal">{adm.patient?.phone}</div>
+                      <div className="text-[10px] text-slate-400 font-normal">
+                        {adm.patient?.phone}
+                      </div>
                     </td>
+
                     <td className="p-3.5">
                       <span className="font-mono font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-800">
                         {adm.bed?.bedNumber}
                       </span>
-                      <span className="block text-[10px] text-slate-400 mt-0.5">{adm.bed?.wardType}</span>
+                      <span className="block text-[10px] text-slate-400 mt-0.5">
+                        {adm.bed?.wardType}
+                      </span>
                     </td>
+
                     <td className="p-3.5 font-medium text-slate-800">
-                      {adm.doctor ? `Dr. ${adm.doctor.user?.email?.split('@')[0]}` : 'General Duty Medical Officer'}
+                      {adm.doctor
+                        ? `Dr. ${adm.doctor.user?.email?.split('@')[0]}`
+                        : 'General Duty Medical Officer'}
                     </td>
+
                     <td className="p-3.5 text-slate-700 italic max-w-xs truncate">
                       {adm.admissionDiagnosis || 'Clinical Observation'}
                     </td>
+
                     <td className="p-3.5 text-slate-500 font-mono">
                       {new Date(adm.admittedAt).toLocaleDateString()}
                     </td>
+
                     <td className="p-3.5 text-right">
                       <button
                         onClick={() => setDischargeTarget(adm)}
@@ -412,10 +481,16 @@ export default function IpdManagementPage() {
       {isBedModalOpen && (
         <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-sm font-black text-slate-900">Add New Hospital Bed</h3>
+            <h3 className="text-sm font-black text-slate-900">
+              Add New Hospital Bed
+            </h3>
+
             <form onSubmit={handleCreateBed} className="mt-4 space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Bed Number *</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                  Bed Number *
+                </label>
+
                 <input
                   type="text"
                   required
@@ -427,7 +502,10 @@ export default function IpdManagementPage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Ward Type</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                  Ward Type
+                </label>
+
                 <select
                   value={newWardType}
                   onChange={(e) => setNewWardType(e.target.value)}
@@ -442,7 +520,10 @@ export default function IpdManagementPage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Daily Rate (₹)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                  Daily Rate (₹)
+                </label>
+
                 <input
                   type="number"
                   required
@@ -460,6 +541,7 @@ export default function IpdManagementPage() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={actionLoading}
@@ -477,11 +559,16 @@ export default function IpdManagementPage() {
       {isAdmitModalOpen && (
         <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-sm font-black text-slate-900">In-Patient Admission</h3>
+            <h3 className="text-sm font-black text-slate-900">
+              In-Patient Admission
+            </h3>
 
             <form onSubmit={handleAdmit} className="mt-4 space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Select Patient *</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                  Select Patient *
+                </label>
+
                 <select
                   required
                   value={admitPatientId}
@@ -489,6 +576,7 @@ export default function IpdManagementPage() {
                   className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50"
                 >
                   <option value="">-- Choose Patient --</option>
+
                   {patients.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.fullName} • {p.phone}
@@ -501,6 +589,7 @@ export default function IpdManagementPage() {
                 <label className="text-[10px] font-bold text-slate-500 uppercase">
                   Select Available Bed * ({availableBeds.length} available)
                 </label>
+
                 <select
                   required
                   value={admitBedId}
@@ -508,6 +597,7 @@ export default function IpdManagementPage() {
                   className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 text-blue-700"
                 >
                   <option value="">-- Choose Bed --</option>
+
                   {availableBeds.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.bedNumber} ({b.wardType}) - ₹{b.dailyRate}/day
@@ -517,13 +607,17 @@ export default function IpdManagementPage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Attending Doctor (Optional)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                  Attending Doctor (Optional)
+                </label>
+
                 <select
                   value={admitDoctorId}
                   onChange={(e) => setAdmitDoctorId(e.target.value)}
                   className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl outline-none bg-slate-50"
                 >
                   <option value="">-- None / General Care --</option>
+
                   {doctors.map((d) => (
                     <option key={d.id} value={String(d.id)}>
                       {d.user?.email || 'Doctor'} ({d.specialization})
@@ -533,7 +627,10 @@ export default function IpdManagementPage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Provisional Diagnosis</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                  Provisional Diagnosis
+                </label>
+
                 <textarea
                   rows={2}
                   placeholder="e.g. Acute appendicitis, severe dehydration..."
@@ -551,6 +648,7 @@ export default function IpdManagementPage() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={actionLoading}
@@ -568,15 +666,27 @@ export default function IpdManagementPage() {
       {dischargeTarget && (
         <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-sm font-black text-slate-900">Discharge Patient & Release Bed</h3>
+            <h3 className="text-sm font-black text-slate-900">
+              Discharge Patient & Release Bed
+            </h3>
+
             <p className="text-xs text-slate-500 mt-1">
-              Patient: <strong className="text-slate-800">{dischargeTarget.patient?.fullName}</strong> • Bed:{' '}
-              <strong className="text-blue-600">{dischargeTarget.bed?.bedNumber}</strong>
+              Patient:{' '}
+              <strong className="text-slate-800">
+                {dischargeTarget.patient?.fullName}
+              </strong>{' '}
+              • Bed:{' '}
+              <strong className="text-blue-600">
+                {dischargeTarget.bed?.bedNumber}
+              </strong>
             </p>
 
             <form onSubmit={handleDischarge} className="mt-4 space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Discharge Summary & Advice</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                  Discharge Summary & Advice
+                </label>
+
                 <textarea
                   rows={3}
                   required
@@ -595,6 +705,7 @@ export default function IpdManagementPage() {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={actionLoading}
