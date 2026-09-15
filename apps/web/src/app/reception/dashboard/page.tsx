@@ -53,7 +53,6 @@ export default function ReceptionDashboardPage() {
     return () => clearInterval(poll);
   }, []);
 
-  // Socket listener for real-time online/walk-in arrivals
   useEffect(() => {
     const socket: Socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
@@ -62,18 +61,18 @@ export default function ReceptionDashboardPage() {
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
 
-    socket.on('appointment:new', (newApt: any) => {
-      console.log('⚡ Socket received new appointment:', newApt);
-      
-      // Force immediate data sync to populate full relations (patient & doctor info)
-      fetchData(true);
+    socket.on('reception:appointment:new', (newApt: any) => {
+      setAppointments((prev) =>
+        prev.some((i) => i.id === newApt.id)
+          ? prev
+          : [newApt, ...prev],
+      );
 
-      const patientName = newApt?.patient?.fullName || newApt?.fullName || 'Patient';
-      const aptNum = newApt?.appointmentNumber || 'OPD';
-      const alertMsg = `⚡ LIVE ARRIVAL: ${patientName} (${aptNum})`;
-
-      setLiveAlert(alertMsg);
-      showToast(alertMsg, 'success');
+      setLiveAlert(
+        `⚡ LIVE ARRIVAL: ${
+          newApt.patient?.fullName || 'Patient'
+        } (${newApt.appointmentNumber || 'OPD'})`,
+      );
 
       setTimeout(() => setLiveAlert(null), 8000);
     });
@@ -275,14 +274,13 @@ export default function ReceptionDashboardPage() {
         }
       } catch {}
 
-      // STATUS SET TO 'COMPLETED' SO IT INSTANTLY SHOWS IN THE RECEPTION QUEUE TABLE & UPDATES COUNTERS
       const appointmentPayload: any = {
         patientId: pId,
         appointmentDate: new Date()
           .toISOString()
           .split('T')[0],
         timeSlot: walkinForm.slot || '10:00 AM',
-        status: 'Completed', 
+        status: 'Scheduled',
         symptoms:
           walkinForm.reason || 'Walk-in Consultation',
       };
@@ -313,10 +311,10 @@ export default function ReceptionDashboardPage() {
           patientId: '',
         });
 
-        await fetchData();
+        fetchData();
 
         showToast(
-          'Walk-in token issued & added to queue successfully!',
+          'Walk-in token issued successfully!',
           'success',
         );
       } else {
@@ -452,7 +450,7 @@ export default function ReceptionDashboardPage() {
 
         setSelectedApt(null);
         setPaying(false);
-        showToast('Bill settled successfully via Cash!', 'success');
+
         return;
       }
 
@@ -558,7 +556,6 @@ export default function ReceptionDashboardPage() {
             });
 
             setSelectedApt(null);
-            showToast('Online payment verified and settled successfully!', 'success');
           } catch (err: any) {
             showToast(
               err.message ||
@@ -724,7 +721,7 @@ export default function ReceptionDashboardPage() {
         .map((id: any) => String(id)),
     );
 
-    const filtered = appointments.filter((a) => {
+    return appointments.filter((a) => {
       const status = String(
         a.status || '',
       )
@@ -750,14 +747,6 @@ export default function ReceptionDashboardPage() {
           .toLowerCase()
           .includes(q)
       );
-    });
-
-    // New to Old sequence sorting (latest on top)
-    return filtered.sort((x, y) => {
-      const dateX = new Date(x.createdAt || x.appointmentDate || 0).getTime();
-      const dateY = new Date(y.createdAt || y.appointmentDate || 0).getTime();
-      if (dateX !== dateY) return dateY - dateX;
-      return String(y.id || '').localeCompare(String(x.id || ''));
     });
   }, [
     appointments,
