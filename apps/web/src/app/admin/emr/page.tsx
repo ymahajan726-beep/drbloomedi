@@ -1,6 +1,8 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getActiveToken, getAuthHeaders } from '@/utils/session';
 
 interface Patient {
   id: string;
@@ -24,13 +26,8 @@ export default function PatientEMRPage() {
 
   // 1. Auth Guard
   useEffect(() => {
-    const getCookie = (name: string) => {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      return match ? match[2] : null;
-    };
-
-    const token = getCookie('token') || localStorage.getItem('token');
-    const role = (getCookie('userRole') || localStorage.getItem('userRole'))?.toUpperCase();
+    const token = getActiveToken();
+    const role = sessionStorage.getItem('userRole')?.toUpperCase();
 
     if (!token || (role !== 'ADMIN' && role !== 'DOCTOR' && role !== 'RECEPTION')) {
       window.location.replace('/login');
@@ -47,7 +44,10 @@ export default function PatientEMRPage() {
         ? `https://drbloomedi-backend.onrender.com/patients?search=${encodeURIComponent(query.trim())}`
         : 'https://drbloomedi-backend.onrender.com/patients';
 
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+
       if (res.ok) {
         const data = await res.json();
         const list = Array.isArray(data) ? data : [];
@@ -73,10 +73,18 @@ export default function PatientEMRPage() {
     try {
       setLoading(true);
       setFetchError(null);
-      const res = await fetch(`https://drbloomedi-backend.onrender.com/emr/patient/${patientId}`);
+
+      const res = await fetch(
+        `https://drbloomedi-backend.onrender.com/emr/patient/${patientId}`,
+        {
+          headers: getAuthHeaders(),
+        }
+      );
+
       if (!res.ok) {
         throw new Error(`Server returned ${res.status}: Failed to load timeline`);
       }
+
       const data = await res.json();
       setPatientData(data);
     } catch (err: any) {
@@ -517,3 +525,4 @@ export default function PatientEMRPage() {
     </div>
   );
 }
+
