@@ -53,7 +53,7 @@ export default function ReceptionDashboardPage() {
     return () => clearInterval(poll);
   }, []);
 
-  // FIXED SOCKET LISTENER: Ensures new patient is prepended to queue (New to Old sequence) and triggers toast/alert
+  // FIXED SOCKET LISTENER: Ensures real-time notification & triggers immediate data sync so patient appears in queue
   useEffect(() => {
     const socket: Socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
@@ -63,17 +63,20 @@ export default function ReceptionDashboardPage() {
     socket.on('disconnect', () => setIsConnected(false));
 
     socket.on('appointment:new', (newApt: any) => {
-      setAppointments((prev) => {
-        // Avoid duplicate entries if already present
-        const exists = prev.some((i) => String(i.id) === String(newApt.id));
-        if (exists) return prev;
-        // Prepend new appointment so it appears at the top (New to Old sequence)
-        return [newApt, ...prev];
-      });
+      if (newApt && newApt.id) {
+        setAppointments((prev) => {
+          const exists = prev.some((i) => String(i.id) === String(newApt.id));
+          if (exists) return prev;
+          return [newApt, ...prev];
+        });
+      }
+
+      // Force background fetch to instantly sync backend database state with queue table
+      fetchData(true);
 
       const alertMsg = `⚡ LIVE ARRIVAL: ${
-        newApt.patient?.fullName || newApt.fullName || 'Patient'
-      } (${newApt.appointmentNumber || 'OPD'})`;
+        newApt?.patient?.fullName || newApt?.fullName || 'New Patient'
+      } (${newApt?.appointmentNumber || 'OPD'})`;
 
       setLiveAlert(alertMsg);
       showToast(alertMsg, 'success');
