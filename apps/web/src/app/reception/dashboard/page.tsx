@@ -53,7 +53,7 @@ export default function ReceptionDashboardPage() {
     return () => clearInterval(poll);
   }, []);
 
-  // FIXED SOCKET LISTENER: Ensures real-time notification & triggers immediate data sync so patient appears in queue
+  // Socket listener for real-time online/walk-in arrivals
   useEffect(() => {
     const socket: Socket = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
@@ -63,20 +63,14 @@ export default function ReceptionDashboardPage() {
     socket.on('disconnect', () => setIsConnected(false));
 
     socket.on('appointment:new', (newApt: any) => {
-      if (newApt && newApt.id) {
-        setAppointments((prev) => {
-          const exists = prev.some((i) => String(i.id) === String(newApt.id));
-          if (exists) return prev;
-          return [newApt, ...prev];
-        });
-      }
-
-      // Force background fetch to instantly sync backend database state with queue table
+      console.log('⚡ Socket received new appointment:', newApt);
+      
+      // Force immediate data sync to populate full relations (patient & doctor info)
       fetchData(true);
 
-      const alertMsg = `⚡ LIVE ARRIVAL: ${
-        newApt?.patient?.fullName || newApt?.fullName || 'New Patient'
-      } (${newApt?.appointmentNumber || 'OPD'})`;
+      const patientName = newApt?.patient?.fullName || newApt?.fullName || 'Patient';
+      const aptNum = newApt?.appointmentNumber || 'OPD';
+      const alertMsg = `⚡ LIVE ARRIVAL: ${patientName} (${aptNum})`;
 
       setLiveAlert(alertMsg);
       showToast(alertMsg, 'success');
@@ -281,13 +275,14 @@ export default function ReceptionDashboardPage() {
         }
       } catch {}
 
+      // STATUS SET TO 'COMPLETED' SO IT INSTANTLY SHOWS IN THE RECEPTION QUEUE TABLE & UPDATES COUNTERS
       const appointmentPayload: any = {
         patientId: pId,
         appointmentDate: new Date()
           .toISOString()
           .split('T')[0],
         timeSlot: walkinForm.slot || '10:00 AM',
-        status: 'Scheduled',
+        status: 'Completed', 
         symptoms:
           walkinForm.reason || 'Walk-in Consultation',
       };
@@ -318,10 +313,10 @@ export default function ReceptionDashboardPage() {
           patientId: '',
         });
 
-        fetchData();
+        await fetchData();
 
         showToast(
-          'Walk-in token issued successfully!',
+          'Walk-in token issued & added to queue successfully!',
           'success',
         );
       } else {
@@ -729,7 +724,7 @@ export default function ReceptionDashboardPage() {
         .map((id: any) => String(id)),
     );
 
-    return appointments.filter((a) => {
+    const filtered = appointments.filter((a) => {
       const status = String(
         a.status || '',
       )
@@ -755,6 +750,14 @@ export default function ReceptionDashboardPage() {
           .toLowerCase()
           .includes(q)
       );
+    });
+
+    // New to Old sequence sorting (latest on top)
+    return filtered.sort((x, y) => {
+      const dateX = new Date(x.createdAt || x.appointmentDate || 0).getTime();
+      const dateY = new Date(y.createdAt || y.appointmentDate || 0).getTime();
+      if (dateX !== dateY) return dateY - dateX;
+      return String(y.id || '').localeCompare(String(x.id || ''));
     });
   }, [
     appointments,
