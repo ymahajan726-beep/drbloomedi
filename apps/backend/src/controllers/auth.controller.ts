@@ -45,21 +45,9 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Res({ passthrough: true }) response: Response) {
-    response.clearCookie('token', {
-      path: '/',
-      secure: true,
-      sameSite: 'none',
-    });
-    response.clearCookie('access_token', {
-      path: '/',
-      secure: true,
-      sameSite: 'none',
-    });
-    response.clearCookie('user_role', {
-      path: '/',
-      secure: true,
-      sameSite: 'none',
-    });
+    response.clearCookie('token', { path: '/', secure: true, sameSite: 'none' });
+    response.clearCookie('access_token', { path: '/', secure: true, sameSite: 'none' });
+    response.clearCookie('user_role', { path: '/', secure: true, sameSite: 'none' });
     return { success: true, message: 'Logged out successfully' };
   }
 

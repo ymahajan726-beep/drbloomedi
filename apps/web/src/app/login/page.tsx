@@ -29,18 +29,7 @@ export default function LoginPage() {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-
-        /*
-         * Backend authentication may use cookies.
-         *
-         * Keep credentials enabled so the backend can complete
-         * its normal authentication flow.
-         *
-         * We DO NOT manually create authentication cookies
-         * from the frontend.
-         */
         credentials: "include",
-
         body: JSON.stringify({
           email: cleanEmail,
           password,
@@ -58,18 +47,12 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      /*
-       * Get role from backend response.
-       */
       const userRole = (
         data.user?.role ||
         data.role ||
         "ADMIN"
       ).toUpperCase();
 
-      /*
-       * Support all common token property names.
-       */
       const token =
         data.accessToken ||
         data.access_token ||
@@ -80,109 +63,45 @@ export default function LoginPage() {
         throw new Error("No authorization token returned by backend.");
       }
 
-      /*
-       * Normalize Receptionist -> Reception
-       */
       const roleKey =
         userRole === "RECEPTIONIST" ? "RECEPTION" : userRole;
 
       const lowerKey = roleKey.toLowerCase();
 
-      /*
-       * ============================================================
-       * TAB-SPECIFIC AUTHENTICATION
-       * ============================================================
-       *
-       * sessionStorage is isolated per browser tab.
-       *
-       * We intentionally DO NOT use localStorage for auth.
-       *
-       * We also DO NOT manually write auth cookies.
-       */
-
-      // 1. Main authentication data for THIS TAB
       sessionStorage.setItem("token", token);
       sessionStorage.setItem("userRole", userRole);
-
       sessionStorage.setItem(
         "userEmail",
         data.user?.email || cleanEmail
       );
 
-      // 2. Role-specific session data for THIS TAB
-      sessionStorage.setItem(
-        `${lowerKey}_token`,
-        token
-      );
-
-      sessionStorage.setItem(
-        `${lowerKey}_role`,
-        userRole
-      );
-
+      sessionStorage.setItem(`${lowerKey}_token`, token);
+      sessionStorage.setItem(`${lowerKey}_role`, userRole);
       sessionStorage.setItem(
         `${lowerKey}_email`,
         data.user?.email || cleanEmail
       );
-
-      // 3. Session start time
       sessionStorage.setItem(
         "session_started_at",
         Date.now().toString()
       );
 
-      /*
-       * IMPORTANT:
-       *
-       * DO NOT manually create authentication cookies here.
-       *
-       * ❌ document.cookie = token
-       * ❌ document.cookie = userRole
-       * ❌ document.cookie = admin_token
-       * ❌ document.cookie = doctor_token
-       * ❌ document.cookie = reception_token
-       *
-       * The backend may still manage its own cookies through
-       * the normal credentials: "include" request above.
-       */
-
-      /*
-       * ============================================================
-       * ROLE-BASED ROUTING
-       * ============================================================
-       */
-
       if (userRole === "DOCTOR") {
-        queueToast(
-          "Login successful. Opening Doctor Panel.",
-          "success"
-        );
-
+        queueToast("Login successful. Opening Doctor Panel.", "success");
         window.location.href = "/doctor/dashboard";
       } else if (
         userRole === "RECEPTION" ||
         userRole === "RECEPTIONIST"
       ) {
-        queueToast(
-          "Login successful. Opening Reception Desk.",
-          "success"
-        );
-
+        queueToast("Login successful. Opening Reception Desk.", "success");
         window.location.href = "/reception/dashboard";
       } else {
-        queueToast(
-          "Login successful. Opening Admin Dashboard.",
-          "success"
-        );
-
+        queueToast("Login successful. Opening Admin Dashboard.", "success");
         window.location.href = "/admin/dashboard";
       }
     } catch (err: any) {
-      const message =
-        err?.message || "Unable to authenticate.";
-
+      const message = err?.message || "Unable to authenticate.";
       setError(message);
-
       showToast(message, "error");
     } finally {
       setLoading(false);
@@ -213,7 +132,6 @@ export default function LoginPage() {
         {/* Left Banner Section */}
         <div className="relative hidden md:flex flex-col justify-between overflow-hidden bg-sky-50 dark:bg-[#111827] p-10 lg:p-14 text-slate-900 dark:text-slate-100 border-r border-slate-100 dark:border-slate-800">
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full border-[38px] border-white/80 dark:border-slate-800/40"></div>
-
           <div className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-emerald-100/70 dark:bg-emerald-950/20"></div>
 
           <div className="relative z-10 space-y-8">
@@ -221,12 +139,8 @@ export default function LoginPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-2xl font-black text-white shadow-lg shadow-blue-600/20">
                 +
               </div>
-
               <div>
-                <p className="text-lg font-black tracking-tight">
-                  DrBlooMedi
-                </p>
-
+                <p className="text-lg font-black tracking-tight">DrBlooMedi</p>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700 dark:text-blue-400">
                   Healthcare intelligence
                 </p>
@@ -251,20 +165,14 @@ export default function LoginPage() {
 
           <div className="relative z-10 grid max-w-md grid-cols-2 gap-3">
             <div className="rounded-2xl border border-white dark:border-slate-800 bg-white/80 dark:bg-[#1f2937]/80 p-4 shadow-sm">
-              <p className="text-2xl font-black text-slate-900 dark:text-white">
-                24/7
-              </p>
-
+              <p className="text-2xl font-black text-slate-900 dark:text-white">24/7</p>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Care visibility
               </p>
             </div>
 
             <div className="rounded-2xl border border-white dark:border-slate-800 bg-white/80 dark:bg-[#1f2937]/80 p-4 shadow-sm">
-              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                Live
-              </p>
-
+              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">Live</p>
               <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Queue sync
               </p>
@@ -279,12 +187,8 @@ export default function LoginPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-xl font-black text-white">
                 +
               </div>
-
               <div>
-                <p className="font-black tracking-tight text-slate-900 dark:text-white">
-                  DrBlooMedi
-                </p>
-
+                <p className="font-black tracking-tight text-slate-900 dark:text-white">DrBlooMedi</p>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">
                   Staff portal
                 </p>
@@ -295,11 +199,9 @@ export default function LoginPage() {
               <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
                 Secure staff access
               </p>
-
               <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-4xl">
                 Welcome Back
               </h1>
-
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 Let&apos;s get you logged in.
               </p>
@@ -312,20 +214,13 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form
-              onSubmit={handleLogin}
-              className="space-y-5 text-xs"
-            >
+            <form onSubmit={handleLogin} className="space-y-5 text-xs">
               <div>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                   Email or username
                 </label>
-
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400">
-                    ✉
-                  </span>
-
+                  <span className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400">✉</span>
                   <input
                     type="email"
                     required
@@ -343,19 +238,17 @@ export default function LoginPage() {
                     Password
                   </label>
 
+                  {/* UPDATED: Forgot Password Link */}
                   <Link
                     href="/forgot-password"
                     className="text-[11px] font-bold text-blue-600 dark:text-blue-400 transition hover:text-blue-800"
                   >
-                    Need Help?
+                    Forgot Password?
                   </Link>
                 </div>
 
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400">
-                    ▣
-                  </span>
-
+                  <span className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400">▣</span>
                   <input
                     type={showPassword ? "text" : "password"}
                     required
@@ -364,13 +257,10 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1f2937] py-3.5 pl-10 pr-16 font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   />
-
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPassword(!showPassword)
-                    }
-                    className="absolute right-3.5 top-3.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 transition hover:text-slate-900 dark:hover:text-white"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-3.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 transition hover:text-slate-900 dark:hover:text-white cursor-pointer"
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
@@ -382,7 +272,6 @@ export default function LoginPage() {
                   type="checkbox"
                   className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-transparent"
                 />
-
                 Remember me on this device
               </label>
 
@@ -391,9 +280,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               >
-                {loading
-                  ? "Authenticating..."
-                  : "Sign In to Workspace →"}
+                {loading ? "Authenticating..." : "Sign In to Workspace →"}
               </button>
             </form>
           </div>
@@ -403,7 +290,6 @@ export default function LoginPage() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                 Quick test access
               </p>
-
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -412,7 +298,6 @@ export default function LoginPage() {
                 >
                   👑 Admin
                 </button>
-
                 <button
                   type="button"
                   onClick={() => handleAutofill("DOCTOR")}
@@ -420,7 +305,6 @@ export default function LoginPage() {
                 >
                   🩺 Doctor
                 </button>
-
                 <button
                   type="button"
                   onClick={() => handleAutofill("RECEPTION")}
@@ -434,24 +318,20 @@ export default function LoginPage() {
             {/* Modern Patient Self-Portal Card */}
             <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-[1px] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01]">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-teal-400 opacity-30 group-hover:opacity-75 transition-opacity" />
-
               <div className="relative flex items-center justify-between rounded-2xl bg-slate-900/90 px-4 py-3.5 backdrop-blur-md">
                 <div className="flex items-center space-x-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 shadow-inner">
                     <span className="text-lg">🏥</span>
                   </div>
-
                   <div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-semibold text-white tracking-wide">
                         Patient Self-Portal
                       </span>
-
                       <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
                         Live
                       </span>
                     </div>
-
                     <p className="text-xs text-slate-400 mt-0.5">
                       Walk-in booking & live OPD tokens
                     </p>
@@ -463,19 +343,8 @@ export default function LoginPage() {
                   className="inline-flex items-center space-x-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-medium text-white shadow-md shadow-blue-600/30 transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/40 active:scale-95"
                 >
                   <span>Open</span>
-
-                  <svg
-                    className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
+                  <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
               </div>
