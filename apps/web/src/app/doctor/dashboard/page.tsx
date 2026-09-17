@@ -50,6 +50,8 @@ export default function DoctorDashboard() {
   const initializeDoctorSession = async () => {
     try {
       const headers = getAuthHeaders();
+      let doctorId: string | number | null = null;
+
       const profileRes = await fetch(`${BACKEND_URL}/doctors/profile/me`, {
         headers,
         credentials: 'include',
@@ -58,25 +60,30 @@ export default function DoctorDashboard() {
       if (profileRes.ok) {
         const doctorProfile = await profileRes.json();
         if (doctorProfile && doctorProfile.id) {
+          doctorId = doctorProfile.id;
           if (doctorProfile.user?.email) {
             setDoctorEmail(doctorProfile.user.email);
           }
-          await loadAppointments(doctorProfile.id);
         }
-      } else {
-        console.error('Failed to resolve doctor profile from server session');
       }
+
+      await loadAppointments(doctorId);
     } catch (err) {
       console.error('Session initialization error', err);
+      await loadAppointments(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadAppointments = async (doctorId: number | string) => {
+  const loadAppointments = async (doctorId: number | string | null) => {
     try {
       const headers = getAuthHeaders();
-      const res = await fetch(`${BACKEND_URL}/appointments?doctorId=${doctorId}`, {
+      const endpoint = doctorId 
+        ? `${BACKEND_URL}/appointments?doctorId=${doctorId}` 
+        : `${BACKEND_URL}/appointments`;
+
+      const res = await fetch(endpoint, {
         headers,
         credentials: 'include',
       });
@@ -111,14 +118,7 @@ export default function DoctorDashboard() {
         credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
-      const profileRes = await fetch(`${BACKEND_URL}/doctors/profile/me`, {
-        headers,
-        credentials: 'include',
-      });
-      if (profileRes.ok) {
-        const doc = await profileRes.json();
-        if (doc?.id) loadAppointments(doc.id);
-      }
+      initializeDoctorSession();
     } catch (err) {
       console.error(err);
     }
@@ -157,7 +157,7 @@ export default function DoctorDashboard() {
               DrBlooMedi Clinical OPD Cabin
             </h1>
             <p className="text-[10px] text-slate-400 font-medium">
-              Specialist Physician • <span className="text-emerald-400 font-bold">{doctorEmail || 'Authorized Doctor'}</span>
+              Specialist Physician • <span className="text-emerald-500 font-bold">{doctorEmail || 'Authorized Doctor'}</span>
             </p>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function DoctorDashboard() {
           >
             🔄 Sync Queue
           </button>
-          <span className="hidden sm:inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-full animate-pulse">
+          <span className="hidden sm:inline-block px-3 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] font-bold rounded-full animate-pulse">
             ● Cabin Active
           </span>
           <button
