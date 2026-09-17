@@ -78,12 +78,14 @@ export default function DoctorDashboard() {
 
   const loadAppointments = async (doctorId: number | string | null) => {
     try {
-      const headers = getAuthHeaders();
-      const endpoint = doctorId 
-        ? `${BACKEND_URL}/appointments?doctorId=${doctorId}` 
-        : `${BACKEND_URL}/appointments`;
+      if (!doctorId) {
+        setAppointments([]);
+        setLoading(false);
+        return;
+      }
 
-      const res = await fetch(endpoint, {
+      const headers = getAuthHeaders();
+      const res = await fetch(`${BACKEND_URL}/appointments?doctorId=${doctorId}`, {
         headers,
         credentials: 'include',
       });
