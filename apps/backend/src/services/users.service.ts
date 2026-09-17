@@ -7,12 +7,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { User, UserRole } from '../entities/user.entity';
+import { Doctor } from '../entities/doctor.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Doctor)
+    private readonly doctorRepository: Repository<Doctor>,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -34,7 +37,6 @@ export class UsersService {
       if (!user.name || user.name === 'Staff User') {
         user.name = user.email ? user.email.split('@')[0] : 'User';
       }
-
       return user;
     });
   }
@@ -110,8 +112,20 @@ export class UsersService {
     }
 
     Object.assign(user, updateData);
+    const updatedUser = await this.userRepository.save(user);
 
-    return this.userRepository.save(user);
+    if (user.role === UserRole.DOCTOR && updateData.specialization) {
+      const doctorProfile = await this.doctorRepository.findOne({
+        where: { user: { id: user.id } },
+      });
+      if (doctorProfile) {
+        doctorProfile.specialization = updateData.specialization;
+        if (updateData.phone) doctorProfile.phone = updateData.phone;
+        await this.doctorRepository.save(doctorProfile);
+      }
+    }
+
+    return updatedUser;
   }
 
   async setActive(id: string, isActive: boolean): Promise<User> {
@@ -122,7 +136,19 @@ export class UsersService {
     }
 
     user.isActive = isActive;
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    if (user.role === UserRole.DOCTOR) {
+      const doctorProfile = await this.doctorRepository.findOne({
+        where: { user: { id: user.id } },
+      });
+      if (doctorProfile) {
+        doctorProfile.isActive = isActive;
+        await this.doctorRepository.save(doctorProfile);
+      }
+    }
+
+    return savedUser;
   }
 
   async deleteUser(id: string): Promise<{ message: string }> {
@@ -130,6 +156,10 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (user.role === UserRole.DOCTOR) {
+      await this.doctorRepository.delete({ user: { id: user.id } } as any);
     }
 
     await this.userRepository.delete(String(id));
@@ -183,13 +213,13 @@ export class UsersService {
     const [totalDoctors, totalPatients, totalReception] =
       await Promise.all([
         this.userRepository.count({
-          where: { role: UserRole.DOCTOR },
+          where: { role: UserRole.DOCTOR, isActive: true },
         }),
         this.userRepository.count({
-          where: { role: UserRole.PATIENT },
+          where: { role: UserRole.PATIENT, isActive: true },
         }),
         this.userRepository.count({
-          where: { role: UserRole.RECEPTION },
+          where: { role: UserRole.RECEPTION, isActive: true },
         }),
       ]);
 
