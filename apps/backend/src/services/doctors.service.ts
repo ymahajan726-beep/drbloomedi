@@ -24,13 +24,14 @@ export class DoctorsService {
   async findAll(search?: string): Promise<Doctor[]> {
     const query = this.doctorRepo
       .createQueryBuilder('doctor')
-      .leftJoinAndSelect('doctor.user', 'user')
+      .innerJoinAndSelect('doctor.user', 'user')
       .leftJoinAndSelect('doctor.department', 'department')
+      .where('doctor.isActive = :isActive', { isActive: true })
       .orderBy('doctor.createdAt', 'DESC');
 
     if (search) {
-      query.where(
-        'doctor.specialization ILIKE :search OR doctor.phone ILIKE :search OR user.email ILIKE :search',
+      query.andWhere(
+        '(doctor.specialization ILIKE :search OR doctor.phone ILIKE :search OR user.email ILIKE :search)',
         { search: `%${search}%` },
       );
     }
@@ -53,7 +54,7 @@ export class DoctorsService {
 
   async findByUserId(userId: string): Promise<Doctor | null> {
     return this.doctorRepo.findOne({
-      where: { user: { id: userId } },
+      where: { user: { id: userId }, isActive: true },
       relations: { user: true, department: true },
     });
   }
