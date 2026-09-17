@@ -67,7 +67,8 @@ export class Prescription {
   @JoinColumn({ name: 'appointmentId' })
   appointment: Appointment;
 
-  @ManyToOne(() => Patient)
+  // Yahan patient relation mein onDelete: 'CASCADE' add kar diya gaya hai
+  @ManyToOne(() => Patient, (patient) => patient.prescriptions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'patientId' })
   patient: Patient;
 
