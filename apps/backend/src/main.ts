@@ -35,7 +35,6 @@ async function bootstrap() {
         }
       }
 
-      // Keep the existing behavior: unknown origins are also accepted.
       return callback(null, allowed || true);
     },
     credentials: true,
@@ -51,10 +50,11 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
-  const port = Number(process.env.PORT) || 4000;
+  
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
 
   await app.listen(port, '0.0.0.0');
-  console.log(`Application is running on port: ${port}`);
+  console.log(`🚀 Application is running smoothly on port: ${port}`);
 }
 
 bootstrap().catch((err) => {
