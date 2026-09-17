@@ -9,12 +9,23 @@ import {
   Post,
   Put,
   Query,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { DoctorsService } from '../services/doctors.service';
 
 @Controller('doctors')
 export class DoctorsController {
   constructor(private readonly doctorsService: DoctorsService) {}
+
+  @Get('profile/me')
+  async getMyProfile(@Req() req: any) {
+    const userId = req.user?.id || req.user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException('User session not found');
+    }
+    return this.doctorsService.findByUserId(userId);
+  }
 
   @Get()
   async getAll(@Query('search') search?: string) {

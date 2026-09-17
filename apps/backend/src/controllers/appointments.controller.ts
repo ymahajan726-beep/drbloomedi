@@ -19,8 +19,9 @@ export class AppointmentsController {
   async getAll(
     @Query('search') search?: string,
     @Query('status') status?: string,
+    @Query('doctorId') doctorId?: string,
   ) {
-    return this.appointmentsService.findAll(search, status);
+    return this.appointmentsService.findAll(search, status, doctorId);
   }
 
   @Get(':id')

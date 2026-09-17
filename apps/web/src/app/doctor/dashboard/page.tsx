@@ -40,19 +40,43 @@ export default function DoctorDashboard() {
       return;
     }
 
-    const email = localStorage.getItem('doctor_email') || localStorage.getItem('userEmail') || 'Doctor';
-    setDoctorEmail(email);
     setIsAuthorized(true);
-    loadAppointments();
+    initializeDoctorSession();
     
-    const interval = setInterval(loadAppointments, 8000);
+    const interval = setInterval(initializeDoctorSession, 8000);
     return () => clearInterval(interval);
   }, []);
 
-  const loadAppointments = async () => {
+  const initializeDoctorSession = async () => {
     try {
       const headers = getAuthHeaders();
-      const res = await fetch(`${BACKEND_URL}/appointments`, {
+      const profileRes = await fetch(`${BACKEND_URL}/doctors/profile/me`, {
+        headers,
+        credentials: 'include',
+      });
+
+      if (profileRes.ok) {
+        const doctorProfile = await profileRes.json();
+        if (doctorProfile && doctorProfile.id) {
+          if (doctorProfile.user?.email) {
+            setDoctorEmail(doctorProfile.user.email);
+          }
+          await loadAppointments(doctorProfile.id);
+        }
+      } else {
+        console.error('Failed to resolve doctor profile from server session');
+      }
+    } catch (err) {
+      console.error('Session initialization error', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAppointments = async (doctorId: number | string) => {
+    try {
+      const headers = getAuthHeaders();
+      const res = await fetch(`${BACKEND_URL}/appointments?doctorId=${doctorId}`, {
         headers,
         credentials: 'include',
       });
@@ -61,7 +85,6 @@ export default function DoctorDashboard() {
         const data = await res.json();
         const list = Array.isArray(data) ? data : [];
         
-        // FILTER: Keep only pending/scheduled/confirmed appointments in the doctor's active queue
         const activeList = list.filter((a) => {
           const st = String(a.status || '').trim().toUpperCase();
           return st === 'SCHEDULED' || st === 'CONFIRMED' || st === 'PENDING';
@@ -76,8 +99,6 @@ export default function DoctorDashboard() {
       }
     } catch (err) {
       console.error('Failed to load doctor appointments', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -90,7 +111,14 @@ export default function DoctorDashboard() {
         credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
-      await loadAppointments();
+      const profileRes = await fetch(`${BACKEND_URL}/doctors/profile/me`, {
+        headers,
+        credentials: 'include',
+      });
+      if (profileRes.ok) {
+        const doc = await profileRes.json();
+        if (doc?.id) loadAppointments(doc.id);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -129,14 +157,14 @@ export default function DoctorDashboard() {
               DrBlooMedi Clinical OPD Cabin
             </h1>
             <p className="text-[10px] text-slate-400 font-medium">
-              Specialist Physician • <span className="text-emerald-400 font-bold">{doctorEmail}</span>
+              Specialist Physician • <span className="text-emerald-400 font-bold">{doctorEmail || 'Authorized Doctor'}</span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
-            onClick={loadAppointments}
+            onClick={initializeDoctorSession}
             className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 transition shadow-sm cursor-pointer"
           >
             🔄 Sync Queue

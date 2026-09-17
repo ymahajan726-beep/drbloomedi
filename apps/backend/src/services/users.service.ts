@@ -35,16 +35,6 @@ export class UsersService {
         user.name = user.email ? user.email.split('@')[0] : 'User';
       }
 
-      if (!user.phone && Array.isArray(user.permissions)) {
-        const phone = user.permissions.find((p) =>
-          p.startsWith('PHONE:'),
-        );
-
-        if (phone) {
-          user.phone = phone.replace('PHONE:', '');
-        }
-      }
-
       return user;
     });
   }
@@ -79,7 +69,6 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const resolvedName = name || email.split('@')[0];
-    const permissions = phone ? [`PHONE:${phone}`] : [];
 
     try {
       const user = this.userRepository.create({
@@ -88,7 +77,6 @@ export class UsersService {
         role,
         name: resolvedName,
         phone: phone || null,
-        permissions,
         isActive: true,
       } as any);
 
@@ -100,7 +88,6 @@ export class UsersService {
         password: hashedPassword,
         role,
         name: resolvedName,
-        permissions,
         isActive: true,
       } as any);
 
@@ -120,10 +107,6 @@ export class UsersService {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     } else {
       delete updateData.password;
-    }
-
-    if (updateData.phone) {
-      updateData.permissions = [`PHONE:${updateData.phone}`];
     }
 
     Object.assign(user, updateData);

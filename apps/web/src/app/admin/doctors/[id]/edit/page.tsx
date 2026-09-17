@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { getAuthHeaders } from '@/utils/session';
 
 interface Department { id: string; name: string; }
 
@@ -30,14 +31,21 @@ export default function EditDoctorPage() {
     async function loadData() {
       try {
         setLoading(true);
+        const headers = getAuthHeaders();
 
-        const deptRes = await fetch('https://drbloomedi-backend.onrender.com/departments');
+        const deptRes = await fetch('https://drbloomedi-backend.onrender.com/departments', {
+          headers,
+          credentials: 'include',
+        });
         if (deptRes.ok) {
           const deptData = await deptRes.json();
           if (Array.isArray(deptData)) setDepartments(deptData);
         }
 
-        const docRes = await fetch(`https://drbloomedi-backend.onrender.com/doctors/${doctorId}`);
+        const docRes = await fetch(`https://drbloomedi-backend.onrender.com/doctors/${doctorId}`, {
+          headers,
+          credentials: 'include',
+        });
         if (!docRes.ok) throw new Error('Doctor profile not found');
         const doc = await docRes.json();
 
@@ -63,10 +71,12 @@ export default function EditDoctorPage() {
     try {
       setSubmitting(true);
       setErrorMsg('');
+      const headers = getAuthHeaders();
 
       const res = await fetch(`https://drbloomedi-backend.onrender.com/doctors/${doctorId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           fullName: fullName.trim(), email: email.trim(),
           specialization: specialization.trim(), qualifications: qualifications.trim(),

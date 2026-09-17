@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
+import { getAuthHeaders } from '@/utils/session';
 
 const API_BASE = 'https://drbloomedi-backend.onrender.com';
 
@@ -37,21 +38,16 @@ export default function DoctorConsultPage() {
     loadLabTests();
   }, [appointmentId]);
 
-  const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const authHeaders = () => {
-    const token = getToken();
-    return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
-  };
-
   const loadAppointment = async () => {
     try {
       setLoading(true);
       let data: any = null;
-      const res = await fetch(`${API_BASE}/appointments/${appointmentId}`, { headers: authHeaders(), cache: 'no-store' });
+      const headers = getAuthHeaders();
+      const res = await fetch(`${API_BASE}/appointments/${appointmentId}`, { headers, cache: 'no-store', credentials: 'include' });
       if (res.ok) {
         data = await res.json();
       } else {
-        const listRes = await fetch(`${API_BASE}/appointments`, { headers: authHeaders(), cache: 'no-store' });
+        const listRes = await fetch(`${API_BASE}/appointments`, { headers, cache: 'no-store', credentials: 'include' });
         if (listRes.ok) {
           const list = await listRes.json();
           if (Array.isArray(list)) data = list.find((i: any) => String(i.id) === String(appointmentId));
@@ -63,7 +59,7 @@ export default function DoctorConsultPage() {
       const patientData = data.patient;
       if (!patientData?.id) { setPatient(patientData); return; }
 
-      const emrRes = await fetch(`${API_BASE}/emr/patient/${patientData.id}`, { headers: authHeaders(), cache: 'no-store' });
+      const emrRes = await fetch(`${API_BASE}/emr/patient/${patientData.id}`, { headers, cache: 'no-store', credentials: 'include' });
       if (emrRes.ok) {
         const emr = await emrRes.json();
         const loadedPatient = emr.patient || emr;
@@ -81,7 +77,8 @@ export default function DoctorConsultPage() {
   const loadLabTests = async () => {
     try {
       setLoadingTests(true);
-      const res = await fetch(`${API_BASE}/lab/tests`, { headers: authHeaders(), cache: 'no-store' });
+      const headers = getAuthHeaders();
+      const res = await fetch(`${API_BASE}/lab/tests`, { headers, cache: 'no-store', credentials: 'include' });
       if (!res.ok) throw new Error('Unable to load laboratory tests.');
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('Invalid test response.');
@@ -134,12 +131,13 @@ export default function DoctorConsultPage() {
 
     try {
       setSaving(true);
+      const headers = getAuthHeaders();
       const validMedicines = medicines.filter(m => m.medicineName.trim()).map(m => ({
         name: m.medicineName.trim(), dosage: m.dosage.trim() || '1 Tab', freq: m.frequency.trim() || '1-0-1', duration: m.duration.trim() || '5 Days', notes: m.instructions.trim() || 'After food'
       }));
 
       const presRes = await fetch(`${API_BASE}/prescriptions`, {
-        method: 'POST', headers: authHeaders(),
+        method: 'POST', headers, credentials: 'include',
         body: JSON.stringify({
           patientId, doctorId: appointment?.doctor?.id || appointment?.doctorId, appointmentId,
           diagnosis: diagnosis.trim(), symptoms: appointment?.symptoms || '',
@@ -151,7 +149,7 @@ export default function DoctorConsultPage() {
 
       if (selectedTests.length > 0) {
         const labRes = await fetch(`${API_BASE}/lab/consultation-orders`, {
-          method: 'POST', headers: authHeaders(),
+          method: 'POST', headers, credentials: 'include',
           body: JSON.stringify({ appointmentId, patientId, labTestIds: selectedTests.map(t => String(t.id)) }),
         });
         if (!labRes.ok) throw new Error('Failed to transmit lab orders.');
@@ -159,7 +157,7 @@ export default function DoctorConsultPage() {
 
       if (appointmentId) {
         await fetch(`${API_BASE}/appointments/${appointmentId}/status`, {
-          method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status: 'Completed' }),
+          method: 'PATCH', headers, credentials: 'include', body: JSON.stringify({ status: 'Completed' }),
         });
       }
 

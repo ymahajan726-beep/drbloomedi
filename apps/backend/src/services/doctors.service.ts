@@ -51,6 +51,13 @@ export class DoctorsService {
     return doc;
   }
 
+  async findByUserId(userId: string): Promise<Doctor | null> {
+    return this.doctorRepo.findOne({
+      where: { user: { id: userId } },
+      relations: { user: true, department: true },
+    });
+  }
+
   async create(data: {
     fullName: string;
     email: string;

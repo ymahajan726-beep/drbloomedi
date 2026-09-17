@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
+import { getAuthHeaders } from '@/utils/session';
 
 interface MedicineItem {
   name: string;
@@ -16,7 +17,6 @@ export default function DoctorPortalPage() {
   const [selectedApt, setSelectedApt] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Clinical Consultation State
   const [diagnosis, setDiagnosis] = useState('');
   const [symptoms, setSymptoms] = useState('');
   const [medicines, setMedicines] = useState<MedicineItem[]>([
@@ -25,13 +25,11 @@ export default function DoctorPortalPage() {
   const [advice, setAdvice] = useState('');
   const [submittingRx, setSubmittingRx] = useState(false);
 
-  // AI Assistant States
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any | null>(null);
   const [aiSummary, setAiSummary] = useState<any | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  // Printable Rx Modal State
   const [printedRx, setPrintedRx] = useState<any | null>(null);
 
   useEffect(() => {
@@ -41,7 +39,11 @@ export default function DoctorPortalPage() {
   const loadAppointments = async () => {
     try {
       setLoading(true);
-      const res = await fetch('https://drbloomedi-backend.onrender.com/appointments');
+      const headers = getAuthHeaders();
+      const res = await fetch('https://drbloomedi-backend.onrender.com/appointments', {
+        headers,
+        credentials: 'include',
+      });
       if (res.ok) {
         const data = await res.json();
         setAppointments(data);
@@ -65,13 +67,11 @@ export default function DoctorPortalPage() {
     setAiSuggestions(null);
     setAiSummary(null);
 
-    // Auto-fetch AI Longitudinal Summary for this patient
     if (apt?.patient?.id) {
       loadAiPatientSummary(apt.patient);
     }
   };
 
-  // 1. Trigger AI Prescription Assistant
   const handleAiSuggestPrescription = async () => {
     if (!diagnosis.trim() && !symptoms.trim()) {
       showToast('Please enter clinical diagnosis or patient symptoms first.', 'error');
@@ -80,9 +80,11 @@ export default function DoctorPortalPage() {
 
     try {
       setAiLoading(true);
+      const headers = getAuthHeaders();
       const res = await fetch('https://drbloomedi-backend.onrender.com/ai/suggest-prescription', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ diagnosis, symptoms }),
       });
 
@@ -96,7 +98,6 @@ export default function DoctorPortalPage() {
     }
   };
 
-  // Apply AI Suggestions directly into the Prescription form
   const handleApplyAiPrescription = () => {
     if (!aiSuggestions) return;
     if (aiSuggestions.recommendedMedicines) {
@@ -110,17 +111,20 @@ export default function DoctorPortalPage() {
     }
   };
 
-  // 2. Fetch AI Longitudinal EMR Summary
   const loadAiPatientSummary = async (patient: any) => {
     try {
       setSummaryLoading(true);
-      // Fetch full patient history for EMR summarization
-      const histRes = await fetch(`https://drbloomedi-backend.onrender.com/patient-portal/history/${patient.id}`).catch(() => null);
+      const headers = getAuthHeaders();
+      const histRes = await fetch(`https://drbloomedi-backend.onrender.com/patient-portal/history/${patient.id}`, {
+        headers,
+        credentials: 'include',
+      }).catch(() => null);
       const histData = histRes?.ok ? await histRes.json() : {};
 
       const res = await fetch('https://drbloomedi-backend.onrender.com/ai/patient-summary', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           fullName: patient.fullName,
           age: patient.age,
@@ -142,7 +146,6 @@ export default function DoctorPortalPage() {
     }
   };
 
-  // Medicine Table Handlers
   const handleAddMedicineRow = () => {
     setMedicines([...medicines, { name: '', dosage: '1-0-1', duration: '5 Days', instruction: 'After meals' }]);
   };
@@ -158,7 +161,6 @@ export default function DoctorPortalPage() {
     setMedicines(medicines.filter((_, idx) => idx !== index));
   };
 
-  // Submit Prescription to Backend
   const handleSubmitPrescription = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedApt || !selectedApt.patient) {
@@ -177,6 +179,8 @@ export default function DoctorPortalPage() {
     }
 
     try {
+      setSubmittingRx(true);
+      const headers = getAuthHeaders();
       const payload = {
         patientId: selectedApt.patient.id,
         doctorId: selectedApt.doctor?.id || selectedApt.doctorId || null,
@@ -189,7 +193,8 @@ export default function DoctorPortalPage() {
 
       const res = await fetch('https://drbloomedi-backend.onrender.com/prescriptions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
@@ -215,7 +220,6 @@ export default function DoctorPortalPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans max-w-7xl mx-auto space-y-6">
-      {/* Top Header */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <span className="text-[10px] font-bold px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-full uppercase">
@@ -230,14 +234,13 @@ export default function DoctorPortalPage() {
         </div>
         <button
           onClick={loadAppointments}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold self-start md:self-auto"
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold self-start md:self-auto cursor-pointer"
         >
           🔄 Refresh Patient Queue
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Waiting Patient Queue */}
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xs font-black text-slate-900 uppercase">
@@ -262,7 +265,7 @@ export default function DoctorPortalPage() {
                     onClick={() => handleSelectPatient(apt)}
                     className={`p-3.5 rounded-2xl cursor-pointer transition text-xs my-1.5 ${
                       isSelected
-                        ? 'bg-white text-slate-900 shadow-md'
+                        ? 'bg-slate-900 text-white shadow-md'
                         : 'hover:bg-slate-50 text-slate-800 border border-transparent'
                     }`}
                   >
@@ -270,13 +273,13 @@ export default function DoctorPortalPage() {
                       <p className="font-bold text-sm">{apt.patient?.fullName || 'Walk-in Patient'}</p>
                       <span
                         className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                          isSelected ? 'bg-white/20 text-slate-900' : 'bg-slate-100 text-slate-600'
+                          isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         {apt.appointmentNumber || 'OPD'}
                       </span>
                     </div>
-                    <p className={`text-[10px] mt-1 ${isSelected ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <p className={`text-[10px] mt-1 ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
                       Slot: {apt.timeSlot || '10:00 AM'} • Phone: {apt.patient?.phone}
                     </p>
                   </div>
@@ -286,9 +289,7 @@ export default function DoctorPortalPage() {
           </div>
         </div>
 
-        {/* Right 2 Columns: Active Consultation & AI Assistant */}
         <div className="lg:col-span-2 space-y-5">
-          {/* Patient Overview & AI EMR Longitudinal Summary Card */}
           {selectedApt && (
             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
               <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
@@ -311,7 +312,6 @@ export default function DoctorPortalPage() {
                 )}
               </div>
 
-              {/* AI Clinical Brief */}
               <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-xs space-y-1.5">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm">🧠</span>
@@ -333,7 +333,6 @@ export default function DoctorPortalPage() {
             </div>
           )}
 
-          {/* Consultation Prescription Form */}
           <form
             onSubmit={handleSubmitPrescription}
             className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5"
@@ -346,14 +345,13 @@ export default function DoctorPortalPage() {
                 type="button"
                 onClick={handleAiSuggestPrescription}
                 disabled={aiLoading}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition"
+                className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5 transition cursor-pointer"
               >
                 <span>✨</span>
                 <span>{aiLoading ? 'Analyzing Protocol...' : 'AI Suggest Prescription'}</span>
               </button>
             </div>
 
-            {/* Inputs: Diagnosis & Symptoms */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
@@ -382,7 +380,6 @@ export default function DoctorPortalPage() {
               </div>
             </div>
 
-            {/* AI SUGGESTION BANNER IF AVAILABLE */}
             {aiSuggestions && (
               <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2 text-xs">
                 <div className="flex justify-between items-center">
@@ -393,7 +390,7 @@ export default function DoctorPortalPage() {
                   <button
                     type="button"
                     onClick={handleApplyAiPrescription}
-                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-[11px] shadow-sm transition"
+                    className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-[11px] shadow-sm transition cursor-pointer"
                   >
                     Apply AI Rx to Form →
                   </button>
@@ -405,7 +402,6 @@ export default function DoctorPortalPage() {
               </div>
             )}
 
-            {/* Prescribed Medicines Dynamic Table */}
             <div className="space-y-3 pt-2">
               <div className="flex justify-between items-center">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">
@@ -414,7 +410,7 @@ export default function DoctorPortalPage() {
                 <button
                   type="button"
                   onClick={handleAddMedicineRow}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
                 >
                   + Add Medicine Row
                 </button>
@@ -454,7 +450,7 @@ export default function DoctorPortalPage() {
                       <button
                         type="button"
                         onClick={() => handleRemoveMedicineRow(idx)}
-                        className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold"
+                        className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold cursor-pointer"
                       >
                         ✕
                       </button>
@@ -464,7 +460,6 @@ export default function DoctorPortalPage() {
               </div>
             </div>
 
-            {/* Clinical Advice */}
             <div className="text-xs">
               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
                 Clinical Advice & Dietary Guidelines
@@ -481,7 +476,7 @@ export default function DoctorPortalPage() {
             <button
               type="submit"
               disabled={submittingRx}
-              className="w-full py-3.5 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold text-xs shadow-md transition"
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md transition cursor-pointer"
             >
               {submittingRx ? 'Finalizing Prescription...' : '✓ Finalize & Issue Digital Prescription'}
             </button>
@@ -489,9 +484,8 @@ export default function DoctorPortalPage() {
         </div>
       </div>
 
-      {/* MODAL: OFFICIAL PRINTABLE PRESCRIPTION */}
       {printedRx && (
-        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 font-sans">
             <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
               <div>
@@ -502,7 +496,7 @@ export default function DoctorPortalPage() {
               </div>
               <button
                 onClick={() => setPrintedRx(null)}
-                className="w-7 h-7 bg-slate-100 rounded-full font-bold text-slate-500 hover:bg-slate-200"
+                className="w-7 h-7 bg-slate-100 rounded-full font-bold text-slate-500 hover:bg-slate-200 cursor-pointer"
               >
                 ✕
               </button>
@@ -558,14 +552,14 @@ export default function DoctorPortalPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-white text-slate-900 rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-md"
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1 shadow-md cursor-pointer"
               >
                 <span>🖨️</span> Print Prescription
               </button>
               <button
                 type="button"
                 onClick={() => setPrintedRx(null)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold"
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
               >
                 Close
               </button>
