@@ -109,6 +109,28 @@ export class UsersService {
     }
   }
 
+  async updateUser(id: string, updateData: any): Promise<User> {
+    const user = await this.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (updateData.password && updateData.password.trim() !== '') {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    } else {
+      delete updateData.password;
+    }
+
+    if (updateData.phone) {
+      updateData.permissions = [`PHONE:${updateData.phone}`];
+    }
+
+    Object.assign(user, updateData);
+
+    return this.userRepository.save(user);
+  }
+
   async setActive(id: string, isActive: boolean): Promise<User> {
     const user = await this.findById(id);
 

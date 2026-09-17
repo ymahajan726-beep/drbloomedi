@@ -47,6 +47,14 @@ export class UsersController {
     );
   }
 
+  @Patch(':id')
+  async updateUser(
+    @Param('id') id: string,
+    @Body() updateData: any,
+  ) {
+    return this.usersService.updateUser(id, updateData);
+  }
+
   @Patch(':id/active')
   async toggleActiveStatus(
     @Param('id') id: string,

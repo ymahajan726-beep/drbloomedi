@@ -10,6 +10,8 @@ type User = {
   isActive: boolean;
   name?: string;
   phone?: string;
+  specialization?: string;
+  consultationFee?: number;
 };
 
 export default function UsersPage() {
@@ -20,12 +22,13 @@ export default function UsersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [editingUserId, setEditingUserId] = useState<string | number | null>(null);
+
   const [toast, setToast] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
-  // Form State for New Staff
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -42,8 +45,6 @@ export default function UsersPage() {
         method: "GET",
         cache: "no-store",
       });
-
-      console.log("USERS STATUS:", response.status);
 
       if (!response.ok) {
         throw new Error("Failed to fetch users");
@@ -76,7 +77,37 @@ export default function UsersPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  async function handleCreateUser(e: React.FormEvent) {
+  function handleOpenCreateModal() {
+    setEditingUserId(null);
+    setFormError(null);
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "DOCTOR",
+      phone: "",
+      specialization: "General Physician",
+      consultationFee: 500,
+    });
+    setShowModal(true);
+  }
+
+  function handleOpenEditModal(user: User) {
+    setEditingUserId(user.id);
+    setFormError(null);
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+      password: "",
+      role: user.role || "DOCTOR",
+      phone: user.phone || "",
+      specialization: user.specialization || "General Physician",
+      consultationFee: user.consultationFee || 500,
+    });
+    setShowModal(true);
+  }
+
+  async function handleSaveUser(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setFormError(null);
@@ -86,10 +117,15 @@ export default function UsersPage() {
       const payload: any = {
         name: trimmedName,
         email: formData.email.trim().toLowerCase(),
-        password: formData.password,
         role: formData.role.toUpperCase(),
         phone: formData.phone.trim() || undefined,
       };
+
+      if (formData.password.trim() !== "") {
+        payload.password = formData.password;
+      } else if (!editingUserId) {
+        throw new Error("Password is required for new accounts.");
+      }
 
       if (formData.role.toUpperCase() === "DOCTOR") {
         payload.specialization =
@@ -97,22 +133,24 @@ export default function UsersPage() {
         payload.consultationFee = Number(formData.consultationFee) || 500;
       }
 
-      const response = await secureFetch("/users", {
-        method: "POST",
+      const endpoint = editingUserId ? `/users/${editingUserId}` : "/users";
+      const method = editingUserId ? "PATCH" : "POST";
+
+      const response = await secureFetch(endpoint, {
+        method,
         body: JSON.stringify(payload),
       });
-
-      console.log("CREATE USER STATUS:", response.status);
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         throw new Error(
           errData.message ||
-            "Failed to create staff account. Email may already be taken.",
+            (editingUserId
+              ? "Failed to update staff account."
+              : "Failed to create staff account. Email may already be taken."),
         );
       }
 
-      // If doctor role, trigger doctor profile entry guarantee
       if (formData.role.toUpperCase() === "DOCTOR") {
         try {
           await secureFetch("/doctors", {
@@ -128,25 +166,17 @@ export default function UsersPage() {
         } catch (_) {}
       }
 
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
-        role: "DOCTOR",
-        phone: "",
-        specialization: "General Physician",
-        consultationFee: 500,
-      });
-
       setShowModal(false);
       await fetchUsers();
 
       setToast({
         type: "success",
-        message: "Staff member onboarded successfully.",
+        message: editingUserId
+          ? "Staff member updated successfully."
+          : "Staff member onboarded successfully.",
       });
     } catch (error: any) {
-      console.error("CREATE USER ERROR:", error);
+      console.error("SAVE USER ERROR:", error);
       setFormError(error.message || "Error saving staff member.");
     } finally {
       setSubmitting(false);
@@ -228,7 +258,6 @@ export default function UsersPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 font-sans text-gray-900 dark:bg-slate-950 dark:text-gray-100">
-      {/* Toast Notification */}
       {toast && (
         <div className="fixed right-6 top-6 z-[100]">
           <div
@@ -260,10 +289,7 @@ export default function UsersPage() {
 
         <button
           type="button"
-          onClick={() => {
-            setFormError(null);
-            setShowModal(true);
-          }}
+          onClick={handleOpenCreateModal}
           className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
           <span>➕</span> Add New Staff Member
@@ -376,6 +402,14 @@ export default function UsersPage() {
                       <div className="flex gap-2">
                         <button
                           type="button"
+                          onClick={() => handleOpenEditModal(user)}
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-200 dark:hover:bg-slate-700"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() =>
                             toggleStatus(user.id, user.isActive !== false)
                           }
@@ -403,13 +437,12 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* Onboard Staff Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-100/90 p-4 backdrop-blur-sm dark:bg-slate-950/90">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
             <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3 dark:border-slate-700">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Onboard Hospital Personnel
+                {editingUserId ? "Edit Hospital Personnel" : "Onboard Hospital Personnel"}
               </h2>
 
               <button
@@ -427,7 +460,7 @@ export default function UsersPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveUser} className="space-y-4 text-xs">
               <div>
                 <label className="mb-1 block font-semibold text-gray-700 dark:text-gray-300">
                   Full Name / Title *
@@ -462,12 +495,12 @@ export default function UsersPage() {
 
               <div>
                 <label className="mb-1 block font-semibold text-gray-700 dark:text-gray-300">
-                  Login Password *
+                  Login Password {editingUserId ? "(Leave blank to keep current)" : "*"}
                 </label>
                 <input
                   type="password"
-                  required
-                  placeholder="At least 6 characters"
+                  required={!editingUserId}
+                  placeholder={editingUserId ? "Enter new password if changing" : "At least 6 characters"}
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
@@ -569,7 +602,11 @@ export default function UsersPage() {
                   disabled={submitting}
                   className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {submitting ? "Saving..." : "Create Staff Account"}
+                  {submitting
+                    ? "Saving..."
+                    : editingUserId
+                    ? "Update Staff Account"
+                    : "Create Staff Account"}
                 </button>
               </div>
             </form>
