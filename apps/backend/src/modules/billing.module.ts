@@ -1,14 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-// Entities
-import { Billing } from '../entities/billing.entity';
-import { Patient } from '../entities/patient.entity';
 import { Appointment } from '../entities/appointment.entity';
-import { LabOrder } from '../entities/lab-order.entity';
+import { Billing } from '../entities/billing.entity';
 import { IpdAdmission } from '../entities/ipd-admission.entity';
-
-// Controller & Service
+import { LabOrder } from '../entities/lab-order.entity';
+import { Patient } from '../entities/patient.entity';
 import { BillingController } from '../controllers/billing.controller';
 import { BillingService } from '../services/billing.service';
 

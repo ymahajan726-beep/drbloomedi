@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export enum WardType {
   GENERAL = 'General Ward',
@@ -26,20 +20,12 @@ export class Bed {
   id: string;
 
   @Column({ unique: true })
-  bedNumber: string; // e.g. "GW-101", "ICU-04"
+  bedNumber: string;
 
-  @Column({
-    type: 'enum',
-    enum: WardType,
-    default: WardType.GENERAL,
-  })
+  @Column({ type: 'enum', enum: WardType, default: WardType.GENERAL })
   wardType: WardType;
 
-  @Column({
-    type: 'enum',
-    enum: BedStatus,
-    default: BedStatus.AVAILABLE,
-  })
+  @Column({ type: 'enum', enum: BedStatus, default: BedStatus.AVAILABLE })
   status: BedStatus;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 500.0 })

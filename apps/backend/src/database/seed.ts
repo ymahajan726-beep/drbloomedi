@@ -9,7 +9,6 @@ async function seedAllUsers() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const usersService = app.get(UsersService);
 
-  // Teeno roles ke default users ki list
   const usersToSeed = [
     {
       email: (process.env.ADMIN_EMAIL || 'admin@drbloomedi.com').toLowerCase(),
@@ -37,7 +36,6 @@ async function seedAllUsers() {
       const hashedPassword = await bcrypt.hash(item.password, 10);
 
       if (existingUser) {
-        // Agar user pehle se hai toh password & role refresh karo
         existingUser.password = hashedPassword;
         existingUser.role = item.role;
         if ('isActive' in existingUser) existingUser.isActive = true;
@@ -51,9 +49,8 @@ async function seedAllUsers() {
         } else if (typeof (usersService as any).updatePassword === 'function') {
           await (usersService as any).updatePassword(existingUser.id, hashedPassword);
         }
-        console.log(`✅ ${item.role} updated: ${item.email} / ${item.password}`);
+        console.log(`[SEED] Updated ${item.role}: ${item.email}`);
       } else {
-        // Naya user create karo
         if (typeof (usersService as any).create === 'function') {
           await (usersService as any).create({
             email: item.email,
@@ -65,19 +62,19 @@ async function seedAllUsers() {
         } else if (item.role === 'ADMIN' && typeof usersService.createAdmin === 'function') {
           await usersService.createAdmin(item.email, item.password);
         }
-        console.log(`✅ ${item.role} created: ${item.email} / ${item.password}`);
+        console.log(`[SEED] Created ${item.role}: ${item.email}`);
       }
     }
 
-    console.log('🎉 Sabhi modules ke users ready hain!');
+    console.log('[SEED] User seeding completed successfully.');
   } catch (error) {
-    console.error('Seeding error details:', error);
+    console.error('Seeding execution error:', error);
   } finally {
     await app.close();
   }
 }
 
 seedAllUsers().catch((error) => {
-  console.error('Seed failed:', error);
+  console.error('Seed process failed:', error);
   process.exit(1);
 });

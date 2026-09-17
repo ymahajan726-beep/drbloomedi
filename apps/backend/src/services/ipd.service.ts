@@ -1,13 +1,16 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
   ConflictException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bed, BedStatus } from '../entities/bed.entity';
-import { IpdAdmission, AdmissionStatus } from '../entities/ipd-admission.entity';
+import {
+  IpdAdmission,
+  AdmissionStatus,
+} from '../entities/ipd-admission.entity';
 import { Patient } from '../entities/patient.entity';
 import { Doctor } from '../entities/doctor.entity';
 
@@ -24,11 +27,19 @@ export class IpdService {
     private readonly doctorRepo: Repository<Doctor>,
   ) {}
 
-  // 1. Bed Management
   async getAllBeds(wardType?: string, status?: string): Promise<Bed[]> {
-    const qb = this.bedRepo.createQueryBuilder('bed').orderBy('bed.bedNumber', 'ASC');
-    if (wardType) qb.andWhere('bed.wardType = :wardType', { wardType });
-    if (status) qb.andWhere('bed.status = :status', { status });
+    const qb = this.bedRepo
+      .createQueryBuilder('bed')
+      .orderBy('bed.bedNumber', 'ASC');
+
+    if (wardType) {
+      qb.andWhere('bed.wardType = :wardType', { wardType });
+    }
+
+    if (status) {
+      qb.andWhere('bed.status = :status', { status });
+    }
+
     return qb.getMany();
   }
 
@@ -36,21 +47,25 @@ export class IpdService {
     if (!data.bedNumber?.trim()) {
       throw new BadRequestException('Bed number is required');
     }
-    const trimmed = data.bedNumber.trim().toUpperCase();
-    const existing = await this.bedRepo.findOne({ where: { bedNumber: trimmed } });
+
+    const bedNumber = data.bedNumber.trim().toUpperCase();
+    const existing = await this.bedRepo.findOne({
+      where: { bedNumber },
+    });
+
     if (existing) {
-      throw new ConflictException(`Bed ${trimmed} already exists`);
+      throw new ConflictException(`Bed ${bedNumber} already exists`);
     }
 
     const bed = this.bedRepo.create({
       ...data,
-      bedNumber: trimmed,
+      bedNumber,
       dailyRate: Math.max(0, Number(data.dailyRate) || 0),
     });
+
     return this.bedRepo.save(bed);
   }
 
-  // 2. Admission Management
   async getAllAdmissions(status?: string): Promise<IpdAdmission[]> {
     const qb = this.admissionRepo
       .createQueryBuilder('adm')
@@ -73,24 +88,39 @@ export class IpdService {
     doctorId?: number;
     admissionDiagnosis?: string;
   }): Promise<IpdAdmission> {
-    const patient = await this.patientRepo.findOne({ where: { id: data.patientId } });
-    if (!patient) throw new NotFoundException('Patient not found');
+    const patient = await this.patientRepo.findOne({
+      where: { id: data.patientId },
+    });
 
-    const bed = await this.bedRepo.findOne({ where: { id: data.bedId } });
-    if (!bed) throw new NotFoundException('Bed not found');
+    if (!patient) {
+      throw new NotFoundException('Patient not found');
+    }
+
+    const bed = await this.bedRepo.findOne({
+      where: { id: data.bedId },
+    });
+
+    if (!bed) {
+      throw new NotFoundException('Bed not found');
+    }
 
     if (bed.status !== BedStatus.AVAILABLE) {
-      throw new BadRequestException(`Bed ${bed.bedNumber} is currently not available`);
+      throw new BadRequestException(
+        `Bed ${bed.bedNumber} is currently not available`,
+      );
     }
 
     let doctor: Doctor | null = null;
+
     if (data.doctorId) {
-      doctor = await this.doctorRepo.findOne({ where: { id: data.doctorId } });
+      doctor = await this.doctorRepo.findOne({
+        where: { id: data.doctorId },
+      });
     }
 
-    // Auto-generate Admission Number
-    const timestamp = Date.now().toString().slice(-6);
-    const admissionNumber = `IPD-${new Date().getFullYear()}-${timestamp}`;
+    const admissionNumber = `IPD-${new Date().getFullYear()}-${Date.now()
+      .toString()
+      .slice(-6)}`;
 
     const admission = this.admissionRepo.create({
       admissionNumber,
@@ -101,7 +131,6 @@ export class IpdService {
       status: AdmissionStatus.ADMITTED,
     });
 
-    // Mark bed as Occupied
     bed.status = BedStatus.OCCUPIED;
     await this.bedRepo.save(bed);
 
@@ -126,10 +155,10 @@ export class IpdService {
     }
 
     admission.status = AdmissionStatus.DISCHARGED;
-    admission.dischargeSummary = dischargeSummary?.trim() || 'Discharged in stable condition';
+    admission.dischargeSummary =
+      dischargeSummary?.trim() || 'Discharged in stable condition';
     admission.dischargedAt = new Date();
 
-    // Release bed back to Available
     if (admission.bed) {
       admission.bed.status = BedStatus.AVAILABLE;
       await this.bedRepo.save(admission.bed);

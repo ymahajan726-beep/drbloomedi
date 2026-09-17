@@ -31,8 +31,10 @@ export class RolesService {
       qb.andWhere('user.role = :role', { role });
     }
 
-    if (search) {
-      qb.andWhere('user.email ILIKE :search', { search: `%${search}%` });
+    if (search?.trim()) {
+      qb.andWhere('user.email ILIKE :search', {
+        search: `%${search.trim()}%`,
+      });
     }
 
     return qb.getMany();
@@ -43,16 +45,26 @@ export class RolesService {
       throw new BadRequestException('Invalid user role specified');
     }
 
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User account not found');
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User account not found');
+    }
 
     user.role = newRole;
     return this.userRepo.save(user);
   }
 
   async toggleActive(userId: string): Promise<User> {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User account not found');
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User account not found');
+    }
 
     user.isActive = !user.isActive;
     return this.userRepo.save(user);
@@ -62,23 +74,46 @@ export class RolesService {
     return [
       {
         role: UserRole.ADMIN,
-        description: 'Complete system access, user role assignment & audit logs',
-        permissions: ['Full Access', 'Financial Audits', 'User Deletion', 'Staff Onboarding'],
+        description:
+          'Complete system access, user role assignment & audit logs',
+        permissions: [
+          'Full Access',
+          'Financial Audits',
+          'User Deletion',
+          'Staff Onboarding',
+        ],
       },
       {
         role: UserRole.DOCTOR,
-        description: 'Clinical access, consultations, prescription records & diagnosis',
-        permissions: ['OPD Queue', 'Patient History', 'Diagnosis Entry', 'E-Prescriptions'],
+        description:
+          'Clinical access, consultations, prescription records & diagnosis',
+        permissions: [
+          'OPD Queue',
+          'Patient History',
+          'Diagnosis Entry',
+          'E-Prescriptions',
+        ],
       },
       {
         role: UserRole.RECEPTION,
-        description: 'Front-desk operations, appointments booking & patient registration',
-        permissions: ['Book Appointments', 'Register Patient', 'Generate Invoices', 'Counter Billing'],
+        description:
+          'Front-desk operations, appointments booking & patient registration',
+        permissions: [
+          'Book Appointments',
+          'Register Patient',
+          'Generate Invoices',
+          'Counter Billing',
+        ],
       },
       {
         role: UserRole.PATIENT,
-        description: 'Self-service portal access for reports and appointment status',
-        permissions: ['View Prescriptions', 'Appointment History', 'Download Receipts'],
+        description:
+          'Self-service portal access for reports and appointment status',
+        permissions: [
+          'View Prescriptions',
+          'Appointment History',
+          'Download Receipts',
+        ],
       },
     ];
   }

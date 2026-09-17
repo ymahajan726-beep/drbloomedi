@@ -14,33 +14,21 @@ import { UserRole } from '../entities/user.entity';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // =====================================================
-  // GET ALL USERS
-  // =====================================================
   @Get()
   async getAllUsers() {
     return this.usersService.findAll();
   }
 
-  // =====================================================
-  // GET DASHBOARD STATS
-  // =====================================================
   @Get('stats')
   async getStats() {
     return this.usersService.getDashboardStats();
   }
 
-  // =====================================================
-  // GET USER BY ID
-  // =====================================================
   @Get(':id')
   async getUserById(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
 
-  // =====================================================
-  // CREATE USER (ADMIN / RECEPTION / PATIENT / DOCTOR)
-  // =====================================================
   @Post()
   async createUser(
     @Body('email') email: string,
@@ -59,9 +47,6 @@ export class UsersController {
     );
   }
 
-  // =====================================================
-  // TOGGLE ACTIVE STATUS
-  // =====================================================
   @Patch(':id/active')
   async toggleActiveStatus(
     @Param('id') id: string,
@@ -78,9 +63,6 @@ export class UsersController {
     return this.usersService.setActive(id, isActive);
   }
 
-  // =====================================================
-  // DELETE USER
-  // =====================================================
   @Delete(':id')
   async deleteUser(@Param('id') id: string) {
     return this.usersService.deleteUser(id);

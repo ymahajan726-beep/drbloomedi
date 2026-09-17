@@ -23,7 +23,6 @@ if (!existsSync(uploadDir)) {
   mkdirSync(uploadDir, { recursive: true });
 }
 
-// Helper to determine Content-Type
 const getMimeType = (filename: string): string => {
   const ext = extname(filename).toLowerCase();
   switch (ext) {
@@ -86,7 +85,6 @@ export class DocumentsController {
     return this.docsService.saveDocumentMeta(file, body);
   }
 
-  // Handle stream with inline preview headers
   @Get(['documents/download/:filename', 'uploads/:filename'])
   serveFile(
     @Param('filename') filename: string,
@@ -106,7 +104,6 @@ export class DocumentsController {
       throw new NotFoundException(`File ${filename} not found on server disk`);
     }
 
-    // Set inline header so browser previews instead of downloading
     res.set({
       'Content-Type': getMimeType(filename),
       'Content-Disposition': `inline; filename="${filename}"`,

@@ -11,7 +11,6 @@ export class AdminUserController {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  // 1. सभी मौजूदा स्टाफ यूज़र्स की लिस्ट
   @Get()
   async getAllUsers(): Promise<User[]> {
     return this.userRepo.find({
@@ -26,7 +25,6 @@ export class AdminUserController {
     });
   }
 
-  // 2. एडमिन द्वारा नया यूज़र, पासवर्ड और परमिशन बनाना
   @Post('create')
   async createUser(
     @Body()
@@ -43,6 +41,7 @@ export class AdminUserController {
 
     const email = body.email.trim().toLowerCase();
     const existing = await this.userRepo.findOne({ where: { email } });
+    
     if (existing) {
       throw new BadRequestException('User with this email already exists');
     }
@@ -52,7 +51,7 @@ export class AdminUserController {
 
     const newUser = new User();
     newUser.email = email;
-    newUser.password = hashedPassword; // आपकी entity में 'password' नाम है
+    newUser.password = hashedPassword;
     newUser.role = body.role || UserRole.RECEPTION;
     newUser.permissions = body.permissions || [];
 

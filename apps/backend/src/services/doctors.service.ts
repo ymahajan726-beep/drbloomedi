@@ -1,7 +1,7 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
@@ -43,7 +43,11 @@ export class DoctorsService {
       where: { id },
       relations: { user: true, department: true },
     });
-    if (!doc) throw new NotFoundException('Doctor not found');
+
+    if (!doc) {
+      throw new NotFoundException('Doctor not found');
+    }
+
     return doc;
   }
 
@@ -58,28 +62,42 @@ export class DoctorsService {
   }): Promise<Doctor> {
     const normalizedEmail = data.email.trim().toLowerCase();
 
-    let user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
+    let user = await this.userRepo.findOne({
+      where: { email: normalizedEmail },
+    });
+
     if (user) {
       const existingDoc = await this.doctorRepo.findOne({
         where: { user: { id: user.id } },
       });
+
       if (existingDoc) {
-        throw new ConflictException('A doctor with this email already exists');
+        throw new ConflictException(
+          'A doctor with this email already exists',
+        );
       }
     } else {
-      const hashedPassword = await bcrypt.hash(data.password || 'Doctor@123', 10);
-      user = this.userRepo.create({
-        email: normalizedEmail,
-        password: hashedPassword,
-        role: UserRole.DOCTOR,
-        isActive: true,
-      });
-      user = await this.userRepo.save(user);
+      const hashedPassword = await bcrypt.hash(
+        data.password || 'Doctor@123',
+        10,
+      );
+
+      user = await this.userRepo.save(
+        this.userRepo.create({
+          email: normalizedEmail,
+          password: hashedPassword,
+          role: UserRole.DOCTOR,
+          isActive: true,
+        }),
+      );
     }
 
     let department: Department | null = null;
+
     if (data.departmentId) {
-      department = await this.deptRepo.findOne({ where: { id: data.departmentId } });
+      department = await this.deptRepo.findOne({
+        where: { id: data.departmentId },
+      });
     }
 
     const doctor = this.doctorRepo.create({
@@ -94,28 +112,37 @@ export class DoctorsService {
     return this.doctorRepo.save(doctor);
   }
 
-  async update(id: number, data: {
-    fullName?: string;
-    email?: string;
-    password?: string;
-    specialization?: string;
-    qualifications?: string;
-    phone?: string;
-    departmentId?: string;
-    isActive?: boolean;
-    consultationFee?: number;
-    experienceYears?: number;
-  }): Promise<Doctor> {
+  async update(
+    id: number,
+    data: {
+      fullName?: string;
+      email?: string;
+      password?: string;
+      specialization?: string;
+      qualifications?: string;
+      phone?: string;
+      departmentId?: string;
+      isActive?: boolean;
+      consultationFee?: number;
+      experienceYears?: number;
+    },
+  ): Promise<Doctor> {
     const doc = await this.findOne(id);
 
-    // 1. Agar Email ya Password update ho raha ho
     if (data.email && doc.user) {
       const normalizedEmail = data.email.trim().toLowerCase();
+
       if (normalizedEmail !== doc.user.email) {
-        const emailTaken = await this.userRepo.findOne({ where: { email: normalizedEmail } });
+        const emailTaken = await this.userRepo.findOne({
+          where: { email: normalizedEmail },
+        });
+
         if (emailTaken && emailTaken.id !== doc.user.id) {
-          throw new ConflictException('This email is already in use by another account');
+          throw new ConflictException(
+            'This email is already in use by another account',
+          );
         }
+
         doc.user.email = normalizedEmail;
       }
     }
@@ -128,23 +155,31 @@ export class DoctorsService {
       await this.userRepo.save(doc.user);
     }
 
-    // 2. Department update handling
-    // 2. Department update handling (Type-safe)
-    if (data.departmentId !== undefined) {
-      if (data.departmentId) {
-        const dept = await this.deptRepo.findOne({ where: { id: data.departmentId } });
-        if (dept) {
-          doc.department = dept;
-        }
+    if (data.departmentId) {
+      const dept = await this.deptRepo.findOne({
+        where: { id: data.departmentId },
+      });
+
+      if (dept) {
+        doc.department = dept;
       }
     }
 
-    // 3. Doctor specific fields update
-    if (data.specialization !== undefined) doc.specialization = data.specialization;
-    if (data.qualifications !== undefined) doc.qualifications = data.qualifications;
-    if (data.phone !== undefined) doc.phone = data.phone;
-    if (data.isActive !== undefined) doc.isActive = data.isActive;
-    
+    if (data.specialization !== undefined) {
+      doc.specialization = data.specialization;
+    }
+
+    if (data.qualifications !== undefined) {
+      doc.qualifications = data.qualifications;
+    }
+
+    if (data.phone !== undefined) {
+      doc.phone = data.phone;
+    }
+
+    if (data.isActive !== undefined) {
+      doc.isActive = data.isActive;
+    }
 
     return this.doctorRepo.save(doc);
   }
@@ -152,6 +187,7 @@ export class DoctorsService {
   async toggleStatus(id: number): Promise<Doctor> {
     const doc = await this.findOne(id);
     doc.isActive = !doc.isActive;
+
     return this.doctorRepo.save(doc);
   }
 
@@ -160,10 +196,14 @@ export class DoctorsService {
     const userId = doc.user?.id;
 
     await this.doctorRepo.delete(id);
+
     if (userId) {
       await this.userRepo.delete(userId).catch(() => null);
     }
 
-    return { success: true, message: 'Doctor profile removed successfully' };
+    return {
+      success: true,
+      message: 'Doctor profile removed successfully',
+    };
   }
 }

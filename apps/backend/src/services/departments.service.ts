@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Department } from '../entities/department.entity';
@@ -26,7 +22,11 @@ export class DepartmentsService {
       where: { id },
       relations: { doctors: true },
     });
-    if (!dept) throw new NotFoundException('Department not found');
+
+    if (!dept) {
+      throw new NotFoundException('Department not found');
+    }
+
     return dept;
   }
 
@@ -34,22 +34,36 @@ export class DepartmentsService {
     const existing = await this.deptRepo.findOne({
       where: { name: data.name },
     });
+
     if (existing) {
-      throw new ConflictException('Department with this name already exists');
+      throw new ConflictException(
+        'Department with this name already exists',
+      );
     }
-    const dept = this.deptRepo.create(data);
-    return this.deptRepo.save(dept);
+
+    return this.deptRepo.save(this.deptRepo.create(data));
   }
 
-  async update(id: string, data: Partial<Department>): Promise<Department> {
+  async update(
+    id: string,
+    data: Partial<Department>,
+  ): Promise<Department> {
     const dept = await this.findOne(id);
+
     Object.assign(dept, data);
     return this.deptRepo.save(dept);
   }
 
   async delete(id: string): Promise<{ success: boolean; message: string }> {
-    const res = await this.deptRepo.delete(id);
-    if (!res.affected) throw new NotFoundException('Department not found');
-    return { success: true, message: 'Department removed successfully' };
+    const result = await this.deptRepo.delete(id);
+
+    if (!result.affected) {
+      throw new NotFoundException('Department not found');
+    }
+
+    return {
+      success: true,
+      message: 'Department removed successfully',
+    };
   }
 }

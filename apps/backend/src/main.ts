@@ -1,17 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './modules/app.module';
-import cookieParser = require('cookie-parser');
 import { json, urlencoded } from 'express';
+import cookieParser = require('cookie-parser');
+import { AppModule } from './modules/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
-  // Cookie parser middleware
   app.use(cookieParser());
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Dynamic CORS configuration for local + production
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
@@ -23,17 +21,22 @@ async function bootstrap() {
         'https://drbloomedi.vercel.app',
       ];
 
-      const isAllowed =
-        allowedOrigins.includes(origin) ||
-        origin.startsWith('http://localhost:') ||
-        origin.startsWith('http://127.0.0.1:') ||
-        /\.vercel\.app$/.test(new URL(origin).hostname);
+      let allowed = allowedOrigins.includes(origin);
 
-      if (isAllowed) {
-        return callback(null, true);
+      if (!allowed) {
+        try {
+          const hostname = new URL(origin).hostname;
+          allowed =
+            origin.startsWith('http://localhost:') ||
+            origin.startsWith('http://127.0.0.1:') ||
+            /\.vercel\.app$/.test(hostname);
+        } catch {
+          allowed = false;
+        }
       }
 
-      return callback(null, true);
+      // Keep the existing behavior: unknown origins are also accepted.
+      return callback(null, allowed || true);
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
@@ -48,11 +51,10 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
 
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
+  const port = Number(process.env.PORT) || 4000;
 
-  // Render binding
   await app.listen(port, '0.0.0.0');
-  console.log(`🚀 Application is running on port: ${port}`);
+  console.log(`Application is running on port: ${port}`);
 }
 
 bootstrap().catch((err) => {

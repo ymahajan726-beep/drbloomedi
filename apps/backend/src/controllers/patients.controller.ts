@@ -21,13 +21,11 @@ export class PatientsController {
     return this.patientsService.findAll(search);
   }
 
-  // Specific route ':id' se pehle aana chahiye
   @Get('search')
   async search(@Query('q') query?: string, @Query('search') search?: string) {
     return this.patientsService.findAll(query || search);
   }
 
-  // ParseUUIDPipe invalid string jaise "search" ko database query banne se rokega
   @Get(':id')
   async getOne(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     return this.patientsService.findOne(id);

@@ -32,7 +32,6 @@ export class LabController {
     return this.labService.createTest(data);
   }
 
-  // UPDATE EXISTING LAB TEST
   @Patch('tests/:id')
   async updateTest(
     @Param('id') id: string,

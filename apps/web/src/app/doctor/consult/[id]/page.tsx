@@ -138,7 +138,6 @@ export default function DoctorConsultPage() {
         name: m.medicineName.trim(), dosage: m.dosage.trim() || '1 Tab', freq: m.frequency.trim() || '1-0-1', duration: m.duration.trim() || '5 Days', notes: m.instructions.trim() || 'After food'
       }));
 
-      // 1. Save Prescription
       const presRes = await fetch(`${API_BASE}/prescriptions`, {
         method: 'POST', headers: authHeaders(),
         body: JSON.stringify({
@@ -150,7 +149,6 @@ export default function DoctorConsultPage() {
       });
       if (!presRes.ok) throw new Error('Failed to save prescription.');
 
-      // 2. Create Lab Orders if selected
       if (selectedTests.length > 0) {
         const labRes = await fetch(`${API_BASE}/lab/consultation-orders`, {
           method: 'POST', headers: authHeaders(),
@@ -159,7 +157,6 @@ export default function DoctorConsultPage() {
         if (!labRes.ok) throw new Error('Failed to transmit lab orders.');
       }
 
-      // 3. Complete Appointment (Updates status to Completed so it clears doctor queue & routes to reception/pathology)
       if (appointmentId) {
         await fetch(`${API_BASE}/appointments/${appointmentId}/status`, {
           method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status: 'Completed' }),
@@ -178,7 +175,7 @@ export default function DoctorConsultPage() {
   const patientName = patient?.fullName || appointment?.patient?.fullName || 'Patient Consultation';
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 max-w-7xl mx-auto space-y-6 font-sans">
       <style>{`@media print { button, select, nav, header { display: none !important; } body { background: white !important; } @page { size: A4; margin: 12mm 15mm; } }`}</style>
 
       <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex justify-between items-center gap-4">

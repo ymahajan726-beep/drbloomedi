@@ -1,14 +1,14 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
   Put,
-  Patch,
-  Delete,
-  Param,
-  Body,
   Query,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { DoctorsService } from '../services/doctors.service';
 
@@ -31,7 +31,6 @@ export class DoctorsController {
     return this.doctorsService.create(body);
   }
 
-  // PUT method for updating doctor details
   @Put(':id')
   async updateDoctorPut(
     @Param('id', ParseIntPipe) id: number,
@@ -40,7 +39,6 @@ export class DoctorsController {
     return this.doctorsService.update(id, body);
   }
 
-  // PATCH method for updating doctor details (fallback)
   @Patch(':id')
   async updateDoctorPatch(
     @Param('id', ParseIntPipe) id: number,

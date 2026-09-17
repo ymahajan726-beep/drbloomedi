@@ -64,5 +64,5 @@ export class Appointment {
   updatedAt: Date;
 
   @Column({ type: 'text', nullable: true })
-reason: string;
+  reason: string;
 }

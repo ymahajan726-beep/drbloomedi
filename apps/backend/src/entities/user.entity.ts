@@ -1,8 +1,8 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
@@ -18,13 +18,14 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'varchar', length: 120, nullable: true })
   name: string;
 
-  @Column({ type: 'varchar', nullable: true })
-  phone: string; // <--- Yeh hona sabse zaroori hai!
+  
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, length: 120 })
   email: string;
 
   @Column()

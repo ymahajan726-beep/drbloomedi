@@ -23,29 +23,29 @@ export class ReportsService {
   ) {}
 
   async getExecutiveReport() {
-    // 1. Financial Analytics
     const bills = await this.billingRepo.find();
+
     let totalRevenue = 0;
     let pendingDues = 0;
     let totalDiscount = 0;
     const paymentModes: Record<string, number> = {};
 
-    bills.forEach((b) => {
-      const amt = Number(b.totalAmount) || 0;
-      const disc = Number(b.discount) || 0;
-      totalDiscount += disc;
+    for (const bill of bills) {
+      const amount = Number(bill.totalAmount) || 0;
+      totalDiscount += Number(bill.discount) || 0;
 
-      if (b.paymentStatus === PaymentStatus.PAID) {
-        totalRevenue += amt;
-      } else if (b.paymentStatus === PaymentStatus.PENDING) {
-        pendingDues += amt;
+      if (bill.paymentStatus === PaymentStatus.PAID) {
+        totalRevenue += amount;
+      } else if (bill.paymentStatus === PaymentStatus.PENDING) {
+        pendingDues += amount;
       }
 
-      paymentModes[b.paymentMethod] = (paymentModes[b.paymentMethod] || 0) + amt;
-    });
+      paymentModes[bill.paymentMethod] =
+        (paymentModes[bill.paymentMethod] || 0) + amount;
+    }
 
-    // 2. Appointment Analytics
     const appointments = await this.appointmentRepo.find();
+
     const totalAppointments = appointments.length;
     const completedAppointments = appointments.filter(
       (a) => a.status === AppointmentStatus.COMPLETED,
@@ -57,14 +57,13 @@ export class ReportsService {
       (a) => a.status === AppointmentStatus.CANCELLED,
     ).length;
 
-    // 3. Clinical Resources
-    const [totalPatients, totalDoctors, totalDepartments] = await Promise.all([
-      this.patientRepo.count(),
-      this.doctorRepo.count(),
-      this.deptRepo.count(),
-    ]);
+    const [totalPatients, totalDoctors, totalDepartments] =
+      await Promise.all([
+        this.patientRepo.count(),
+        this.doctorRepo.count(),
+        this.deptRepo.count(),
+      ]);
 
-    // 4. Recent High-Value Invoices
     const recentInvoices = await this.billingRepo.find({
       relations: { patient: true },
       order: { createdAt: 'DESC' },

@@ -1,15 +1,19 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Appointment, AppointmentStatus } from '../entities/appointment.entity';
+
+import {
+  Appointment,
+  AppointmentStatus,
+} from '../entities/appointment.entity';
 import { Patient } from '../entities/patient.entity';
 import { Doctor } from '../entities/doctor.entity';
 import { Department } from '../entities/department.entity';
-import { EventsGateway } from '../gateways/events.gateway'; 
+import { EventsGateway } from '../gateways/events.gateway';
 
 @Injectable()
 export class AppointmentsService {
@@ -25,7 +29,11 @@ export class AppointmentsService {
     private readonly eventsGateway: EventsGateway,
   ) {}
 
-  async findAll(search?: string, status?: string, doctorId?: string | number): Promise<Appointment[]> {
+  async findAll(
+    search?: string,
+    status?: string,
+    doctorId?: string | number,
+  ): Promise<Appointment[]> {
     const qb = this.appointmentRepo
       .createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.patient', 'patient')
@@ -41,7 +49,9 @@ export class AppointmentsService {
 
     // Doctor-wise filtering for doctor dashboard / cabins
     if (doctorId) {
-      qb.andWhere('doctor.id = :doctorId', { doctorId: Number(doctorId) });
+      qb.andWhere('doctor.id = :doctorId', {
+        doctorId: Number(doctorId),
+      });
     }
 
     if (search) {
@@ -63,7 +73,11 @@ export class AppointmentsService {
         department: true,
       },
     });
-    if (!apt) throw new NotFoundException('Appointment record not found');
+
+    if (!apt) {
+      throw new NotFoundException('Appointment record not found');
+    }
+
     return apt;
   }
 
@@ -79,18 +93,29 @@ export class AppointmentsService {
     reason?: string;
     notes?: string;
   }): Promise<Appointment> {
-    const patient = await this.patientRepo.findOne({ where: { id: data.patientId } });
-    if (!patient) throw new NotFoundException('Selected patient not found');
+    const patient = await this.patientRepo.findOne({
+      where: { id: data.patientId },
+    });
+
+    if (!patient) {
+      throw new NotFoundException('Selected patient not found');
+    }
 
     const doctor = await this.doctorRepo.findOne({
       where: { id: Number(data.doctorId) },
       relations: { department: true },
     });
-    if (!doctor) throw new NotFoundException('Selected doctor not found');
+
+    if (!doctor) {
+      throw new NotFoundException('Selected doctor not found');
+    }
 
     let department: Department | null = null;
+
     if (data.departmentId) {
-      department = await this.deptRepo.findOne({ where: { id: data.departmentId } });
+      department = await this.deptRepo.findOne({
+        where: { id: data.departmentId },
+      });
     } else if (doctor.department) {
       department = doctor.department;
     }
@@ -106,9 +131,11 @@ export class AppointmentsService {
 
     const appointment = this.appointmentRepo.create({
       appointmentNumber,
-      appointmentDate: data.appointmentDate || new Date().toISOString().split('T')[0],
+      appointmentDate:
+        data.appointmentDate ||
+        new Date().toISOString().split('T')[0],
       timeSlot: safeTimeSlot,
-      status: AppointmentStatus.SCHEDULED, 
+      status: AppointmentStatus.SCHEDULED,
       symptoms: data.symptoms || data.reason || 'General Consultation',
       patient,
       doctor,
@@ -119,6 +146,7 @@ export class AppointmentsService {
 
     try {
       const fullAppointment = await this.findOne(savedAppointment.id);
+
       if (this.eventsGateway && this.eventsGateway.server) {
         this.eventsGateway.server.emit('appointment:new', fullAppointment);
       }
@@ -129,15 +157,29 @@ export class AppointmentsService {
     return savedAppointment;
   }
 
-  async updateStatus(id: string, status: AppointmentStatus): Promise<Appointment> {
+  async updateStatus(
+    id: string,
+    status: AppointmentStatus,
+  ): Promise<Appointment> {
     const apt = await this.findOne(id);
+
     apt.status = status;
+
     return this.appointmentRepo.save(apt);
   }
 
-  async delete(id: string): Promise<{ success: boolean; message: string }> {
+  async delete(
+    id: string,
+  ): Promise<{ success: boolean; message: string }> {
     const res = await this.appointmentRepo.delete(id);
-    if (!res.affected) throw new NotFoundException('Appointment not found');
-    return { success: true, message: 'Appointment cancelled & removed' };
+
+    if (!res.affected) {
+      throw new NotFoundException('Appointment not found');
+    }
+
+    return {
+      success: true,
+      message: 'Appointment cancelled & removed',
+    };
   }
 }

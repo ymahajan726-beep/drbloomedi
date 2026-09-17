@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
@@ -30,7 +30,6 @@ export default function NewAppointmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Form State (timeSlot default string value set)
   const [formData, setFormData] = useState({
     patientId: '',
     doctorId: '',
@@ -44,6 +43,7 @@ export default function NewAppointmentPage() {
     async function loadDropdownData() {
       try {
         setLoadingData(true);
+
         const [patientsRes, doctorsRes] = await Promise.all([
           fetch('https://drbloomedi-backend.onrender.com/patients'),
           fetch('https://drbloomedi-backend.onrender.com/doctors'),
@@ -51,20 +51,30 @@ export default function NewAppointmentPage() {
 
         if (patientsRes.ok) {
           const pData = await patientsRes.json();
+
           if (Array.isArray(pData)) {
             setPatients(pData);
+
             if (pData.length > 0) {
-              setFormData((prev) => ({ ...prev, patientId: pData[0].id }));
+              setFormData((prev) => ({
+                ...prev,
+                patientId: pData[0].id,
+              }));
             }
           }
         }
 
         if (doctorsRes.ok) {
           const dData = await doctorsRes.json();
+
           if (Array.isArray(dData)) {
             setDoctors(dData);
+
             if (dData.length > 0) {
-              setFormData((prev) => ({ ...prev, doctorId: String(dData[0].id) }));
+              setFormData((prev) => ({
+                ...prev,
+                doctorId: String(dData[0].id),
+              }));
             }
           }
         }
@@ -80,7 +90,9 @@ export default function NewAppointmentPage() {
   }, []);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -88,6 +100,7 @@ export default function NewAppointmentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!formData.patientId || !formData.doctorId) {
       setErrorMsg('Please select a patient and a doctor.');
       return;
@@ -97,28 +110,37 @@ export default function NewAppointmentPage() {
       setSubmitting(true);
       setErrorMsg('');
 
-      const res = await fetch('https://drbloomedi-backend.onrender.com/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patientId: formData.patientId,
-          doctorId: Number(formData.doctorId),
-          appointmentDate: formData.appointmentDate,
-          timeSlot: formData.timeSlot.trim(),
-          symptoms: formData.symptoms.trim() || undefined,
-          reason: formData.reason.trim() || undefined,
-        }),
-      });
+      const res = await fetch(
+        'https://drbloomedi-backend.onrender.com/appointments',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            patientId: formData.patientId,
+            doctorId: Number(formData.doctorId),
+            appointmentDate: formData.appointmentDate,
+            timeSlot: formData.timeSlot.trim(),
+            symptoms: formData.symptoms.trim() || undefined,
+            reason: formData.reason.trim() || undefined,
+          }),
+        },
+      );
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || 'Failed to schedule appointment');
+        throw new Error(
+          errJson.message || 'Failed to schedule appointment',
+        );
       }
 
       showToast('Appointment booked successfully!', 'success');
       router.push('/reception/dashboard');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error occurred while scheduling appointment');
+      setErrorMsg(
+        err.message || 'Error occurred while scheduling appointment',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -128,9 +150,14 @@ export default function NewAppointmentPage() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black text-slate-900">Schedule New Appointment</h1>
-          <p className="text-xs text-slate-500">Book clinical consultation slot</p>
+          <h1 className="text-xl font-black text-slate-900">
+            Schedule New Appointment
+          </h1>
+          <p className="text-xs text-slate-500">
+            Book clinical consultation slot
+          </p>
         </div>
+
         <Link
           href="/reception/dashboard"
           className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
@@ -152,11 +179,11 @@ export default function NewAppointmentPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Patient Selector */}
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                 Select Patient *
               </label>
+
               <select
                 name="patientId"
                 required
@@ -172,11 +199,11 @@ export default function NewAppointmentPage() {
               </select>
             </div>
 
-            {/* Doctor Selector */}
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                 Select Consulting Doctor *
               </label>
+
               <select
                 name="doctorId"
                 required
@@ -193,11 +220,11 @@ export default function NewAppointmentPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Date Picker */}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                   Appointment Date *
                 </label>
+
                 <input
                   type="date"
                   name="appointmentDate"
@@ -208,11 +235,11 @@ export default function NewAppointmentPage() {
                 />
               </div>
 
-              {/* Time Slot Picker */}
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                   Time Slot *
                 </label>
+
                 <select
                   name="timeSlot"
                   required
@@ -220,23 +247,39 @@ export default function NewAppointmentPage() {
                   onChange={handleChange}
                   className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 focus:border-blue-600"
                 >
-                  <option value="09:30 AM - 10:00 AM">09:30 AM - 10:00 AM</option>
-                  <option value="10:00 AM - 10:30 AM">10:00 AM - 10:30 AM</option>
-                  <option value="10:30 AM - 11:00 AM">10:30 AM - 11:00 AM</option>
-                  <option value="11:00 AM - 11:30 AM">11:00 AM - 11:30 AM</option>
-                  <option value="12:00 PM - 12:30 PM">12:00 PM - 12:30 PM</option>
-                  <option value="02:00 PM - 02:30 PM">02:00 PM - 02:30 PM</option>
-                  <option value="04:00 PM - 04:30 PM">04:00 PM - 04:30 PM</option>
-                  <option value="06:00 PM - 06:30 PM">06:00 PM - 06:30 PM</option>
+                  <option value="09:30 AM - 10:00 AM">
+                    09:30 AM - 10:00 AM
+                  </option>
+                  <option value="10:00 AM - 10:30 AM">
+                    10:00 AM - 10:30 AM
+                  </option>
+                  <option value="10:30 AM - 11:00 AM">
+                    10:30 AM - 11:00 AM
+                  </option>
+                  <option value="11:00 AM - 11:30 AM">
+                    11:00 AM - 11:30 AM
+                  </option>
+                  <option value="12:00 PM - 12:30 PM">
+                    12:00 PM - 12:30 PM
+                  </option>
+                  <option value="02:00 PM - 02:30 PM">
+                    02:00 PM - 02:30 PM
+                  </option>
+                  <option value="04:00 PM - 04:30 PM">
+                    04:00 PM - 04:30 PM
+                  </option>
+                  <option value="06:00 PM - 06:30 PM">
+                    06:00 PM - 06:30 PM
+                  </option>
                 </select>
               </div>
             </div>
 
-            {/* Symptoms & Clinical Reason */}
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
                 Clinical Reason / Chief Complaints
               </label>
+
               <textarea
                 name="symptoms"
                 rows={3}
@@ -254,6 +297,7 @@ export default function NewAppointmentPage() {
               >
                 Cancel
               </Link>
+
               <button
                 type="submit"
                 disabled={submitting}

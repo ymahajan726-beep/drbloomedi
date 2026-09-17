@@ -1,4 +1,3 @@
-// apps/backend/src/controllers/emr.controller.ts
 import {
   Controller,
   Get,
@@ -34,7 +33,6 @@ export class EmrController {
     private readonly labTestRepo: Repository<LabTest>,
   ) {}
 
-  // 1. Patient ki 360 History (QueryBuilder Safe Approach)
   @Get('patient/:id')
   async getPatientMedicalHistory(@Param('id') id: string) {
     const patient = await this.patientRepo.findOne({
@@ -75,7 +73,6 @@ export class EmrController {
     };
   }
 
-  // 2. Doctor Consultation Save + Lab Test Order + Next Visit
   @Post('consultation')
   async saveConsultation(
     @Body()
@@ -108,13 +105,11 @@ export class EmrController {
       throw new BadRequestException('Clinical diagnosis is required');
     }
 
-    // 1. Validate Patient
     const patient = await this.patientRepo.findOne({ where: { id: body.patientId } });
     if (!patient) {
       throw new NotFoundException(`Patient not found with ID: ${body.patientId}`);
     }
 
-    // 2. Resolve Appointment (Using QueryBuilder to prevent type errors)
     let appointment: any = null;
     if (body.appointmentId) {
       appointment = await this.appointmentRepo
@@ -124,7 +119,6 @@ export class EmrController {
         .getOne();
     }
 
-    // If appointmentId was not sent or invalid, find the latest active appointment for this patient
     if (!appointment) {
       appointment = await this.appointmentRepo
         .createQueryBuilder('apt')
@@ -134,7 +128,6 @@ export class EmrController {
         .getOne();
     }
 
-    // 3. Validate Doctor
     let doctor: Doctor | null = null;
     if (body.doctorId) {
       doctor = await this.doctorRepo.findOne({
@@ -154,7 +147,6 @@ export class EmrController {
       }
     }
 
-    // If still no appointment exists, create one dynamically to fulfill DB NOT NULL constraint
     if (!appointment) {
       const today = new Date().toISOString().split('T')[0];
       const countToday = await this.appointmentRepo.count();
@@ -171,7 +163,6 @@ export class EmrController {
       appointment = await this.appointmentRepo.save(createdApt);
     }
 
-    // 4. Create and Save Prescription matching exact DB columns
     const rxPayload: any = {
       patient,
       doctor,
@@ -187,7 +178,6 @@ export class EmrController {
     const rx = this.rxRepo.create(rxPayload as Prescription);
     const savedRx = await this.rxRepo.save(rx);
 
-    // 5. Create Lab Orders (if suggested by doctor)
     if (body.labTestsSuggested && body.labTestsSuggested.length > 0) {
       for (const t of body.labTestsSuggested) {
         if (!t.testName) continue;
@@ -217,7 +207,6 @@ export class EmrController {
       }
     }
 
-    // 6. Update Appointment to COMPLETED
     if (appointment?.id) {
       await this.appointmentRepo.update(appointment.id, {
         status: AppointmentStatus.COMPLETED,

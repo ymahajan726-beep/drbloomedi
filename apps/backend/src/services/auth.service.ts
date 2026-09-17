@@ -1,12 +1,12 @@
 import {
-  Injectable,
-  UnauthorizedException,
-  NotFoundException,
   BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 
@@ -20,7 +20,10 @@ export class AuthService {
 
   async validateUser(email: string, pass: string): Promise<any> {
     const cleanEmail = email.trim().toLowerCase();
-    const user = await this.userRepository.findOne({ where: { email: cleanEmail } });
+
+    const user = await this.userRepository.findOne({
+      where: { email: cleanEmail },
+    });
 
     if (!user) {
       console.log(`[AUTH] User not found: ${cleanEmail}`);
@@ -28,6 +31,7 @@ export class AuthService {
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
+
     if (!isMatch) {
       console.log(`[AUTH] Password mismatch for: ${cleanEmail}`);
       return null;
@@ -39,11 +43,17 @@ export class AuthService {
 
   async login(email: string, pass: string) {
     const user = await this.validateUser(email, pass);
+
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const payload = { email: user.email, sub: user.id, role: user.role };
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      role: user.role,
+    };
+
     return {
       accessToken: this.jwtService.sign(payload),
       token: this.jwtService.sign(payload),
@@ -56,9 +66,24 @@ export class AuthService {
     const salt = await bcrypt.genSalt(10);
 
     const usersToSeed = [
-      { email: 'admin@drbloomedi.com', pass: 'Admin@1234', role: 'ADMIN', name: 'System Admin' },
-      { email: 'doctor@gmail.com', pass: '11111111', role: 'DOCTOR', name: 'Dr. Sharma' },
-      { email: 'rajesh@gmail.com', pass: '22222222', role: 'RECEPTION', name: 'Rajesh Reception' },
+      {
+        email: 'admin@drbloomedi.com',
+        pass: 'Admin@1234',
+        role: 'ADMIN',
+        name: 'System Admin',
+      },
+      {
+        email: 'doctor@gmail.com',
+        pass: '11111111',
+        role: 'DOCTOR',
+        name: 'Dr. Sharma',
+      },
+      {
+        email: 'rajesh@gmail.com',
+        pass: '22222222',
+        role: 'RECEPTION',
+        name: 'Rajesh Reception',
+      },
     ];
 
     const results: string[] = [];
@@ -67,14 +92,18 @@ export class AuthService {
       const cleanEmail = item.email.trim().toLowerCase();
       const hashedPassword = await bcrypt.hash(item.pass, salt);
 
-      const existingUser = await this.userRepository.findOne({ where: { email: cleanEmail } });
+      const existingUser = await this.userRepository.findOne({
+        where: { email: cleanEmail },
+      });
 
       if (existingUser) {
         existingUser.password = hashedPassword;
         existingUser.role = item.role as any;
+
         if ('isActive' in existingUser) {
           (existingUser as any).isActive = true;
         }
+
         await this.userRepository.save(existingUser);
         results.push(`Updated: ${cleanEmail}`);
       } else {
@@ -85,6 +114,7 @@ export class AuthService {
           role: item.role as any,
           isActive: true,
         } as any);
+
         await this.userRepository.save(newUser);
         results.push(`Created: ${cleanEmail}`);
       }
@@ -99,18 +129,26 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const cleanEmail = email.trim().toLowerCase();
-    const user = await this.userRepository.findOne({ where: { email: cleanEmail } });
+
+    const user = await this.userRepository.findOne({
+      where: { email: cleanEmail },
+    });
+
     if (!user) {
       throw new NotFoundException('User with this email does not exist.');
     }
 
-    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetToken = Math.floor(
+      100000 + Math.random() * 900000,
+    ).toString();
+
     const expires = new Date();
     expires.setMinutes(expires.getMinutes() + 15);
 
     // Database-backed token persistence
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = expires;
+
     await this.userRepository.save(user);
 
     console.log(`\n=========================================`);
@@ -123,10 +161,10 @@ export class AuthService {
 
     return {
       success: true,
-      message: isDev 
-        ? 'Reset token generated and synced with database.' 
+      message: isDev
+        ? 'Reset token generated and synced with database.'
         : 'Password reset instructions have been processed.',
-      token: resetToken, // Returned to support dev auto-fill fallback while remaining DB-backed
+      token: resetToken,
     };
   }
 
@@ -143,8 +181,13 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token.');
     }
 
-    if (!user.resetPasswordExpires || new Date() > new Date(user.resetPasswordExpires)) {
-      throw new BadRequestException('Reset token has expired. Please request a new one.');
+    if (
+      !user.resetPasswordExpires ||
+      new Date() > new Date(user.resetPasswordExpires)
+    ) {
+      throw new BadRequestException(
+        'Reset token has expired. Please request a new one.',
+      );
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -156,7 +199,8 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Password has been reset successfully in the database. You can now login with your new password.',
+      message:
+        'Password has been reset successfully in the database. You can now login with your new password.',
     };
   }
 }

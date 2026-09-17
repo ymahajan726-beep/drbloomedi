@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Billing, PaymentMethod, PaymentStatus } from '../entities/billing.entity';
 import { Medicine } from '../entities/medicine.entity';
 import { Patient } from '../entities/patient.entity';
-import { Billing, PaymentMethod, PaymentStatus } from '../entities/billing.entity';
 
 @Injectable()
 export class PharmacyService {
@@ -16,31 +21,34 @@ export class PharmacyService {
     private readonly billingRepo: Repository<Billing>,
   ) {}
 
-  // 1. Get Medicine Inventory
   async getInventory(search?: string) {
-    const query = this.medicineRepo.createQueryBuilder('m').orderBy('m.name', 'ASC');
+    const query = this.medicineRepo
+      .createQueryBuilder('m')
+      .orderBy('m.name', 'ASC');
 
     if (search) {
-      query.where('LOWER(m.name) LIKE :q OR LOWER(m.batchNumber) LIKE :q', {
-        q: `%${search.toLowerCase()}%`,
-      });
+      query.where(
+        'LOWER(m.name) LIKE :q OR LOWER(m.batchNumber) LIKE :q',
+        { q: `%${search.toLowerCase()}%` },
+      );
     }
 
     const items = await query.getMany();
     const today = new Date();
 
     return items.map((med) => {
-      const isExpired = med.expiryDate ? new Date(med.expiryDate) <= today : false;
-      const isLowStock = Number(med.stockQuantity || 0) <= 15;
+      const isExpired = med.expiryDate
+        ? new Date(med.expiryDate) <= today
+        : false;
+
       return {
         ...med,
         isExpired,
-        isLowStock,
+        isLowStock: Number(med.stockQuantity || 0) <= 15,
       };
     });
   }
 
-  // 2. Add New Medicine
   async addMedicine(data: {
     name: string;
     genericName?: string;
@@ -61,13 +69,18 @@ export class PharmacyService {
     return this.medicineRepo.save(medicine);
   }
 
-  // 3. Low Stock & Expiry Alerts
   async getPharmacyAlerts() {
     const today = new Date();
     const allMeds = await this.medicineRepo.find();
 
-    const lowStock = allMeds.filter((m) => Number(m.stockQuantity || 0) <= 15);
-    const expired = allMeds.filter((m) => m.expiryDate && new Date(m.expiryDate) <= today);
+    const lowStock = allMeds.filter(
+      (medicine) => Number(medicine.stockQuantity || 0) <= 15,
+    );
+
+    const expired = allMeds.filter(
+      (medicine) =>
+        medicine.expiryDate && new Date(medicine.expiryDate) <= today,
+    );
 
     return {
       lowStockCount: lowStock.length,
@@ -77,7 +90,6 @@ export class PharmacyService {
     };
   }
 
-  // 4. Multi-Medicine Sales Dispense & Direct GST Billing Engine
   async processSaleAndBill(data: {
     patientId: string;
     items: Array<{ medicineId: string; quantity: number }>;
@@ -86,40 +98,56 @@ export class PharmacyService {
     const patient = await this.patientRepo.findOne({
       where: { id: data.patientId },
     });
-    if (!patient) throw new NotFoundException('Patient record not found');
 
-    if (!data.items || data.items.length === 0) {
-      throw new BadRequestException('At least one medicine must be added for dispensing');
+    if (!patient) {
+      throw new NotFoundException('Patient record not found');
+    }
+
+    if (!data.items?.length) {
+      throw new BadRequestException(
+        'At least one medicine must be added for dispensing',
+      );
     }
 
     const lineItems: any[] = [];
     let subTotal = 0;
 
-    // Multi-medicine atomic loop
     for (const item of data.items) {
-      const med = await this.medicineRepo.findOne({ where: { id: item.medicineId } });
-      if (!med) throw new NotFoundException(`Medicine not found: ${item.medicineId}`);
+      const medicine = await this.medicineRepo.findOne({
+        where: { id: item.medicineId },
+      });
 
-      const qty = Number(item.quantity) || 1;
-      if (Number(med.stockQuantity || 0) < qty) {
-        throw new BadRequestException(
-          `Insufficient stock for "${med.name}". Available: ${med.stockQuantity}, Requested: ${qty}`,
+      if (!medicine) {
+        throw new NotFoundException(
+          `Medicine not found: ${item.medicineId}`,
         );
       }
 
-      // Stock deduction
-      med.stockQuantity = Number(med.stockQuantity) - qty;
-      await this.medicineRepo.save(med);
+      const quantity = Number(item.quantity) || 1;
 
-      const itemPrice = Number(med.unitPrice || 0);
-      const itemTotal = Number((itemPrice * qty).toFixed(2));
+      if (Number(medicine.stockQuantity || 0) < quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for "${medicine.name}". Available: ${medicine.stockQuantity}, Requested: ${quantity}`,
+        );
+      }
+
+      medicine.stockQuantity =
+        Number(medicine.stockQuantity) - quantity;
+
+      await this.medicineRepo.save(medicine);
+
+      const unitPrice = Number(medicine.unitPrice || 0);
+      const itemTotal = Number((unitPrice * quantity).toFixed(2));
+
       subTotal += itemTotal;
 
       lineItems.push({
-        itemDescription: `${med.name} (Batch: ${med.batchNumber || 'N/A'}) x${qty}`,
+        itemDescription: `${medicine.name} (Batch: ${
+          medicine.batchNumber || 'N/A'
+        }) x${quantity}`,
         category: 'PHARMACY',
-        unitPrice: itemPrice,
-        quantity: qty,
+        unitPrice,
+        quantity,
         amount: itemTotal,
       });
     }
@@ -127,15 +155,13 @@ export class PharmacyService {
     const gstAmount = Number((subTotal * 0.05).toFixed(2));
     const totalAmount = Number((subTotal + gstAmount).toFixed(2));
 
-    // Enum safe fallback logic
     const methodStr = String(data.paymentMethod || 'Cash');
+
     const safeMethod =
       PaymentMethod?.CASH ||
       (methodStr.toUpperCase() === 'CASH' ? 'Cash' : methodStr);
 
-    const safeStatus =
-      PaymentStatus?.PAID ||
-      'Paid';
+    const safeStatus = PaymentStatus?.PAID || 'Paid';
 
     const billPayload: any = {
       invoiceNumber: `PHARM-INV-${Date.now()}`,
@@ -150,7 +176,10 @@ export class PharmacyService {
     };
 
     try {
-      const newBill = this.billingRepo.create(billPayload as Billing);
+      const newBill = this.billingRepo.create(
+        billPayload as Billing,
+      );
+
       const savedBill = await this.billingRepo.save(newBill);
 
       return {
@@ -164,11 +193,14 @@ export class PharmacyService {
         issuedAt: new Date().toISOString(),
       };
     } catch (err: any) {
-      // If Postgres Enum rejects TitleCase, retry with UPPERCASE
       if (err?.code === '22P02') {
         billPayload.paymentMethod = 'CASH';
         billPayload.paymentStatus = 'PAID';
-        const retryBill = this.billingRepo.create(billPayload as Billing);
+
+        const retryBill = this.billingRepo.create(
+          billPayload as Billing,
+        );
+
         const savedBill = await this.billingRepo.save(retryBill);
 
         return {
@@ -182,7 +214,10 @@ export class PharmacyService {
           issuedAt: new Date().toISOString(),
         };
       }
-      throw new InternalServerErrorException(err.message || 'Billing failed');
+
+      throw new InternalServerErrorException(
+        err.message || 'Billing failed',
+      );
     }
   }
 }
