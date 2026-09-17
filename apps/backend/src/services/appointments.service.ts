@@ -47,8 +47,7 @@ export class AppointmentsService {
       qb.andWhere('appointment.status = :status', { status });
     }
 
-    // Doctor-wise filtering for doctor dashboard / cabins
-    if (doctorId) {
+    if (doctorId && !isNaN(Number(doctorId))) {
       qb.andWhere('doctor.id = :doctorId', {
         doctorId: Number(doctorId),
       });
@@ -83,7 +82,7 @@ export class AppointmentsService {
 
   async create(data: {
     patientId: string;
-    doctorId: number;
+    doctorId?: number | string;
     departmentId?: string;
     appointmentDate: string;
     timeSlot?: string;
@@ -101,13 +100,25 @@ export class AppointmentsService {
       throw new NotFoundException('Selected patient not found');
     }
 
-    const doctor = await this.doctorRepo.findOne({
-      where: { id: Number(data.doctorId) },
-      relations: { department: true },
-    });
+    let doctor: Doctor | null = null;
+
+    if (data.doctorId && !isNaN(Number(data.doctorId))) {
+      doctor = await this.doctorRepo.findOne({
+        where: { id: Number(data.doctorId) },
+        relations: { department: true },
+      });
+    }
 
     if (!doctor) {
-      throw new NotFoundException('Selected doctor not found');
+      doctor = await this.doctorRepo.findOne({
+        where: { isActive: true },
+        relations: { department: true },
+        order: { id: 'ASC' },
+      });
+    }
+
+    if (!doctor) {
+      throw new NotFoundException('No active doctor found in the system to assign appointment');
     }
 
     let department: Department | null = null;
