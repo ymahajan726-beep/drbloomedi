@@ -21,11 +21,11 @@ export class User {
   @Column({ type: 'varchar', length: 120, nullable: true })
   name: string;
 
-  
   @Column({ type: 'varchar', length: 20, nullable: true })
   phone: string;
 
-  @Column({ unique: true, length: 120 })
+  // Yahan nullable: true add kiya hai
+  @Column({ unique: true, length: 120, nullable: true })
   email: string;
 
   @Column()
