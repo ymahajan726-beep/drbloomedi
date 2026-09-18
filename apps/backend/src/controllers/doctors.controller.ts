@@ -11,10 +11,13 @@ import {
   Query,
   Req,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { DoctorsService } from '../services/doctors.service';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('doctors')
+@UseGuards(JwtAuthGuard) 
 export class DoctorsController {
   constructor(private readonly doctorsService: DoctorsService) {}
 
@@ -24,7 +27,13 @@ export class DoctorsController {
     if (!userId) {
       throw new UnauthorizedException('User session not found');
     }
-    return this.doctorsService.findByUserId(userId);
+    
+    
+    const doctor = await this.doctorsService.findByUserId(userId);
+    if (!doctor) {
+      throw new UnauthorizedException('Doctor profile not linked with this user account');
+    }
+    return doctor;
   }
 
   @Get()
