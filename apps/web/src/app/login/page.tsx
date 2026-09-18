@@ -68,6 +68,11 @@ export default function LoginPage() {
 
       const lowerKey = roleKey.toLowerCase();
 
+      // FIX: Clean tab isolation using explicit role and unique session keys 
+      // taaki alag-alag tabs me alag accounts login karne par data overwrite na ho.
+      const activeSessionTokenKey = `${lowerKey}_active_token`;
+      const activeSessionRoleKey = `${lowerKey}_active_role`;
+
       sessionStorage.setItem("token", token);
       sessionStorage.setItem("userRole", userRole);
       sessionStorage.setItem(
@@ -75,6 +80,8 @@ export default function LoginPage() {
         data.user?.email || cleanEmail
       );
 
+      sessionStorage.setItem(activeSessionTokenKey, token);
+      sessionStorage.setItem(activeSessionRoleKey, userRole);
       sessionStorage.setItem(`${lowerKey}_token`, token);
       sessionStorage.setItem(`${lowerKey}_role`, userRole);
       sessionStorage.setItem(
@@ -238,7 +245,6 @@ export default function LoginPage() {
                     Password
                   </label>
 
-                  {/* UPDATED: Forgot Password Link */}
                   <Link
                     href="/forgot-password"
                     className="text-[11px] font-bold text-blue-600 dark:text-blue-400 transition hover:text-blue-800"
@@ -315,7 +321,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Modern Patient Self-Portal Card */}
             <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-[1px] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.01]">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-teal-400 opacity-30 group-hover:opacity-75 transition-opacity" />
               <div className="relative flex items-center justify-between rounded-2xl bg-slate-900/90 px-4 py-3.5 backdrop-blur-md">
