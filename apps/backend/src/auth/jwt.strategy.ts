@@ -17,13 +17,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request) => {
           let token: string | null = null;
-          if (request && request.cookies) {
-          
-            token = request.cookies['token'] || request.cookies['access_token'] || null;
-          }
-          if (!token && request?.headers?.authorization) {
+
+          // Prefer the Authorization header.
+          // This keeps different browser tabs independent.
+          if (request?.headers?.authorization) {
             token = request.headers.authorization.replace('Bearer ', '');
           }
+
+          // Keep cookie authentication as a fallback for existing flows.
+          if (!token && request?.cookies) {
+            token =
+              request.cookies['token'] ||
+              request.cookies['access_token'] ||
+              null;
+          }
+
           return token;
         },
       ]),
@@ -34,9 +42,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     const user = await this.usersService.findById(String(payload.sub));
+
     if (!user || !user.isActive) {
-      throw new UnauthorizedException('User no longer exists or is deactivated');
+      throw new UnauthorizedException(
+        'User no longer exists or is deactivated',
+      );
     }
+
     return user;
   }
 }
