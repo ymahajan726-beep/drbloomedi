@@ -32,7 +32,7 @@ export class AuthController {
     const token = result.token || result.access_token || result.accessToken;
 
     response.cookie('token', token, {
-      httpOnly: false,
+      httpOnly: true,
       secure: true,
       sameSite: 'none',
       path: '/',

@@ -18,7 +18,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         (request: Request) => {
           let token: string | null = null;
           if (request && request.cookies) {
-            token = request.cookies['access_token'] || null;
+          
+            token = request.cookies['token'] || request.cookies['access_token'] || null;
           }
           if (!token && request?.headers?.authorization) {
             token = request.headers.authorization.replace('Bearer ', '');
