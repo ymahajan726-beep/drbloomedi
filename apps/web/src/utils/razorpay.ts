@@ -53,7 +53,6 @@ export const processHospitalPayment = async (options: PayOptions) => {
     return;
   }
 
-  // 2. Online Razorpay Flow
   try {
     const res = await fetch('https://drbloomedi-backend.onrender.com/payments/create-order', {
       method: 'POST',

@@ -431,7 +431,7 @@ export default function ReceptionDashboardPage() {
           name: selectedApt.patient?.fullName || 'Patient',
           contact: selectedApt.patient?.phone || '',
         },
-        theme: { color: '#2563eb' },
+        theme: { color: '#059669' },
       };
 
       const rzp = new (window as any).Razorpay(options);
@@ -511,280 +511,366 @@ export default function ReceptionDashboardPage() {
     return filtered.sort((x, y) => {
       const dateX = new Date(x.createdAt || x.appointmentDate || 0).getTime();
       const dateY = new Date(y.createdAt || y.appointmentDate || 0).getTime();
-      if (dateX !== dateY) return dateY - dateX;
+      if (dateX !== dateY) return dateY - dateY;
       return String(y.id || '').localeCompare(String(x.id || ''));
     });
   }, [appointments, billingRecords, search, selectedDoctorQueue]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] font-sans text-slate-900 dark:text-slate-100 p-4 md:p-8 max-w-7xl mx-auto space-y-6 relative overflow-hidden transition-colors">
-      <div className="absolute top-0 right-1/4 w-[450px] h-[450px] bg-blue-600/10 dark:bg-blue-950/20 rounded-full blur-[130px] pointer-events-none"></div>
-
+    <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-12">
       {liveAlert && (
-        <div className="p-3.5 bg-emerald-600 text-white text-xs rounded-2xl font-bold flex justify-between items-center shadow-xl animate-bounce border border-emerald-400/30">
+        <div className="bg-emerald-600 text-white text-xs px-6 py-3 font-semibold flex justify-between items-center shadow-md border-b border-emerald-500">
           <span>🔔 {liveAlert}</span>
-          <button onClick={() => setLiveAlert(null)} className="bg-white/20 px-2.5 py-0.5 rounded-lg cursor-pointer">✕</button>
+          <button onClick={() => setLiveAlert(null)} className="bg-white/20 px-2 py-0.5 rounded text-xs cursor-pointer">✕</button>
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#111827] backdrop-blur-xl p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Reception & Discharge Terminal</span>
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider shadow-sm">
+            REC
           </div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white mt-1">Live Counter & Billing Queue</h1>
+          <div>
+            <h1 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase">
+              Reception & Billing Counter
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Terminal Active • <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{isConnected ? 'Socket Online' : 'Connecting...'}</span>
+            </p>
+          </div>
         </div>
 
-        <div className="flex gap-2">
-          <button onClick={() => fetchData()} className="px-4 py-2.5 bg-slate-100 dark:bg-[#1f2937] hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 transition shadow-xs cursor-pointer">🔄 Refresh</button>
-          <button onClick={() => performLogout('Logged out successfully.')} className="px-4 py-2.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900 transition shadow-xs cursor-pointer">Logout</button>
-        </div>
-      </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => fetchData()}
+            className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+          >
+            <span>↻</span> Refresh
+          </button>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Patients</p>
-          <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{analytics.total}</p>
+          <button
+            onClick={() => performLogout('Logged out successfully.')}
+            className="px-3.5 py-1.5 text-xs text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-lg font-semibold transition cursor-pointer"
+          >
+            Logout
+          </button>
         </div>
-        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total Revenue</p>
-          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">₹{analytics.rev}</p>
-        </div>
-        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Discharged</p>
-          <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{analytics.discharged}</p>
-        </div>
-        <div className="bg-white dark:bg-[#111827] backdrop-blur-md p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Pending Settlement</p>
-          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{analytics.pending}</p>
-        </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-4 bg-white dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-            <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Walk-in Patient Token Issue</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">Instant counter registration & queue assignment</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        {/* Metric Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Patients</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{analytics.total}</p>
           </div>
 
-          <form onSubmit={handleWalkinSubmit} className="space-y-3.5 text-xs">
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Mobile Number *</label>
-              <input type="text" placeholder="10-digit phone" value={walkinForm.phone} onChange={(e) => handlePhoneChange(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition" required />
+          <div className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Revenue</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">₹{analytics.rev}</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Discharged</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{analytics.discharged}</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Settlement</p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{analytics.pending}</p>
+          </div>
+        </div>
+
+        {/* Main Grid: Walk-in Token Registration & Queue */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Walk-in Form */}
+          <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Walk-in Patient Token Issue</h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Instant counter registration & queue assignment</p>
             </div>
 
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Patient Name *</label>
-              <input type="text" placeholder="e.g. Ramesh Kulkarni" value={walkinForm.fullName} onChange={(e) => setWalkinForm({ ...walkinForm, fullName: e.target.value })} className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition" required />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleWalkinSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Age</label>
-                <input type="number" placeholder="35" value={walkinForm.age} onChange={(e) => setWalkinForm({ ...walkinForm, age: e.target.value })} className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition" />
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Mobile Number *</label>
+                <input 
+                  type="text" 
+                  placeholder="10-digit phone" 
+                  value={walkinForm.phone} 
+                  onChange={(e) => handlePhoneChange(e.target.value)} 
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition" 
+                  required 
+                />
               </div>
+
               <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Gender</label>
-                <select value={walkinForm.gender} onChange={(e) => setWalkinForm({ ...walkinForm, gender: e.target.value })} className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition">
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Patient Name *</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Ramesh Kulkarni" 
+                  value={walkinForm.fullName} 
+                  onChange={(e) => setWalkinForm({ ...walkinForm, fullName: e.target.value })} 
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition" 
+                  required 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Age</label>
+                  <input 
+                    type="number" 
+                    placeholder="35" 
+                    value={walkinForm.age} 
+                    onChange={(e) => setWalkinForm({ ...walkinForm, age: e.target.value })} 
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Gender</label>
+                  <select 
+                    value={walkinForm.gender} 
+                    onChange={(e) => setWalkinForm({ ...walkinForm, gender: e.target.value })} 
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Assign Doctor & Specialist *</label>
+                <select 
+                  value={walkinForm.doctorId} 
+                  onChange={(e) => setWalkinForm({ ...walkinForm, doctorId: e.target.value })} 
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition"
+                >
+                  {doctorsList.length === 0 ? (
+                    <option value="">No active doctors found</option>
+                  ) : (
+                    doctorsList.map((doc: any) => {
+                      const rawName = doc.user?.fullName || doc.name || '';
+                      const cleanName = rawName.replace(/^Dr\.\s*Doctor/i, 'Dr.').replace(/^Doctor/i, 'Dr.').trim();
+                      const displayName = cleanName ? (cleanName.startsWith('Dr.') ? cleanName : `Dr. ${cleanName}`) : 'Doctor';
+                      return (
+                        <option key={doc.id} value={doc.id}>
+                          {displayName} - {doc.specialization || 'General Physician'}
+                        </option>
+                      );
+                    })
+                  )}
                 </select>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Assign Doctor & Specialist *</label>
-              <select value={walkinForm.doctorId} onChange={(e) => setWalkinForm({ ...walkinForm, doctorId: e.target.value })} className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition">
-                {doctorsList.length === 0 ? (
-                  <option value="">No active doctors found</option>
-                ) : (
-                  doctorsList.map((doc: any) => {
-                    const rawName = doc.user?.fullName || doc.name || '';
-                    const cleanName = rawName.replace(/^Dr\.\s*Doctor/i, 'Dr.').replace(/^Doctor/i, 'Dr.').trim();
-                    const displayName = cleanName ? (cleanName.startsWith('Dr.') ? cleanName : `Dr. ${cleanName}`) : 'Doctor';
-                    return (
-                      <option key={doc.id} value={doc.id}>
-                        {displayName} - {doc.specialization || 'General Physician'}
-                      </option>
-                    );
-                  })
-                )}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Time Slot</label>
-                <input type="text" value={walkinForm.slot} onChange={(e) => setWalkinForm({ ...walkinForm, slot: e.target.value })} className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Time Slot</label>
+                  <input 
+                    type="text" 
+                    value={walkinForm.slot} 
+                    onChange={(e) => setWalkinForm({ ...walkinForm, slot: e.target.value })} 
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Consult Reason</label>
+                  <input 
+                    type="text" 
+                    value={walkinForm.reason} 
+                    onChange={(e) => setWalkinForm({ ...walkinForm, reason: e.target.value })} 
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition" 
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1">Consult Reason</label>
-                <input type="text" value={walkinForm.reason} onChange={(e) => setWalkinForm({ ...walkinForm, reason: e.target.value })} className="w-full p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 transition" />
-              </div>
+
+              <button 
+                type="submit" 
+                disabled={registering} 
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs shadow-2xs transition mt-2 disabled:opacity-50 cursor-pointer"
+              >
+                {registering ? 'Issuing Token...' : '⚡ Generate Token & Assign Queue'}
+              </button>
+            </form>
+          </div>
+
+          {/* OPD Queue List */}
+          <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl p-5 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+              <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">OPD & Consultation Queue</h2>
+              <input 
+                type="text" 
+                placeholder="Search patient name, phone, token..." 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                className="w-full sm:w-64 p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-emerald-600 transition" 
+              />
             </div>
 
-            <button type="submit" disabled={registering} className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-lg shadow-blue-600/30 transition mt-2 disabled:opacity-50 cursor-pointer">
-              {registering ? 'Issuing Token...' : '⚡ Generate Token & Assign Queue'}
-            </button>
-          </form>
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <button 
+                type="button" 
+                onClick={() => setSelectedDoctorQueue('ALL')} 
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${selectedDoctorQueue === 'ALL' ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-750'}`}
+              >
+                All Queues
+              </button>
+              {doctorsList.map((doc: any) => {
+                const rawName = doc.user?.fullName || doc.name || '';
+                const cleanName = rawName.replace(/^Dr\.\s*Doctor/i, 'Dr.').replace(/^Doctor/i, 'Dr.').trim();
+                const displayName = cleanName ? (cleanName.startsWith('Dr.') ? cleanName : `Dr. ${cleanName}`) : `Dr. #${doc.id}`;
+                return (
+                  <button 
+                    key={doc.id} 
+                    type="button" 
+                    onClick={() => setSelectedDoctorQueue(String(doc.id))} 
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${selectedDoctorQueue === String(doc.id) ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-750'}`}
+                  >
+                    {displayName} ({doc.specialization || 'General'})
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[580px]">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px]">
+                    <th className="py-2.5 px-3">Token</th>
+                    <th className="py-2.5 px-3">Patient Name</th>
+                    <th className="py-2.5 px-3">Mobile No</th>
+                    <th className="py-2.5 px-3">Slot</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-right">Billing Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                  {loading ? (
+                    <tr><td colSpan={6} className="py-12 text-center text-slate-500 font-mono text-xs">Synchronizing live queue...</td></tr>
+                  ) : list.length === 0 ? (
+                    <tr><td colSpan={6} className="py-12 text-center text-slate-500 text-xs">No active pending appointments found.</td></tr>
+                  ) : (
+                    list.map((a , index) => (
+                      <tr key={`${a.id}-${index}`} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+                        <td className="py-3 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">{a.appointmentNumber || 'APT'}</td>
+                        <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">{a.patient?.fullName || 'Walk-in'}</td>
+                        <td className="py-3 px-3 text-slate-500 dark:text-slate-400 font-mono">{a.patient?.phone || 'N/A'}</td>
+                        <td className="py-3 px-3 text-slate-600 dark:text-slate-300 font-mono">{a.timeSlot || '10:00 AM'}</td>
+                        <td className="py-3 px-3 text-center">
+                          <span className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900">{a.status || 'Scheduled'}</span>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <button onClick={() => openBilling(a)} className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-semibold shadow-2xs transition cursor-pointer">💳 Settle Bill</button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
+      </main>
 
-        <div className="lg:col-span-8 bg-white dark:bg-[#111827] backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-            <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">OPD & Consultation Queue</h2>
-            <input type="text" placeholder="Search patient name, phone, token..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-72 p-3 bg-slate-50 dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-500 transition" />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 pt-1 pb-2 border-b border-slate-100 dark:border-slate-800">
-            <button type="button" onClick={() => setSelectedDoctorQueue('ALL')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${selectedDoctorQueue === 'ALL' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-[#1f2937] text-slate-600 dark:text-slate-300'}`}>All Queues</button>
-            {doctorsList.map((doc: any) => {
-              const rawName = doc.user?.fullName || doc.name || '';
-              const cleanName = rawName.replace(/^Dr\.\s*Doctor/i, 'Dr.').replace(/^Doctor/i, 'Dr.').trim();
-              const displayName = cleanName ? (cleanName.startsWith('Dr.') ? cleanName : `Dr. ${cleanName}`) : `Dr. #${doc.id}`;
-              return (
-                <button key={doc.id} type="button" onClick={() => setSelectedDoctorQueue(String(doc.id))} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${selectedDoctorQueue === String(doc.id) ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 dark:bg-[#1f2937] text-slate-600 dark:text-slate-300'}`}>
-                  {displayName} ({doc.specialization || 'General'})
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[600px]">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold uppercase text-[10px]">
-                  <th className="py-3 px-2">Token</th>
-                  <th className="py-3 px-2">Patient Name</th>
-                  <th className="py-3 px-2">Mobile No</th>
-                  <th className="py-3 px-2">Slot</th>
-                  <th className="py-3 px-2 text-center">Status</th>
-                  <th className="py-3 px-2 text-right">Billing Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {loading ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-slate-400 font-mono">Synchronizing live queue...</td></tr>
-                ) : list.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-slate-400">No active pending appointments found.</td></tr>
-                ) : (
-                  list.map((a) => (
-                    <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-[#1f2937]/50 transition">
-                      <td className="py-3.5 px-2 font-mono font-bold text-blue-600 dark:text-blue-400">{a.appointmentNumber || 'APT'}</td>
-                      <td className="py-3.5 px-2 font-bold text-slate-900 dark:text-white">{a.patient?.fullName || 'Walk-in'}</td>
-                      <td className="py-3.5 px-2 text-slate-500 dark:text-slate-400 font-mono">{a.patient?.phone || 'N/A'}</td>
-                      <td className="py-3.5 px-2 text-slate-600 dark:text-slate-300">{a.timeSlot || '10:00 AM'}</td>
-                      <td className="py-3.5 px-2 text-center">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900">{a.status || 'Scheduled'}</span>
-                      </td>
-                      <td className="py-3.5 px-2 text-right">
-                        <button onClick={() => openBilling(a)} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer">💳 Settle Bill</button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
+      {/* Billing Drawer */}
       {selectedApt && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex justify-end transition-all">
-          <div className="bg-white dark:bg-[#111827] border-l border-slate-200 dark:border-slate-800 w-full max-w-md h-full p-6 sm:p-8 shadow-2xl flex flex-col justify-between overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 w-full max-w-md h-full p-6 sm:p-7 shadow-2xl flex flex-col justify-between overflow-y-auto">
             <div className="space-y-6">
               <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-4">
                 <div>
-                  <span className="text-[10px] font-black px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full uppercase">Billing Drawer</span>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white mt-2">{selectedApt.patient?.fullName}</h3>
-                  <p className="text-xs text-slate-500">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
+                  <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 rounded uppercase">Billing Drawer</span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1.5">{selectedApt.patient?.fullName}</h3>
+                  <p className="text-xs text-slate-500 font-mono">Token: {selectedApt.appointmentNumber} • {selectedApt.patient?.phone}</p>
                 </div>
-                <button onClick={() => setSelectedApt(null)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center font-bold cursor-pointer">✕</button>
+                <button onClick={() => setSelectedApt(null)} className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center font-bold cursor-pointer">✕</button>
               </div>
 
               <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] rounded-2xl">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-700">
                   <span>Consultation Fee</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                    <input type="number" value={bill.consult} onChange={(e) => updateBill('consult', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-right outline-none" />
+                    <input type="number" value={bill.consult} onChange={(e) => updateBill('consult', Number(e.target.value))} className="w-full p-2 pl-6 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-semibold text-right outline-none" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] rounded-2xl">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-700">
                   <span>Pathology / Lab Tests</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                    <input type="number" value={bill.lab} onChange={(e) => updateBill('lab', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-right outline-none" />
+                    <input type="number" value={bill.lab} onChange={(e) => updateBill('lab', Number(e.target.value))} className="w-full p-2 pl-6 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-semibold text-right outline-none" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] rounded-2xl">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-700">
                   <span>Procedures & Treatment</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                    <input type="number" value={bill.treatment || ''} placeholder="0" onChange={(e) => updateBill('treatment', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-right outline-none" />
+                    <input type="number" value={bill.treatment || ''} placeholder="0" onChange={(e) => updateBill('treatment', Number(e.target.value))} className="w-full p-2 pl-6 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-semibold text-right outline-none" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] rounded-2xl">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-700">
                   <span>Pharmacy Medicines</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                    <input type="number" value={bill.pharma || ''} placeholder="0" onChange={(e) => updateBill('pharma', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-right outline-none" />
+                    <input type="number" value={bill.pharma || ''} placeholder="0" onChange={(e) => updateBill('pharma', Number(e.target.value))} className="w-full p-2 pl-6 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-semibold text-right outline-none" />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-[#1f2937] rounded-2xl">
+                <div className="flex justify-between items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-700">
                   <span>Discount / Concession</span>
                   <div className="relative w-24 shrink-0">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
-                    <input type="number" value={bill.discount || ''} placeholder="0" onChange={(e) => updateBill('discount', Number(e.target.value))} className="w-full p-2.5 pl-6 bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-right outline-none" />
+                    <input type="number" value={bill.discount || ''} placeholder="0" onChange={(e) => updateBill('discount', Number(e.target.value))} className="w-full p-2 pl-6 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-semibold text-right outline-none" />
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-slate-900 text-white rounded-2xl flex justify-between items-center">
+              <div className="p-4 bg-slate-900 text-white rounded-xl flex justify-between items-center shadow-2xs">
                 <span className="text-xs uppercase tracking-wider text-slate-300 font-semibold">Net Payable</span>
-                <span className="text-emerald-400 font-black text-2xl font-mono">₹{bill.net}.00</span>
+                <span className="text-emerald-400 font-bold text-xl font-mono">₹{bill.net}.00</span>
               </div>
             </div>
 
             <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Select Payment Settlement Mode</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Select Payment Settlement Mode</p>
               <div className="grid grid-cols-2 gap-3">
-                <button disabled={paying} onClick={() => finalizePayment('Razorpay Online')} className="py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-xs shadow-md transition disabled:opacity-50 cursor-pointer">⚡ Razorpay Online</button>
-                <button disabled={paying} onClick={() => finalizePayment('Cash Counter')} className="py-3.5 bg-white dark:bg-[#1f2937] border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-bold rounded-2xl text-xs transition disabled:opacity-50 cursor-pointer">💵 Cash Counter</button>
+                <button disabled={paying} onClick={() => finalizePayment('Razorpay Online')} className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow-2xs transition disabled:opacity-50 cursor-pointer">⚡ Razorpay Online</button>
+                <button disabled={paying} onClick={() => finalizePayment('Cash Counter')} className="py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 font-semibold rounded-lg text-xs transition disabled:opacity-50 cursor-pointer">💵 Cash Counter</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Receipt Modal */}
       {receipt && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#111827] text-slate-900 dark:text-slate-100 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 border border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 border border-slate-200 dark:border-slate-800">
             <div className="text-center space-y-1 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <span className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 inline-flex items-center justify-center font-bold text-base">✓</span>
-              <h2 className="text-base font-black">Settled Successfully</h2>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">DrBlooMedi Official Invoice</p>
+              <span className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 inline-flex items-center justify-center font-bold text-sm border border-emerald-200 dark:border-emerald-900">✓</span>
+              <h2 className="text-sm font-bold mt-1">Settled Successfully</h2>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">DrBlooMedi Official Invoice</p>
             </div>
 
-            <div className="space-y-2 bg-slate-50 dark:bg-[#1f2937] p-4 rounded-2xl text-xs">
+            <div className="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-lg text-xs border border-slate-200/80 dark:border-slate-700">
               <div className="flex justify-between"><span className="text-slate-500">Patient:</span><strong>{receipt.patient?.fullName}</strong></div>
               <div className="flex justify-between"><span className="text-slate-500">Token No:</span><span className="font-mono font-semibold">{receipt.appointmentNumber}</span></div>
               <div className="flex justify-between"><span className="text-slate-500">Transaction ID:</span><span className="font-mono text-blue-600 dark:text-blue-400 font-bold">{receipt.txnId}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500">Mode:</span><span className="font-bold text-emerald-600">{receipt.mode}</span></div>
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between font-black text-sm">
+              <div className="flex justify-between"><span className="text-slate-500">Mode:</span><span className="font-semibold text-emerald-600">{receipt.mode}</span></div>
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between font-bold text-sm">
                 <span>Net Total:</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-mono">₹{receipt.bill.net}.00</span>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-2xl font-bold text-xs cursor-pointer">🖨️ Print Receipt</button>
-              <button onClick={() => setReceipt(null)} className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs cursor-pointer">Close</button>
+              <button onClick={() => window.print()} className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 rounded-lg font-semibold text-xs cursor-pointer border border-slate-300 dark:border-slate-700">🖨️ Print Receipt</button>
+              <button onClick={() => setReceipt(null)} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs cursor-pointer shadow-2xs">Close</button>
             </div>
           </div>
         </div>

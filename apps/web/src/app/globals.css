@@ -99,9 +99,6 @@ body {
   color: #64748b !important;
 }
 
-/* ========================================================
-   🚫 GLOBAL SCROLLBAR HIDING
-   ======================================================== */
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,

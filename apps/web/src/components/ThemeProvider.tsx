@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -78,5 +77,4 @@ export function useTheme() {
   }
 
   return context;
-
 }

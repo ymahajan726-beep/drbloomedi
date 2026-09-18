@@ -38,7 +38,6 @@ export default function BillingDirectoryPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [activeReceipt, setActiveReceipt] = useState<BillingRecord | null>(null);
 
-  // 1. Auth Guard
   useEffect(() => {
     const token = getActiveToken();
     const role = sessionStorage.getItem('userRole')?.toUpperCase();
@@ -51,7 +50,6 @@ export default function BillingDirectoryPage() {
     setIsAuthorized(true);
   }, []);
 
-  // 2. Fetch Invoices
   const fetchBills = async () => {
     try {
       setLoading(true);
@@ -83,7 +81,7 @@ export default function BillingDirectoryPage() {
     }
   }, [isAuthorized, search, statusFilter]);
 
-  // 3. Quick Status Change (Type-Safe)
+  
   const handleQuickStatusChange = async (id: string, newStatus: string) => {
     try {
       const res = await fetch(
@@ -127,43 +125,49 @@ export default function BillingDirectoryPage() {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center text-slate-900 font-mono text-xs">
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center text-slate-600 dark:text-slate-400 font-mono text-xs">
         🔒 Checking Financial Clearance...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16 transition-colors">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider shadow-sm">
+            BIL
+          </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase">
               Financial Billing & Invoices
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Cashier Counter • Revenue & Invoicing
             </p>
           </div>
-
-          <Link
-            href="/admin/billing/new"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
-          >
-            <span>+</span>
-            <span>Create New Invoice</span>
-          </Link>
         </div>
 
+        <Link
+          href="/admin/billing/new"
+          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+        >
+          <span>+</span>
+          <span>Create New Invoice</span>
+        </Link>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         {/* Filters */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs flex flex-wrap gap-4 items-center justify-between">
           <div className="flex-1 min-w-[240px]">
             <input
               type="text"
               placeholder="Search by invoice number, patient name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
+              className="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-emerald-600 font-medium transition"
             />
           </div>
 
@@ -171,7 +175,7 @@ export default function BillingDirectoryPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 font-bold text-slate-700 outline-none"
+              className="px-3 py-2 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-emerald-600 transition"
             >
               <option value="">All Payment Statuses</option>
               <option value="Paid">Paid</option>
@@ -183,27 +187,27 @@ export default function BillingDirectoryPage() {
         </div>
 
         {/* Invoices Table */}
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-100">
+            <table className="w-full text-left text-xs border-collapse min-w-[750px]">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200/80 dark:border-slate-800 text-[10px]">
                 <tr>
-                  <th className="p-3.5">Invoice #</th>
-                  <th className="p-3.5">Patient Details</th>
-                  <th className="p-3.5">Doctor</th>
-                  <th className="p-3.5">Total Amount</th>
-                  <th className="p-3.5">Method</th>
-                  <th className="p-3.5">Payment Status</th>
-                  <th className="p-3.5 text-right">Actions</th>
+                  <th className="py-3 px-3">Invoice #</th>
+                  <th className="py-3 px-3">Patient Details</th>
+                  <th className="py-3 px-3">Doctor</th>
+                  <th className="py-3 px-3">Total Amount</th>
+                  <th className="py-3 px-3">Method</th>
+                  <th className="py-3 px-3">Payment Status</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                 {loading ? (
                   <tr>
                     <td
                       colSpan={7}
-                      className="p-8 text-center text-slate-400"
+                      className="py-12 text-center text-slate-500 font-mono text-xs"
                     >
                       Loading invoices...
                     </td>
@@ -212,7 +216,7 @@ export default function BillingDirectoryPage() {
                   <tr>
                     <td
                       colSpan={7}
-                      className="p-10 text-center text-slate-400 font-medium"
+                      className="py-12 text-center text-slate-500 text-xs font-medium"
                     >
                       No invoices recorded yet.
                     </td>
@@ -221,9 +225,9 @@ export default function BillingDirectoryPage() {
                   bills.map((bill) => (
                     <tr
                       key={bill.id}
-                      className="hover:bg-slate-50/70 transition"
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
                     >
-                      <td className="p-3.5 font-mono font-bold text-blue-600">
+                      <td className="py-3 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">
                         {bill.invoiceNumber}
 
                         <div className="text-[10px] text-slate-400 font-sans font-normal">
@@ -231,22 +235,22 @@ export default function BillingDirectoryPage() {
                         </div>
                       </td>
 
-                      <td className="p-3.5 font-bold text-slate-900">
+                      <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">
                         <div>
                           {bill.patient?.fullName || 'Walk-in Patient'}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-normal">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
                           {bill.patient?.phone || '-'}
                         </div>
                       </td>
 
-                      <td className="p-3.5 text-slate-700">
+                      <td className="py-3 px-3 text-slate-700 dark:text-slate-300">
                         {bill.doctor ? (
                           <div>
-                            <span className="font-bold">
+                            <span className="font-bold text-slate-900 dark:text-white">
                               Dr. {bill.doctor.user?.email?.split('@')[0]}
                             </span>
-                            <span className="block text-[10px] text-slate-400">
+                            <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
                               {bill.doctor.specialization}
                             </span>
                           </div>
@@ -257,23 +261,23 @@ export default function BillingDirectoryPage() {
                         )}
                       </td>
 
-                      <td className="p-3.5">
-                        <span className="font-mono font-black text-slate-900 text-sm">
+                      <td className="py-3 px-3">
+                        <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
                           ₹{Number(bill.totalAmount).toFixed(2)}
                         </span>
 
                         {Number(bill.discount) > 0 && (
-                          <span className="block text-[10px] text-emerald-600 font-bold">
+                          <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
                             (-₹{bill.discount} Disc)
                           </span>
                         )}
                       </td>
 
-                      <td className="p-3.5 font-bold text-slate-600 font-mono text-[11px]">
+                      <td className="py-3 px-3 font-semibold text-slate-600 dark:text-slate-300 font-mono text-[11px]">
                         {bill.paymentMethod}
                       </td>
 
-                      <td className="p-3.5">
+                      <td className="py-3 px-3">
                         <select
                           value={bill.paymentStatus}
                           onChange={(e) =>
@@ -282,12 +286,12 @@ export default function BillingDirectoryPage() {
                               e.target.value
                             )
                           }
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold border outline-none cursor-pointer ${
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-semibold border outline-none cursor-pointer ${
                             bill.paymentStatus === 'Paid'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900'
                               : bill.paymentStatus === 'Cancelled'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                              ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900'
+                              : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900'
                           }`}
                         >
                           <option value="Paid">Paid</option>
@@ -299,17 +303,17 @@ export default function BillingDirectoryPage() {
                         </select>
                       </td>
 
-                      <td className="p-3.5 text-right space-x-2">
+                      <td className="py-3 px-3 text-right space-x-2">
                         <button
                           onClick={() => setActiveReceipt(bill)}
-                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition"
+                          className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-lg text-[11px] font-semibold transition cursor-pointer border border-slate-300 dark:border-slate-700"
                         >
                           🖨️ Receipt
                         </button>
 
                         <button
                           onClick={() => handleDelete(bill.id)}
-                          className="p-1 text-rose-500 hover:bg-rose-50 rounded-lg transition text-xs"
+                          className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition text-xs cursor-pointer"
                           title="Delete Invoice"
                         >
                           🗑️
@@ -322,35 +326,35 @@ export default function BillingDirectoryPage() {
             </table>
           </div>
         </div>
-      </div>
+      </main>
 
       {/* A4 Printable Receipt Modal */}
       {activeReceipt && (
-        <div className="fixed inset-0 bg-white backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 shadow-2xl border border-slate-200 relative print:m-0 print:p-0 print:border-none print:shadow-none">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800 relative print:m-0 print:p-0 print:border-none print:shadow-none">
             <div className="flex justify-between items-center mb-6 print:hidden">
               <button
                 onClick={() => setActiveReceipt(null)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-semibold cursor-pointer"
               >
                 ✕ Close
               </button>
 
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer"
               >
                 🖨️ Print Receipt (A4)
               </button>
             </div>
 
-            <div className="border-b-2 border-slate-900 pb-4 flex justify-between items-start">
+            <div className="border-b-2 border-slate-900 dark:border-slate-700 pb-4 flex justify-between items-start">
               <div>
-                <h2 className="text-xl font-black text-blue-600 tracking-tight">
-                  DrBloo<span className="text-slate-900">Medi</span> Hospital
+                <h2 className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                  DrBloo<span className="text-slate-900 dark:text-white">Medi</span> Hospital
                 </h2>
 
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Accounts & Cashier Department
                 </p>
 
@@ -360,11 +364,11 @@ export default function BillingDirectoryPage() {
               </div>
 
               <div className="text-right">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                   Tax Invoice / Receipt
                 </span>
 
-                <p className="text-sm font-mono font-bold text-blue-600 mt-0.5">
+                <p className="text-sm font-mono font-bold text-blue-600 dark:text-blue-400 mt-0.5">
                   {activeReceipt.invoiceNumber}
                 </p>
 
@@ -377,17 +381,17 @@ export default function BillingDirectoryPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 my-4 p-3.5 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+            <div className="grid grid-cols-2 gap-4 my-4 p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200/80 dark:border-slate-700 text-xs">
               <div>
                 <p className="text-[10px] font-bold uppercase text-slate-400">
                   Billed To
                 </p>
 
-                <p className="font-bold text-slate-900 mt-0.5">
+                <p className="font-bold text-slate-900 dark:text-white mt-0.5">
                   {activeReceipt.patient?.fullName || 'Walk-in'}
                 </p>
 
-                <p className="text-slate-500">
+                <p className="text-slate-500 dark:text-slate-400 font-mono">
                   {activeReceipt.patient?.phone}
                 </p>
               </div>
@@ -397,35 +401,35 @@ export default function BillingDirectoryPage() {
                   Consulting Specialist
                 </p>
 
-                <p className="font-bold text-slate-900 mt-0.5">
+                <p className="font-bold text-slate-900 dark:text-white mt-0.5">
                   {activeReceipt.doctor
                     ? `Dr. ${activeReceipt.doctor.user?.email?.split('@')[0]}`
                     : 'General OPD Counter'}
                 </p>
 
-                <p className="text-slate-500">
+                <p className="text-slate-500 dark:text-slate-400">
                   {activeReceipt.doctor?.specialization ||
                     'Clinical Services'}
                 </p>
               </div>
             </div>
 
-            <table className="w-full text-xs text-left border border-slate-200 rounded-lg overflow-hidden my-4">
-              <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+            <table className="w-full text-xs text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden my-4">
+              <thead className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="p-2.5">Description</th>
                   <th className="p-2.5 text-right">Amount (₹)</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
                 {Number(activeReceipt.consultationFee) > 0 && (
                   <tr>
-                    <td className="p-2.5 font-medium text-slate-800">
+                    <td className="p-2.5 text-slate-800 dark:text-slate-200">
                       Doctor Consultation Fee
                     </td>
 
-                    <td className="p-2.5 text-right font-mono">
+                    <td className="p-2.5 text-right font-mono text-slate-900 dark:text-slate-100">
                       ₹
                       {Number(
                         activeReceipt.consultationFee
@@ -436,11 +440,11 @@ export default function BillingDirectoryPage() {
 
                 {Number(activeReceipt.treatmentCharges) > 0 && (
                   <tr>
-                    <td className="p-2.5 font-medium text-slate-800">
+                    <td className="p-2.5 text-slate-800 dark:text-slate-200">
                       Treatment & Diagnostic Procedures
                     </td>
 
-                    <td className="p-2.5 text-right font-mono">
+                    <td className="p-2.5 text-right font-mono text-slate-900 dark:text-slate-100">
                       ₹
                       {Number(
                         activeReceipt.treatmentCharges
@@ -451,11 +455,11 @@ export default function BillingDirectoryPage() {
 
                 {Number(activeReceipt.medicineCharges) > 0 && (
                   <tr>
-                    <td className="p-2.5 font-medium text-slate-800">
+                    <td className="p-2.5 text-slate-800 dark:text-slate-200">
                       Pharmacy & Dispensed Medicines
                     </td>
 
-                    <td className="p-2.5 text-right font-mono">
+                    <td className="p-2.5 text-right font-mono text-slate-900 dark:text-slate-100">
                       ₹
                       {Number(
                         activeReceipt.medicineCharges
@@ -465,7 +469,7 @@ export default function BillingDirectoryPage() {
                 )}
 
                 {Number(activeReceipt.discount) > 0 && (
-                  <tr className="text-emerald-600 font-medium">
+                  <tr className="text-emerald-600 dark:text-emerald-400 font-medium">
                     <td className="p-2.5">
                       Concession / Discount
                     </td>
@@ -481,18 +485,18 @@ export default function BillingDirectoryPage() {
               </tbody>
             </table>
 
-            <div className="border-t border-slate-200 pt-3 flex justify-between items-center text-xs">
+            <div className="border-t border-slate-200 dark:border-slate-800 pt-3 flex justify-between items-center text-xs">
               <div>
-                <p className="font-bold text-slate-700">
+                <p className="font-semibold text-slate-700 dark:text-slate-300">
                   Payment Mode:{' '}
-                  <span className="font-mono text-slate-900">
+                  <span className="font-mono text-slate-900 dark:text-white font-bold">
                     {activeReceipt.paymentMethod}
                   </span>
                 </p>
 
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Status:{' '}
-                  <span className="font-bold uppercase text-emerald-600">
+                  <span className="font-bold uppercase text-emerald-600 dark:text-emerald-400">
                     {activeReceipt.paymentStatus}
                   </span>
                 </p>
@@ -503,17 +507,17 @@ export default function BillingDirectoryPage() {
                   Total Billed
                 </span>
 
-                <div className="text-xl font-black font-mono text-slate-900">
+                <div className="text-xl font-bold font-mono text-slate-900 dark:text-white">
                   ₹{Number(activeReceipt.totalAmount).toFixed(2)}
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-slate-100 flex justify-between items-end text-[10px] text-slate-400">
+            <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-end text-[10px] text-slate-400">
               <div>* This is an official computer-generated receipt.</div>
 
-              <div className="text-center w-36 border-t border-slate-300 pt-1">
-                <p className="font-bold text-slate-700">
+              <div className="text-center w-36 border-t border-slate-300 dark:border-slate-700 pt-1">
+                <p className="font-semibold text-slate-700 dark:text-slate-300">
                   Cashier Signature
                 </p>
               </div>

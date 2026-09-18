@@ -147,168 +147,176 @@ export default function NewAppointmentPage() {
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-black text-slate-900">
-            Schedule New Appointment
-          </h1>
-          <p className="text-xs text-slate-500">
-            Book clinical consultation slot
-          </p>
+    <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16 transition-colors">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider shadow-sm">
+            APT
+          </div>
+          <div>
+            <h1 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase">
+              Schedule New Appointment
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Book clinical consultation slot
+            </p>
+          </div>
         </div>
 
         <Link
           href="/reception/dashboard"
-          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+          className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 transition cursor-pointer shadow-2xs"
         >
           Back to Desk
         </Link>
-      </div>
+      </header>
 
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-bold">
-            ⚠️ {errorMsg}
-          </div>
-        )}
-
-        {loadingData ? (
-          <div className="py-8 text-center text-xs font-bold text-slate-400">
-            Loading patients and doctors directory...
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                Select Patient *
-              </label>
-
-              <select
-                name="patientId"
-                required
-                value={formData.patientId}
-                onChange={handleChange}
-                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 focus:border-blue-600"
-              >
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.fullName} • {p.phone}
-                  </option>
-                ))}
-              </select>
+      <main className="p-6 max-w-2xl mx-auto space-y-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+          {errorMsg && (
+            <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 text-xs rounded-lg font-semibold">
+              ⚠️ {errorMsg}
             </div>
+          )}
 
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                Select Consulting Doctor *
-              </label>
-
-              <select
-                name="doctorId"
-                required
-                value={formData.doctorId}
-                onChange={handleChange}
-                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 focus:border-blue-600"
-              >
-                {doctors.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.fullName || `Doctor #${d.id}`} ({d.specialization})
-                  </option>
-                ))}
-              </select>
+          {loadingData ? (
+            <div className="py-12 text-center text-xs font-medium text-slate-500 font-mono">
+              Loading patients and doctors directory...
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                  Appointment Date *
-                </label>
-
-                <input
-                  type="date"
-                  name="appointmentDate"
-                  required
-                  value={formData.appointmentDate}
-                  onChange={handleChange}
-                  className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                  Time Slot *
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">
+                  Select Patient *
                 </label>
 
                 <select
-                  name="timeSlot"
+                  name="patientId"
                   required
-                  value={formData.timeSlot}
+                  value={formData.patientId}
                   onChange={handleChange}
-                  className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 focus:border-blue-600"
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg outline-none font-medium bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-emerald-600 transition"
                 >
-                  <option value="09:30 AM - 10:00 AM">
-                    09:30 AM - 10:00 AM
-                  </option>
-                  <option value="10:00 AM - 10:30 AM">
-                    10:00 AM - 10:30 AM
-                  </option>
-                  <option value="10:30 AM - 11:00 AM">
-                    10:30 AM - 11:00 AM
-                  </option>
-                  <option value="11:00 AM - 11:30 AM">
-                    11:00 AM - 11:30 AM
-                  </option>
-                  <option value="12:00 PM - 12:30 PM">
-                    12:00 PM - 12:30 PM
-                  </option>
-                  <option value="02:00 PM - 02:30 PM">
-                    02:00 PM - 02:30 PM
-                  </option>
-                  <option value="04:00 PM - 04:30 PM">
-                    04:00 PM - 04:30 PM
-                  </option>
-                  <option value="06:00 PM - 06:30 PM">
-                    06:00 PM - 06:30 PM
-                  </option>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.fullName} • {p.phone}
+                    </option>
+                  ))}
                 </select>
               </div>
-            </div>
 
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                Clinical Reason / Chief Complaints
-              </label>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">
+                  Select Consulting Doctor *
+                </label>
 
-              <textarea
-                name="symptoms"
-                rows={3}
-                placeholder="e.g. Mild fever since 2 days, headache, nausea"
-                value={formData.symptoms}
-                onChange={handleChange}
-                className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none text-slate-800 focus:border-blue-600 resize-none"
-              />
-            </div>
+                <select
+                  name="doctorId"
+                  required
+                  value={formData.doctorId}
+                  onChange={handleChange}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg outline-none font-medium bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-emerald-600 transition"
+                >
+                  {doctors.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.fullName || `Doctor #${d.id}`} ({d.specialization})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-              <Link
-                href="/reception/dashboard"
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
-              >
-                Cancel
-              </Link>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">
+                    Appointment Date *
+                  </label>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition"
-              >
-                {submitting ? 'Booking Slot...' : '✓ Book Appointment'}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+                  <input
+                    type="date"
+                    name="appointmentDate"
+                    required
+                    value={formData.appointmentDate}
+                    onChange={handleChange}
+                    className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg outline-none font-medium bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-emerald-600 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">
+                    Time Slot *
+                  </label>
+
+                  <select
+                    name="timeSlot"
+                    required
+                    value={formData.timeSlot}
+                    onChange={handleChange}
+                    className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg outline-none font-medium bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-emerald-600 transition"
+                  >
+                    <option value="09:30 AM - 10:00 AM">
+                      09:30 AM - 10:00 AM
+                    </option>
+                    <option value="10:00 AM - 10:30 AM">
+                      10:00 AM - 10:30 AM
+                    </option>
+                    <option value="10:30 AM - 11:00 AM">
+                      10:30 AM - 11:00 AM
+                    </option>
+                    <option value="11:00 AM - 11:30 AM">
+                      11:00 AM - 11:30 AM
+                    </option>
+                    <option value="12:00 PM - 12:30 PM">
+                      12:00 PM - 12:30 PM
+                    </option>
+                    <option value="02:00 PM - 02:30 PM">
+                      02:00 PM - 02:30 PM
+                    </option>
+                    <option value="04:00 PM - 04:30 PM">
+                      04:00 PM - 04:30 PM
+                    </option>
+                    <option value="06:00 PM - 06:30 PM">
+                      06:00 PM - 06:30 PM
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">
+                  Clinical Reason / Chief Complaints
+                </label>
+
+                <textarea
+                  name="symptoms"
+                  rows={3}
+                  placeholder="e.g. Mild fever since 2 days, headache, nausea"
+                  value={formData.symptoms}
+                  onChange={handleChange}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg outline-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-emerald-600 resize-none transition"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <Link
+                  href="/reception/dashboard"
+                  className="px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer"
+                >
+                  Cancel
+                </Link>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? 'Booking Slot...' : '✓ Book Appointment'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

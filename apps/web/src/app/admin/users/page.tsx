@@ -245,224 +245,220 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 p-8 font-sans text-gray-900 dark:bg-slate-950 dark:text-gray-100">
-        <h1 className="text-3xl font-bold">
-          Staff & Personnel Directory
-        </h1>
-        <p className="mt-4 text-gray-700 dark:text-gray-300">
-          Loading authorized personnel...
-        </p>
+      <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400 font-mono text-xs">
+        Loading authorized personnel...
       </div>
     );
   }
 
+  const field =
+    'w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition';
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans text-gray-900 dark:bg-slate-950 dark:text-gray-100">
+    <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16 transition-colors">
       {toast && (
         <div className="fixed right-6 top-6 z-[100]">
           <div
             className={`flex items-center gap-3 rounded-xl border px-5 py-3 shadow-xl ${
               toast.type === "success"
-                ? "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-300"
-                : "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/80 dark:text-emerald-300"
+                : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/80 dark:text-rose-300"
             }`}
           >
-            <span className="text-lg">
+            <span className="text-base font-bold">
               {toast.type === "success" ? "✓" : "✕"}
             </span>
-            <span className="text-sm font-semibold">
+            <span className="text-xs font-semibold">
               {toast.message}
             </span>
           </div>
         </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Hospital Staff & Personnel
-          </h1>
-          <p className="mt-1 text-gray-700 dark:text-gray-300">
-            Onboard doctors, front desk receptionists, and hospital administrators.
-          </p>
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider shadow-sm">
+            STAFF
+          </div>
+          <div>
+            <h1 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase">
+              Hospital Staff & Personnel
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Onboard doctors, front desk receptionists, and hospital administrators.
+            </p>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={handleOpenCreateModal}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-emerald-600/20 shadow-md"
         >
-          <span>➕</span> Add New Staff Member
+          <span>+</span> Add New Staff Member
         </button>
-      </div>
+      </header>
 
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        {["ALL", "DOCTOR", "RECEPTION", "ADMIN"].map((r) => (
-          <button
-            key={r}
-            type="button"
-            onClick={() => setFilterRole(r)}
-            className={`rounded-lg px-4 py-2 text-xs font-bold transition ${
-              filterRole === r
-                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-gray-300 dark:hover:bg-slate-800"
-            }`}
-          >
-            {r === "ALL" ? "ALL STAFF" : r}
-          </button>
-        ))}
-
-        <span className="ml-auto text-xs font-semibold text-gray-500 dark:text-gray-400">
-          Showing {filteredUsers.length} active personnel
-        </span>
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-gray-300 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        {filteredUsers.length === 0 ? (
-          <div className="p-8 text-center text-gray-700 dark:text-gray-300">
-            No hospital staff found in this role category.
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            {["ALL", "DOCTOR", "RECEPTION", "ADMIN"].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setFilterRole(r)}
+                className={`rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 ${
+                  filterRole === r
+                    ? "bg-emerald-600 text-white shadow-emerald-600/20 shadow-md"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                {r === "ALL" ? "ALL STAFF" : r}
+              </button>
+            ))}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-gray-900 dark:text-gray-100">
-              <thead className="border-b border-gray-300 bg-gray-100 dark:border-slate-700 dark:bg-slate-800">
-                <tr>
-                  <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
-                    ID
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
-                    Staff Identity
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
-                    Mobile No
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
-                    Department / Role
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
-                    Access Status
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold text-gray-900 dark:text-white">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
 
-              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-                {filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-800/70"
-                  >
-                    <td className="px-6 py-4 font-mono text-xs text-gray-600 dark:text-gray-400">
-                      {String(user.id).slice(0, 8)}
-                    </td>
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-mono">
+            Showing {filteredUsers.length} active personnel
+          </span>
+        </div>
 
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                      <p className="font-bold text-gray-900 dark:text-white">
-                        {user.name || user.email.split("@")[0]}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {user.email}
-                      </p>
-                    </td>
-
-                    <td className="px-6 py-4 font-mono text-xs text-gray-700 dark:text-gray-300">
-                      {user.phone ? `📞 ${user.phone}` : <span className="text-gray-400 italic">Not Provided</span>}
-                    </td>
-
-                    <td className="px-6 py-4 text-gray-900 dark:text-white">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          user.role === "DOCTOR"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                            : user.role === "RECEPTION"
-                            ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4">
-                      {user.isActive !== false ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800 dark:bg-green-950 dark:text-green-300">
-                          <span className="h-1.5 w-1.5 rounded-full bg-green-600"></span>
-                          Active
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800 dark:bg-red-950 dark:text-red-300">
-                          Suspended
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(user)}
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-200 dark:hover:bg-slate-700"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            toggleStatus(user.id, user.isActive !== false)
-                          }
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-200 dark:hover:bg-slate-700"
-                        >
-                          {user.isActive !== false
-                            ? "Deactivate"
-                            : "Activate"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => deleteUser(user.id)}
-                          className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
+          {filteredUsers.length === 0 ? (
+            <div className="p-12 text-center text-slate-500 text-xs">
+              No hospital staff found in this role category.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[700px]">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200/80 dark:border-slate-800 text-[10px]">
+                  <tr>
+                    <th className="py-3 px-3">ID</th>
+                    <th className="py-3 px-3">Staff Identity</th>
+                    <th className="py-3 px-3">Mobile No</th>
+                    <th className="py-3 px-3">Department / Role</th>
+                    <th className="py-3 px-3">Access Status</th>
+                    <th className="py-3 px-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                  {filteredUsers.map((user) => (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
+                    >
+                      <td className="py-3 px-3 font-mono text-slate-500 dark:text-slate-400 text-[11px]">
+                        {String(user.id).slice(0, 8)}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <p className="font-bold text-slate-900 dark:text-white">
+                          {user.name || user.email.split("@")[0]}
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                          {user.email}
+                        </p>
+                      </td>
+
+                      <td className="py-3 px-3 font-mono text-slate-600 dark:text-slate-300 text-[11px]">
+                        {user.phone ? user.phone : <span className="text-slate-400 italic">Not Provided</span>}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span
+                          className={`rounded-md px-2.5 py-0.5 text-[10px] font-semibold border ${
+                            user.role === "DOCTOR"
+                              ? "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900"
+                              : user.role === "RECEPTION"
+                              ? "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900"
+                              : "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900"
+                          }`}
+                        >
+                          {user.role}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        {user.isActive !== false ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-ping"></span>
+                            Active
+                          </span>
+                        ) : (
+                          <span className="rounded-md bg-rose-50 dark:bg-rose-950/50 px-2.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+                            Suspended
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(user)}
+                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border border-slate-200 dark:border-slate-700"
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleStatus(user.id, user.isActive !== false)
+                            }
+                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border border-slate-200 dark:border-slate-700"
+                          >
+                            {user.isActive !== false
+                              ? "Deactivate"
+                              : "Activate"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteUser(user.id)}
+                            className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border border-rose-200 dark:border-rose-900/50"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </main>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-100/90 p-4 backdrop-blur-sm dark:bg-slate-950/90">
-          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-            <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3 dark:border-slate-700">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl text-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                 {editingUserId ? "Edit Hospital Personnel" : "Onboard Hospital Personnel"}
               </h2>
 
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-lg font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-slate-200 transition"
               >
                 ✕
               </button>
             </div>
 
             {formError && (
-              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
+              <div className="rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/50 p-3 font-semibold text-rose-700 dark:text-rose-400">
                 {formError}
               </div>
             )}
 
-            <form onSubmit={handleSaveUser} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveUser} className="space-y-3.5">
               <div>
-                <label className="mb-1 block font-semibold text-gray-700 dark:text-gray-300">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">
                   Full Name / Title *
                 </label>
                 <input
@@ -473,12 +469,12 @@ export default function UsersPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-900 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-gray-500"
+                  className={field}
                 />
               </div>
 
               <div>
-                <label className="mb-1 block font-semibold text-gray-700 dark:text-gray-300">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">
                   Official Email / Username *
                 </label>
                 <input
@@ -489,12 +485,12 @@ export default function UsersPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-900 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-gray-500"
+                  className={field}
                 />
               </div>
 
               <div>
-                <label className="mb-1 block font-semibold text-gray-700 dark:text-gray-300">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">
                   Login Password {editingUserId ? "(Leave blank to keep current)" : "*"}
                 </label>
                 <input
@@ -505,12 +501,12 @@ export default function UsersPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-900 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-gray-500"
+                  className={field}
                 />
               </div>
 
               <div>
-                <label className="mb-1 block font-semibold text-gray-700 dark:text-gray-300">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">
                   Phone Number (Optional)
                 </label>
                 <input
@@ -520,12 +516,12 @@ export default function UsersPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
                   }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-900 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-gray-500"
+                  className={field}
                 />
               </div>
 
               <div>
-                <label className="mb-1 block font-semibold text-gray-700 dark:text-gray-300">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">
                   Hospital Role & Permission Group *
                 </label>
                 <select
@@ -533,7 +529,7 @@ export default function UsersPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, role: e.target.value })
                   }
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-gray-900 outline-none focus:border-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                  className={field}
                 >
                   <option value="DOCTOR">
                     Doctor (Consultation Desk & EMR Rx)
@@ -548,9 +544,9 @@ export default function UsersPage() {
               </div>
 
               {formData.role === "DOCTOR" && (
-                <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+                <div className="space-y-3 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 p-3">
                   <div>
-                    <label className="mb-1 block font-semibold text-blue-900 dark:text-blue-300">
+                    <label className="block text-[11px] font-semibold text-blue-900 dark:text-blue-300 uppercase mb-1">
                       Doctor Specialization *
                     </label>
                     <input
@@ -564,12 +560,12 @@ export default function UsersPage() {
                           specialization: e.target.value,
                         })
                       }
-                      className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-gray-900 outline-none focus:border-blue-500 dark:border-blue-800 dark:bg-slate-800 dark:text-white dark:placeholder:text-gray-500"
+                      className="w-full p-2.5 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-800 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block font-semibold text-blue-900 dark:text-blue-300">
+                    <label className="block text-[11px] font-semibold text-blue-900 dark:text-blue-300 uppercase mb-1">
                       Consultation Fee (₹)
                     </label>
                     <input
@@ -582,17 +578,17 @@ export default function UsersPage() {
                           consultationFee: Number(e.target.value),
                         })
                       }
-                      className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-gray-900 outline-none focus:border-blue-500 dark:border-blue-800 dark:bg-slate-800 dark:text-white dark:placeholder:text-gray-500"
+                      className="w-full p-2.5 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-800 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 transition font-mono"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 border-t border-gray-200 pt-4 dark:border-slate-700">
+              <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-800"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-semibold transition-all cursor-pointer shadow-2xs active:scale-95 border border-slate-200 dark:border-slate-700"
                 >
                   Cancel
                 </button>
@@ -600,7 +596,7 @@ export default function UsersPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold shadow-xs transition-all cursor-pointer active:scale-95 shadow-emerald-600/20 shadow-md"
                 >
                   {submitting
                     ? "Saving..."

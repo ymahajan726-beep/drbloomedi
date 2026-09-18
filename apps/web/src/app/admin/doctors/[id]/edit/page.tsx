@@ -99,83 +99,151 @@ export default function EditDoctorPage() {
   };
 
   if (loading) {
-    return <div className="p-10 text-center text-xs font-bold text-slate-500">Loading doctor profile...</div>;
+    return (
+      <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400 font-mono text-xs">
+        Loading doctor profile...
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-black text-slate-900">Edit Doctor Profile</h1>
-          <p className="text-xs text-slate-500">Update personal details and specialization</p>
+    <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16 transition-colors">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider shadow-sm">
+            DOC
+          </div>
+          <div>
+            <h1 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase">
+              Edit Doctor Profile
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Update personal details and specialization
+            </p>
+          </div>
         </div>
-        <Link href="/admin/doctors" className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+
+        <Link
+          href="/admin/doctors"
+          className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 transition cursor-pointer shadow-2xs"
+        >
           Back to Doctors
         </Link>
-      </div>
+      </header>
 
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl font-bold">
-            ⚠️ {errorMsg}
-          </div>
-        )}
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+          {errorMsg && (
+            <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 text-xs rounded-lg font-semibold">
+              ⚠️ {errorMsg}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Doctor Full Name *</label>
-            <input type="text" required placeholder="e.g. Dr. Rajesh Sharma" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600" />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">Doctor Full Name *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Dr. Rajesh Sharma"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+              />
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Doctor Email (Login ID) *</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">Doctor Email (Login ID) *</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Phone Number *</label>
-              <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600" />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Specialization *</label>
-              <input type="text" required value={specialization} onChange={(e) => setSpecialization(e.target.value)} className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">Specialization *</label>
+                <input
+                  type="text"
+                  required
+                  value={specialization}
+                  onChange={(e) => setSpecialization(e.target.value)}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">Qualifications *</label>
+                <input
+                  type="text"
+                  required
+                  value={qualifications}
+                  onChange={(e) => setQualifications(e.target.value)}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Qualifications *</label>
-              <input type="text" required value={qualifications} onChange={(e) => setQualifications(e.target.value)} className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold text-slate-800 focus:border-blue-600" />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Department</label>
-              <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 focus:border-blue-600">
-                <option value="">-- Select Department --</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>{dept.name}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">Department</label>
+                <select
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+                >
+                  <option value="">-- Select Department --</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase block mb-1">Account Status</label>
+                <select
+                  value={isActive ? 'true' : 'false'}
+                  onChange={(e) => setIsActive(e.target.value === 'true')}
+                  className="w-full p-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+                >
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Account Status</label>
-              <select value={isActive ? 'true' : 'false'} onChange={(e) => setIsActive(e.target.value === 'true')} className="w-full p-2.5 text-xs border border-slate-200 rounded-xl outline-none font-bold bg-slate-50 focus:border-blue-600">
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </div>
-          </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <Link href="/admin/doctors" className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">Cancel</Link>
-            <button type="submit" disabled={submitting} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition">
-              {submitting ? 'Updating Profile...' : '✓ Update Doctor'}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <Link
+                href="/admin/doctors"
+                className="px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer"
+              >
+                Cancel
+              </Link>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer"
+              >
+                {submitting ? 'Updating Profile...' : '✓ Update Doctor'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }

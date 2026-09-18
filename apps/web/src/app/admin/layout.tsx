@@ -20,8 +20,7 @@ export default function AdminLayout({
 
   useEffect(() => {
     setIsMounted(true);
-    // Use only tab-specific sessionStorage.
-    // Do not use localStorage or cookies for authentication.
+    
     const token = sessionStorage.getItem('token');
     const savedRole =
       sessionStorage.getItem('userRole')?.toUpperCase() || null;
@@ -40,30 +39,28 @@ export default function AdminLayout({
       return;
     }
 
-    if (savedRole === 'RECEPTION' || savedRole === 'RECEPTIONIST') {
-      window.location.href = '/reception/dashboard';
-      return;
-    }
+      if (savedRole === 'RECEPTION' || savedRole === 'RECEPTIONIST') {
+        window.location.href = '/reception/dashboard';
+        return;
+      }
 
     if (savedRole !== 'ADMIN') {
       window.location.href = '/login';
       return;
     }
 
-    setIsAuthorized(true);
+   setIsAuthorized(true);
   }, [pathname]);
 
   const handleLogout = () => {
     performLogout('Logged out successfully.');
   };
-
-  // Prevent hydration mismatch by returning a safe loader until mounted on client
   if (!isMounted || !isAuthorized) {
     return (
-      <div suppressHydrationWarning className="h-screen w-screen flex items-center justify-center bg-white text-slate-900 font-sans">
+      <div suppressHydrationWarning className="h-screen w-screen flex items-center justify-center bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
         <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-xs text-slate-400 font-semibold tracking-wider uppercase">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold tracking-wider uppercase font-mono">
             Verifying Admin Authorization...
           </p>
         </div>
@@ -116,38 +113,36 @@ export default function AdminLayout({
 
   const sidebarContent = (mobileDrawer = false) => (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Brand Header */}
-      <div className="p-2 md:p-4 border-b border-slate-200 shrink-0 flex items-center justify-between">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800 shrink-0 flex items-center justify-between">
         <div className="w-full md:w-auto">
-          <div className="flex items-center justify-center md:justify-start gap-2 text-slate-900 font-black text-xl tracking-tight">
-            <span className={`${mobileDrawer ? 'hidden' : 'md:hidden'} text-blue-500`}>D</span>
+          <div className="flex items-center justify-center md:justify-start gap-2 text-slate-900 dark:text-white font-bold text-base tracking-tight">
+            <span className={`${mobileDrawer ? 'hidden' : 'md:hidden'} text-emerald-600`}>D</span>
             <span className={mobileDrawer ? '' : 'hidden md:inline'}>
-              <span className="text-blue-500">DrBloo</span>Medi
+              DrBloo<span className="text-emerald-600 dark:text-emerald-400">Medi</span>
             </span>
           </div>
-          <p className={`${mobileDrawer ? 'block' : 'hidden md:block'} text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5`}>
+          <p className={`${mobileDrawer ? 'block' : 'hidden md:block'} text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mt-0.5`}>
             {role === 'ADMIN' ? 'Hospital Administration' : `${role} Desk`}
           </p>
         </div>
-        {/* Mobile Close Button */}
         <button
           onClick={() => setMobileMenuOpen(false)}
           aria-label="Close navigation menu"
-          className={`${mobileDrawer ? '' : 'md:hidden'} text-slate-400 hover:text-slate-900 p-1 text-lg font-bold`}
+          className={`${mobileDrawer ? '' : 'md:hidden'} text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 text-sm font-bold cursor-pointer`}
         >
           ✕
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-2 md:p-3 space-y-4 overflow-y-auto pr-2">
+
+      <nav className="flex-1 p-3 space-y-4 overflow-y-auto pr-2">
         {isReception && (
           <Link
             href="/reception/dashboard"
             onClick={() => setMobileMenuOpen(false)}
             title="Back to Front Desk"
             aria-label="Back to Front Desk"
-            className="flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl text-xs font-bold hover:bg-blue-600/30 transition"
+            className="flex items-center justify-center md:justify-start gap-3 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 rounded-lg text-xs font-semibold transition"
           >
             <span>⬅️</span>
             <span className={mobileDrawer ? 'inline' : 'hidden md:inline'}>Back to Front Desk</span>
@@ -159,7 +154,7 @@ export default function AdminLayout({
 
           return (
             <div key={group.title} className="space-y-1">
-              <p className={`${mobileDrawer ? 'block' : 'hidden md:block'} px-3 text-[10px] font-black uppercase tracking-wider text-slate-500`}>
+              <p className={`${mobileDrawer ? 'block' : 'hidden md:block'} px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400`}>
                 {group.title}
               </p>
 
@@ -178,10 +173,10 @@ export default function AdminLayout({
                       onClick={() => setMobileMenuOpen(false)}
                       title={item.name}
                       aria-label={item.name}
-                      className={`flex items-center ${mobileDrawer ? 'justify-start px-3' : 'justify-center md:justify-start px-2 md:px-3'} gap-3 py-2 rounded-xl text-xs font-semibold transition ${
+                      className={`flex items-center ${mobileDrawer ? 'justify-start px-3' : 'justify-center md:justify-start px-3'} gap-2.5 py-2 rounded-lg text-xs font-semibold transition ${
                         isActive
-                          ? 'bg-blue-600 text-white shadow-sm font-bold'
-                          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+                          ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                       }`}
                     >
                       <span className="text-sm">{item.icon}</span>
@@ -195,15 +190,14 @@ export default function AdminLayout({
         })}
       </nav>
 
-      {/* Clean User Card */}
-      <div className="p-2 md:p-3 border-t border-slate-200 bg-slate-50 shrink-0">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
         <div className={`flex items-center ${mobileDrawer ? 'justify-start' : 'justify-center md:justify-start'} gap-2.5 px-1`}>
-          <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 flex items-center justify-center font-bold text-xs shrink-0">
             {email ? email.charAt(0).toUpperCase() : 'A'}
           </div>
           <div className={`${mobileDrawer ? 'block' : 'hidden md:block'} overflow-hidden`}>
-            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Logged In</p>
-            <p className="text-xs text-slate-600 font-semibold truncate">{email || 'admin@drbloomedi.com'}</p>
+            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Logged In</p>
+            <p className="text-xs text-slate-700 dark:text-slate-300 font-semibold truncate font-mono">{email || 'admin@drbloomedi.com'}</p>
           </div>
         </div>
       </div>
@@ -212,39 +206,35 @@ export default function AdminLayout({
 
   return (
     <ToastProvider>
-      <div suppressHydrationWarning className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 font-sans antialiased overflow-hidden">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:flex w-64 lg:w-72 bg-white text-slate-600 flex-col justify-between shrink-0 z-20 border-r border-slate-200 h-full">
+      <div suppressHydrationWarning className="h-screen w-screen flex flex-col md:flex-row bg-[#F4F7F6] dark:bg-slate-950 font-sans antialiased overflow-hidden">
+        <aside className="hidden md:flex w-64 lg:w-72 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 flex-col justify-between shrink-0 z-20 border-r border-slate-200 dark:border-slate-800 h-full">
           {sidebarContent()}
         </aside>
 
-        {/* Mobile Sidebar Overlay */}
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-50 flex md:hidden" suppressHydrationWarning>
             <div
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
               onClick={() => setMobileMenuOpen(false)}
             ></div>
-            <aside className="relative w-72 max-w-[85vw] bg-white text-slate-600 flex flex-col justify-between z-10 h-full border-r border-slate-200 shadow-2xl animate-in slide-in-from-left duration-300 ease-out">
+            <aside className="relative w-72 max-w-[85vw] bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 flex flex-col justify-between z-10 h-full border-r border-slate-200 dark:border-slate-800 shadow-2xl">
               {sidebarContent(true)}
             </aside>
           </div>
         )}
 
-        {/* Main Workspace with Fluid Responsive Scaling */}
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden" suppressHydrationWarning>
-          <header className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10">
+          <header className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shrink-0 z-10 shadow-xs">
             <div className="flex items-center gap-3">
-              {/* Mobile Hamburger Menu Toggle */}
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition font-bold text-xs sm:text-sm"
+                className="md:hidden px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-750 transition font-semibold text-xs cursor-pointer border border-slate-300 dark:border-slate-700"
               >
                 ☰ Menu
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase text-slate-400 tracking-wider hidden sm:inline">Workspace:</span>
-                <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+                <span className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider hidden sm:inline">Workspace:</span>
+                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 px-2.5 py-1 rounded-md font-mono">
                   {role || 'ADMIN'}
                 </span>
               </div>
@@ -252,14 +242,13 @@ export default function AdminLayout({
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 border border-rose-200 dark:border-rose-900 rounded-lg transition shadow-2xs cursor-pointer"
             >
               <span>🚪</span>
               <span>Logout</span>
             </button>
           </header>
-
-          {/* Fluid Container matching Mobile, Tablets, Laptops & Desktops */}
+  
           <main className="flex-1 h-full overflow-y-auto p-4 sm:p-6 lg:p-10 w-full max-w-7xl mx-auto box-border">
             {children}
           </main>

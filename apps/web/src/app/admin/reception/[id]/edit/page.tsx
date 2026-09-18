@@ -72,93 +72,113 @@ export default function EditReceptionPage() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-slate-400 text-xs">Loading staff details...</div>;
+    return (
+      <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400 font-mono text-xs">
+        Loading staff details...
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 font-sans">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">Edit Receptionist</h1>
-          <p className="text-xs text-slate-500 mt-1">Update desk allocation and shift schedule</p>
+    <div className="min-h-screen bg-[#F4F7F6] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16 transition-colors">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200/90 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold text-xs tracking-wider shadow-sm">
+            REC
+          </div>
+          <div>
+            <h1 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase">
+              Edit Receptionist
+            </h1>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Update desk allocation and shift schedule
+            </p>
+          </div>
         </div>
-        <Link href="/admin/reception" className="text-xs font-semibold text-slate-500 hover:text-slate-800">
+
+        <Link
+          href="/admin/reception"
+          className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold border border-slate-300 dark:border-slate-700 transition cursor-pointer shadow-2xs"
+        >
           ← Back to Staff
         </Link>
-      </div>
+      </header>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         {errorMsg && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl">
+          <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-semibold">
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
-            <input
-              type="text"
-              required
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Contact Phone</label>
-              <input
-                type="tel"
-                required
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Counter Desk</label>
+              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">Full Name *</label>
               <input
                 type="text"
-                value={form.counterDesk}
-                onChange={(e) => setForm({ ...form, counterDesk: e.target.value })}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                required
+                value={form.fullName}
+                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Duty Shift Timing</label>
-            <select
-              value={form.shiftTiming}
-              onChange={(e) => setForm({ ...form, shiftTiming: e.target.value })}
-              className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="Morning (08:00 AM - 04:00 PM)">Morning (08:00 AM - 04:00 PM)</option>
-              <option value="Evening (02:00 PM - 10:00 PM)">Evening (02:00 PM - 10:00 PM)</option>
-              <option value="Night (10:00 PM - 08:00 AM)">Night (10:00 PM - 08:00 AM)</option>
-            </select>
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">Contact Phone *</label>
+                <input
+                  type="tel"
+                  required
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-mono font-medium transition"
+                />
+              </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <Link
-              href="/admin/reception"
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
-            >
-              {saving ? 'Updating...' : 'Update Staff'}
-            </button>
-          </div>
-        </form>
-      </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">Counter Desk</label>
+                <input
+                  type="text"
+                  value={form.counterDesk}
+                  onChange={(e) => setForm({ ...form, counterDesk: e.target.value })}
+                  className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase mb-1">Duty Shift Timing</label>
+              <select
+                value={form.shiftTiming}
+                onChange={(e) => setForm({ ...form, shiftTiming: e.target.value })}
+                className="w-full p-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-600 font-medium transition"
+              >
+                <option value="Morning (08:00 AM - 04:00 PM)">Morning (08:00 AM - 04:00 PM)</option>
+                <option value="Evening (02:00 PM - 10:00 PM)">Evening (02:00 PM - 10:00 PM)</option>
+                <option value="Night (10:00 PM - 08:00 AM)">Night (10:00 PM - 08:00 AM)</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <Link
+                href="/admin/reception"
+                className="px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer"
+              >
+                Cancel
+              </Link>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer"
+              >
+                {saving ? 'Updating...' : 'Update Staff'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
     </div>
   );
 }

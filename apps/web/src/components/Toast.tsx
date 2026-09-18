@@ -54,16 +54,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {toast && (
         <div className="fixed top-6 left-1/2 z-50 -translate-x-1/2 animate-in fade-in slide-in-from-top-5 duration-300">
           <div
-            className={`px-5 py-3.5 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-3 border backdrop-blur-xl ${
+            className={`px-4 py-3 rounded-lg shadow-2xl text-xs font-semibold flex items-center gap-2.5 border backdrop-blur-md ${
               toast.type === 'success'
-                ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200 shadow-emerald-950/50'
+                ? 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400'
                 : toast.type === 'error'
-                ? 'bg-rose-950/90 border-rose-500/40 text-rose-200 shadow-rose-950/50'
-                : 'bg-blue-950/90 border-blue-500/40 text-blue-200 shadow-blue-950/50'
+                ? 'bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-400'
+                : 'bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-400'
             }`}
           >
-            <span className="text-sm">
-              {toast.type === 'success' ? '✅' : toast.type === 'error' ? '⚠️' : 'ℹ️'}
+            <span className="text-xs">
+              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '⚠️' : 'ℹ️'}
             </span>
             <span>{toast.message}</span>
           </div>

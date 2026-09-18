@@ -22,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full" data-theme="light">
-      <body className="antialiased min-h-full flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden selection:bg-blue-600 selection:text-white">
+    <html lang="en" className="h-full" data-theme="light" suppressHydrationWarning>
+      <body className="antialiased min-h-full flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-x-hidden selection:bg-emerald-600 selection:text-white transition-colors">
         <ThemeProvider>
           <ToastProvider>
             {/* Official Razorpay Checkout Script Injection */}

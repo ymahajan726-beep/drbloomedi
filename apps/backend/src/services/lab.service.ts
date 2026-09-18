@@ -27,9 +27,6 @@ export class LabService {
     private readonly appointmentRepo: Repository<Appointment>,
   ) {}
 
-  // ============================================================
-  // 1. GET ALL AVAILABLE LAB TESTS
-  // ============================================================
   async getAllTests() {
     return this.labTestRepo.find({
       order: {
@@ -37,10 +34,6 @@ export class LabService {
       },
     });
   }
-
-  // ============================================================
-  // 2. CREATE NEW LAB TEST
-  // ============================================================
   async createTest(data: {
     testName: string;
     price: number;
@@ -107,9 +100,6 @@ export class LabService {
 
   return this.labTestRepo.save(test);
 }
-  // ============================================================
-  // 3. GET ALL LAB ORDERS
-  // ============================================================
   async getAllOrders() {
     return this.labOrderRepo.find({
       relations: {
@@ -123,9 +113,6 @@ export class LabService {
     });
   }
 
-  // ============================================================
-  // 4. BOOK SINGLE LAB TEST
-  // ============================================================
   async bookTest(body: {
     patientId: string;
     labTestId: string;
@@ -143,11 +130,6 @@ export class LabService {
       );
     }
 
-    /*
-     * IMPORTANT:
-     * Only use a real lab test from database.
-     * No fake/static test is created here.
-     */
     const labTest = await this.labTestRepo.findOne({
       where: {
         id: body.labTestId,
@@ -176,10 +158,6 @@ export class LabService {
 
     return this.labOrderRepo.save(newOrder);
   }
-
-  // ============================================================
-  // 5. UPDATE SAMPLE STATUS
-  // ============================================================
   async updateSampleStatus(
     orderId: string,
     status: string,
@@ -210,9 +188,6 @@ export class LabService {
     return this.labOrderRepo.save(order);
   }
 
-  // ============================================================
-  // 6. SUBMIT LAB REPORT
-  // ============================================================
   async submitReport(
     orderId: string,
     reportData: {
@@ -242,10 +217,6 @@ export class LabService {
     order.resultValue =
       reportData.observedValue || '';
 
-    /*
-     * Entity field is technicianRemarks,
-     * NOT remarks.
-     */
     order.technicianRemarks =
       reportData.remarks || '';
 
@@ -260,9 +231,6 @@ export class LabService {
     return this.labOrderRepo.save(order);
   }
 
-  // ============================================================
-  // 7. GET SINGLE LAB ORDER
-  // ============================================================
   async getOrderById(orderId: string) {
     const order =
       await this.labOrderRepo.findOne({
@@ -284,18 +252,12 @@ export class LabService {
 
     return order;
   }
-
-  // ============================================================
-  // 8. CREATE LAB ORDERS FROM DOCTOR CONSULTATION
-  // ============================================================
   async createOrdersFromConsultation(data: {
     appointmentId: string;
     patientId: string;
     labTestIds: string[];
   }) {
-    // ----------------------------------------------------------
-    // Validate patient
-    // ----------------------------------------------------------
+
     const patient =
       await this.patientRepo.findOne({
         where: {
@@ -309,9 +271,6 @@ export class LabService {
       );
     }
 
-    // ----------------------------------------------------------
-    // Validate appointment
-    // ----------------------------------------------------------
     const appointment =
       await this.appointmentRepo.findOne({
         where: {
@@ -329,9 +288,6 @@ export class LabService {
       );
     }
 
-    // ----------------------------------------------------------
-    // Get doctor from appointment
-    // ----------------------------------------------------------
     const doctor =
       appointment.doctor;
 
@@ -341,9 +297,7 @@ export class LabService {
       );
     }
 
-    // ----------------------------------------------------------
-    // Validate lab test IDs
-    // ----------------------------------------------------------
+
     if (
       !Array.isArray(data.labTestIds) ||
       data.labTestIds.length === 0
@@ -355,18 +309,11 @@ export class LabService {
 
     const createdOrders: LabOrder[] = [];
 
-    // ----------------------------------------------------------
-    // CREATE EACH LAB ORDER
-    // ----------------------------------------------------------
     for (const testId of data.labTestIds) {
       if (!testId) {
         continue;
       }
 
-      /*
-       * Only search the actual database.
-       * DO NOT create fake lab tests.
-       */
       const labTest =
         await this.labTestRepo.findOne({
           where: {
@@ -380,9 +327,6 @@ export class LabService {
         );
       }
 
-      /*
-       * Prevent duplicate order for same appointment/test.
-       */
       const existingOrder =
         await this.labOrderRepo
           .createQueryBuilder('order')
@@ -409,10 +353,6 @@ export class LabService {
           )
           .getOne();
 
-      /*
-       * If same active test already exists,
-       * don't create another duplicate.
-       */
       if (existingOrder) {
         continue;
       }
@@ -453,9 +393,6 @@ export class LabService {
     };
   }
 
-  // ============================================================
-  // 9. GENERATE UNIQUE LAB ORDER NUMBER
-  // ============================================================
   private async generateOrderNumber(): Promise<string> {
     let orderNumber = '';
 
@@ -485,10 +422,6 @@ export class LabService {
 
     return orderNumber;
   }
-
-  // ============================================================
-  // 10. NORMALIZE LAB STATUS
-  // ============================================================
   private normalizeStatus(
     status: string,
   ): LabOrderStatus {
