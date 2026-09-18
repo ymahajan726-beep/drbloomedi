@@ -1,4 +1,3 @@
-
 export const getActiveToken = () => {
   if (typeof window === 'undefined') return null;
 
