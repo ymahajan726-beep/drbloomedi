@@ -43,7 +43,6 @@ export default function DoctorDashboard() {
     setIsAuthorized(true);
     initializeDoctorSession();
     
-    // Auto sync interval for real-time queue updates from DB
     const interval = setInterval(initializeDoctorSession, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -53,10 +52,8 @@ export default function DoctorDashboard() {
       const headers = getAuthHeaders();
       let doctorId: string | number | null = null;
 
-      // Fetch current logged-in doctor profile from database/backend context
       const profileRes = await fetch(`${BACKEND_URL}/doctors/profile/me`, {
         headers,
-        credentials: 'include',
       });
 
       if (profileRes.ok) {
@@ -69,7 +66,6 @@ export default function DoctorDashboard() {
         }
       }
 
-      // Agar profile endpoint se direct id na mile, tabhi empty handle karenge (No hardcoded fallback to avoid mixing)
       if (!doctorId) {
         console.warn('Could not resolve active doctor profile ID securely.');
       }
@@ -91,10 +87,8 @@ export default function DoctorDashboard() {
       }
 
       const headers = getAuthHeaders();
-      // Fetch appointments filtered strictly by the current doctor's ID from database
       const res = await fetch(`${BACKEND_URL}/appointments?doctorId=${doctorId}`, {
         headers,
-        credentials: 'include',
       });
 
       if (res.ok) {
@@ -124,7 +118,6 @@ export default function DoctorDashboard() {
       await fetch(`${BACKEND_URL}/appointments/${id}/status`, {
         method: 'PATCH',
         headers,
-        credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
       initializeDoctorSession();

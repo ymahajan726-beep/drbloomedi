@@ -4,18 +4,17 @@ import toast from 'react-hot-toast';
 const BACKEND_URL = "https://drbloomedi-backend.onrender.com";
 
 export async function secureFetch(endpoint: string, options: RequestInit = {}) {
-  // 1. Determine role context dynamically from URL or localStorage
   let token = null;
   if (typeof window !== "undefined") {
     const path = window.location.pathname;
     if (path.includes("/admin")) {
-      token = localStorage.getItem("admin_token") || localStorage.getItem("token");
+      token = sessionStorage.getItem("admin_active_token") || sessionStorage.getItem("admin_token") || sessionStorage.getItem("token");
     } else if (path.includes("/doctor")) {
-      token = localStorage.getItem("doctor_token") || localStorage.getItem("token");
+      token = sessionStorage.getItem("doctor_active_token") || sessionStorage.getItem("doctor_token") || sessionStorage.getItem("token");
     } else if (path.includes("/reception")) {
-      token = localStorage.getItem("reception_token") || localStorage.getItem("token");
+      token = sessionStorage.getItem("reception_active_token") || sessionStorage.getItem("reception_token") || sessionStorage.getItem("token");
     } else {
-      token = localStorage.getItem("token");
+      token = sessionStorage.getItem("token");
     }
   }
 
@@ -32,7 +31,7 @@ export async function secureFetch(endpoint: string, options: RequestInit = {}) {
       credentials: "include",
     });
 
-    // HTTP Error handling (jaise 400, 401, 403, 500)
+    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMsg = errorData.message || `Error: ${response.statusText}`;
@@ -40,7 +39,6 @@ export async function secureFetch(endpoint: string, options: RequestInit = {}) {
       return response;
     }
 
-    // Success Toast handling for CRUD methods (POST, PUT, DELETE)
     const method = (options.method || 'GET').toUpperCase();
     if (['POST', 'PUT', 'DELETE'].includes(method)) {
       if (method === 'POST') toast.success('Created successfully');
@@ -50,7 +48,6 @@ export async function secureFetch(endpoint: string, options: RequestInit = {}) {
 
     return response;
   } catch (error: any) {
-    // Network ya unexpected errors ke liye
     toast.error(error.message || 'Network error or server unreachable');
     throw error;
   }

@@ -17,12 +17,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request) => {
           let token: string | null = null;
-          if (request && request.cookies) {
+
+        
+          if (request?.headers?.authorization) {
+            const authHeader = request.headers.authorization;
+            if (authHeader.startsWith('Bearer ')) {
+              token = authHeader.replace('Bearer ', '').trim();
+            } else {
+              token = authHeader.trim();
+            }
+          }
+
+          if (!token && request && request.cookies) {
             token = request.cookies['token'] || request.cookies['access_token'] || null;
           }
-          if (!token && request?.headers?.authorization) {
-            token = request.headers.authorization.replace('Bearer ', '');
-          }
+
           return token;
         },
       ]),
