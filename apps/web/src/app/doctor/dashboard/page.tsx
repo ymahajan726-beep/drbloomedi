@@ -43,7 +43,8 @@ export default function DoctorDashboard() {
     setIsAuthorized(true);
     initializeDoctorSession();
     
-    const interval = setInterval(initializeDoctorSession, 8000);
+    // Auto sync interval for real-time queue updates from DB
+    const interval = setInterval(initializeDoctorSession, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -52,6 +53,7 @@ export default function DoctorDashboard() {
       const headers = getAuthHeaders();
       let doctorId: string | number | null = null;
 
+      // Fetch current logged-in doctor profile from database/backend context
       const profileRes = await fetch(`${BACKEND_URL}/doctors/profile/me`, {
         headers,
         credentials: 'include',
@@ -67,28 +69,14 @@ export default function DoctorDashboard() {
         }
       }
 
+      // Agar profile endpoint se direct id na mile, tabhi empty handle karenge (No hardcoded fallback to avoid mixing)
       if (!doctorId) {
-        const docsRes = await fetch(`${BACKEND_URL}/doctors`, {
-          headers,
-          credentials: 'include',
-        });
-        if (docsRes.ok) {
-          const docsList = await docsRes.json();
-          if (Array.isArray(docsList) && docsList.length > 0) {
-            doctorId = docsList[0].id;
-            setDoctorEmail(docsList[0].user?.email || 'Doctor 10');
-          }
-        }
-      }
-
-      if (!doctorId) {
-        doctorId = 10;
+        console.warn('Could not resolve active doctor profile ID securely.');
       }
 
       await loadAppointments(doctorId);
     } catch (err) {
-      console.error('Session initialization error, using fallback doctorId 10', err);
-      await loadAppointments(10);
+      console.error('Session initialization error:', err);
     } finally {
       setLoading(false);
     }
@@ -103,6 +91,7 @@ export default function DoctorDashboard() {
       }
 
       const headers = getAuthHeaders();
+      // Fetch appointments filtered strictly by the current doctor's ID from database
       const res = await fetch(`${BACKEND_URL}/appointments?doctorId=${doctorId}`, {
         headers,
         credentials: 'include',
