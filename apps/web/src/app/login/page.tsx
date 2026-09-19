@@ -294,29 +294,7 @@ export default function LoginPage() {
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
                 Quick test access
               </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleAutofill("ADMIN")}
-                  className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-750 cursor-pointer shadow-2xs"
-                >
-                  👑 Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAutofill("DOCTOR")}
-                  className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-750 cursor-pointer shadow-2xs"
-                >
-                  🩺 Doctor
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAutofill("RECEPTION")}
-                  className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-750 cursor-pointer shadow-2xs"
-                >
-                  🧑‍💼 Reception
-                </button>
-              </div>
+             
             </div>
 
             <div className="group relative overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3.5 border border-slate-200 dark:border-slate-800 transition-all">

@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../modules/app.module';
 import { UsersService } from '../services/users.service';
@@ -15,6 +14,7 @@ async function seedAllUsers() {
       password: process.env.ADMIN_PASSWORD || 'Admin@1234',
       role: 'ADMIN',
       name: 'System Admin',
+      isSystem:true,
     },
     {
       email: 'doctor@gmail.com',
@@ -39,6 +39,9 @@ async function seedAllUsers() {
         existingUser.password = hashedPassword;
         existingUser.role = item.role;
         if ('isActive' in existingUser) existingUser.isActive = true;
+        if (item.isSystem){
+          existingUser.isSystem = true;
+        }
 
         if (typeof (usersService as any).save === 'function') {
           await (usersService as any).save(existingUser);
@@ -58,9 +61,16 @@ async function seedAllUsers() {
             role: item.role,
             name: item.name,
             isActive: true,
+            isSystem:item.isSystem || false,
           });
         } else if (item.role === 'ADMIN' && typeof usersService.createAdmin === 'function') {
           await usersService.createAdmin(item.email, item.password);
+        }
+
+        const createAdmin = await usersService.findByEmail(item.email);
+        if(createAdmin){
+          createAdmin.isSystem =true;
+          await (usersService as any).userRepository?.save(createAdmin)
         }
         console.log(`[SEED] Created ${item.role}: ${item.email}`);
       }

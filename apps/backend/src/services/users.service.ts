@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -105,6 +106,10 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    if (user.isSystem && updateData.role && updateData.role !==UserRole.ADMIN){
+      throw new ForbiddenException('System Admin Role cannot be modified.')
+    }
+
     if (updateData.password && updateData.password.trim() !== '') {
       updateData.password = await bcrypt.hash(updateData.password, 10);
     } else {
@@ -133,6 +138,10 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    } 
+
+    if (user.isSystem && isActive === false){
+      throw new ForbiddenException('System Administrator cannot be deactivated.')
     }
 
     user.isActive = isActive;
@@ -156,6 +165,11 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (user.isSystem){
+      throw new ForbiddenException('System Administartor cannot be deleted.')
+
     }
 
     if (user.role === UserRole.DOCTOR) {

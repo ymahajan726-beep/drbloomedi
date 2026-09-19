@@ -159,7 +159,7 @@ export class AppointmentsService {
       const fullAppointment = await this.findOne(savedAppointment.id);
 
       if (this.eventsGateway && this.eventsGateway.server) {
-        // Targeted socket emit taaki sirf relevant doctor ya client ko update mile
+      
         this.eventsGateway.server.emit('appointment:new', fullAppointment);
       }
     } catch (err) {

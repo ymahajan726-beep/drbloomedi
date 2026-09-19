@@ -32,7 +32,6 @@ export class EmrService {
     private readonly prescriptionRepo: Repository<Prescription>,
   ) {}
 
-  // 1. Get Comprehensive Patient 360 Dossier
   async getPatientDossier(patientId: string) {
     const patient = await this.patientRepo.findOne({
       where: { id: patientId },
@@ -123,7 +122,6 @@ export class EmrService {
     };
   }
 
-  // 2. Save Clinical Consultation
   async saveConsultation(data: {
     patientId: string;
     doctorId: number | string;
@@ -138,9 +136,7 @@ export class EmrService {
     medicines?: any[];
     labTestsSuggested?: any[];
   }) {
-    // --------------------------------------------------
-    // 1. Patient check
-    // --------------------------------------------------
+  
     const patient = await this.patientRepo.findOne({
       where: { id: data.patientId },
     });
@@ -149,9 +145,6 @@ export class EmrService {
       throw new NotFoundException('Patient record not found');
     }
 
-    // --------------------------------------------------
-    // 2. Doctor check
-    // --------------------------------------------------
     let doctor = await this.doctorRepo.findOne({
       where: { id: Number(data.doctorId) || 1 },
       relations: { user: true },
@@ -165,10 +158,6 @@ export class EmrService {
 
       doctor = doctors[0];
     }
-
-    // --------------------------------------------------
-    // 3. Appointment check
-    // --------------------------------------------------
     let appointment: Appointment | null = null;
 
     const cleanApptId = data.appointmentId
@@ -187,9 +176,6 @@ export class EmrService {
       }
     }
 
-    // --------------------------------------------------
-    // 4. Prepare consultation data
-    // --------------------------------------------------
     const medsList =
       data.medications ||
       data.medicines ||
@@ -205,8 +191,6 @@ export class EmrService {
       .filter(Boolean)
       .join('\n');
 
-    // Every consultation is a historical record, even when the same
-    // appointment is referenced again for a returning patient.
     const newPrescription = this.prescriptionRepo.create({
       patientId: data.patientId,
 

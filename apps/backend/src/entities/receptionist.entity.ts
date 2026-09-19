@@ -33,7 +33,7 @@ export class Receptionist {
   @Column({ default: DEFAULT_DESK })
   counterDesk: string;
 
-  // soft-disable instead of deleting the row (attendance/logs still point here)
+  
   @Column({ default: true })
   isActive: boolean;
 

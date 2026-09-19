@@ -8,6 +8,7 @@ type User = {
   email: string;
   role: string;
   isActive: boolean;
+  isSystem?:boolean;
   name?: string;
   phone?: string;
   specialization?: string;
@@ -394,36 +395,47 @@ export default function UsersPage() {
                       </td>
 
                       <td className="py-3 px-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(user)}
-                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border border-slate-200 dark:border-slate-700"
-                          >
-                            Edit
-                          </button>
+  <div className="flex justify-end gap-2">
+    <button
+      type="button"
+      onClick={() => handleOpenEditModal(user)}
+      className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border border-slate-200 dark:border-slate-700"
+    >
+      Edit
+    </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              toggleStatus(user.id, user.isActive !== false)
-                            }
-                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border border-slate-200 dark:border-slate-700"
-                          >
-                            {user.isActive !== false
-                              ? "Deactivate"
-                              : "Activate"}
-                          </button>
+    <button
+      type="button"
+      disabled={user.isSystem}
+      onClick={() =>
+        toggleStatus(user.id, user.isActive !== false)
+      }
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+        user.isSystem
+          ? "bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+          : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 cursor-pointer active:scale-95"
+      }`}
+    >
+      {user.isActive !== false
+        ? "Deactivate"
+        : "Activate"}
+    </button>
 
-                          <button
-                            type="button"
-                            onClick={() => deleteUser(user.id)}
-                            className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-semibold transition-all cursor-pointer active:scale-95 border border-rose-200 dark:border-rose-900/50"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+    <button
+      type="button"
+      disabled={user.isSystem}
+      onClick={() => deleteUser(user.id)}
+      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+        user.isSystem
+          ? "bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+          : "bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/50 cursor-pointer active:scale-95"
+      }`}
+    >
+      Delete
+    </button>
+  </div>
+</td>
+               
                     </tr>
                   ))}
                 </tbody>
