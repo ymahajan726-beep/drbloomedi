@@ -106,8 +106,8 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.isSystem && updateData.role && updateData.role !==UserRole.ADMIN){
-      throw new ForbiddenException('System Admin Role cannot be modified.')
+    if ((user as any).isSystem && updateData.role && updateData.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('System Admin Role cannot be modified.');
     }
 
     if (updateData.password && updateData.password.trim() !== '') {
@@ -138,10 +138,10 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User not found');
-    } 
+    }
 
-    if (user.isSystem && isActive === false){
-      throw new ForbiddenException('System Administrator cannot be deactivated.')
+    if ((user as any).isSystem && isActive === false) {
+      throw new ForbiddenException('System Administrator cannot be deactivated.');
     }
 
     user.isActive = isActive;
@@ -167,9 +167,8 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.isSystem){
-      throw new ForbiddenException('System Administartor cannot be deleted.')
-
+    if ((user as any).isSystem) {
+      throw new ForbiddenException('System Administrator cannot be deleted.');
     }
 
     if (user.role === UserRole.DOCTOR) {

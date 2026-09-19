@@ -69,7 +69,7 @@ async function seedAllUsers() {
 
         const createAdmin = await usersService.findByEmail(item.email);
         if(createAdmin){
-          createAdmin.isSystem =true;
+          ((createAdmin as any ).isSystem =true)
           await (usersService as any).userRepository?.save(createAdmin)
         }
         console.log(`[SEED] Created ${item.role}: ${item.email}`);
